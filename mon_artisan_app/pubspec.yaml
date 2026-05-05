@@ -1,0 +1,61 @@
+name: mon_artisan_app
+description: Application mobile pour connecter clients et artisans au Bénin
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.0.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  
+  # Firebase
+  firebase_core: ^3.8.1
+  firebase_auth: ^5.3.4
+  cloud_firestore: ^5.5.2
+  firebase_storage: ^12.3.8
+  firebase_messaging: ^15.1.8
+  
+  # Géolocalisation
+  google_maps_flutter: ^2.10.0
+  geolocator: ^13.0.2
+  geocoding: ^3.0.0
+  geoflutterfire_plus: ^0.0.3
+  
+  # Paiement FedaPay
+  http: ^1.2.2
+  
+  # UI/UX
+  flutter_svg: ^2.0.10
+  cached_network_image: ^3.4.1
+  shimmer: ^3.0.0
+  google_fonts: ^6.2.1
+  
+  # State Management
+  provider: ^6.1.2
+  
+  # Navigation
+  go_router: ^14.6.2
+  
+  # Utilitaires
+  intl: ^0.20.1
+  shared_preferences: ^2.3.4
+  image_picker: ^1.1.2
+  permission_handler: ^11.3.1
+  flutter_local_notifications: ^17.1.2
+  flutter_dotenv: ^5.1.0
+  url_launcher: ^6.3.1
+  local_auth: ^2.3.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^5.0.0
+
+flutter:
+  uses-material-design: true
+  
+  assets:
+    - assets/images/
+    - assets/icons/

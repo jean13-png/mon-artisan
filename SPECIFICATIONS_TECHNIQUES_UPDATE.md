@@ -1243,3 +1243,32 @@ Pour toute question technique durant le développement :
 10. **Tests** : Tester sur vrais devices, pas seulement émulateurs
 
 **Bon développement !**
+
+❌ Fonctionnalités MANQUANTES (importantes) :
+Priorité HAUTE :
+❌ Passer une commande (écran de création)
+❌ Paiement FedaPay (intégration complète)
+❌ Accepter/Refuser commande (côté artisan)
+❌ Suivi de commande (statuts en temps réel)
+❌ Notifications push (FCM)
+❌ Géolocalisation (recherche artisans proches)
+❌ Système de notation (avis clients)
+Priorité MOYENNE :
+❌ Historique des commandes (client et artisan)
+❌ Profil utilisateur (modification)
+❌ Galerie photos (upload pour artisans)
+❌ Retrait de revenus (artisan)
+❌ Chat client-artisan (optionnel)
+❌ Appel téléphonique (lien vers dialer)
+Priorité BASSE :
+❌ Favoris (sauvegarder artisans)
+❌ Partage de profil
+❌ Système de parrainage
+❌ Réclamations
+📊 Progression globale : ~25%
+Tu veux que je continue avec les fonctionnalités prioritaires ? Je te suggère de commencer par :
+
+Création de commande (pour que le client puisse commander)
+Paiement FedaPay (pour valider la commande)
+Gestion des commandes côté artisan (accepter/refuser)
+Dis-moi si tu veux que je continue ou si tu veux tester ce qui existe déjà ! 👍

@@ -1,0 +1,160 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    
+    // ============================================
+    // FONCTIONS HELPER
+    // ============================================
+    
+    // Vérifier si l'utilisateur est authentifié
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    // Vérifier si l'utilisateur est le propriétaire
+    function isOwner(userId) {
+      return request.auth != null && request.auth.uid == userId;
+    }
+    
+    // Vérifier la taille du fichier (max 5MB)
+    function isValidSize() {
+      return request.resource.size < 5 * 1024 * 1024;
+    }
+    
+    // Vérifier le type de fichier (images seulement)
+    function isImage() {
+      return request.resource.contentType.matches('image/.*');
+    }
+    
+    // ============================================
+    // DOSSIER: artisans/{userId}/
+    // ============================================
+    match /artisans/{userId}/{allPaths=**} {
+      // Lecture: Tous (profils publics)
+      allow read: if true;
+      
+      // Écriture: Propriétaire seulement
+      allow write: if isAuthenticated() && 
+                      isOwner(userId) && 
+                      isValidSize() && 
+                      isImage();
+    }
+    
+    // ============================================
+    // DOSSIER: artisans/{userId}/diplome/
+    // ============================================
+    match /artisans/{userId}/diplome/{fileName} {
+      // Lecture: Tous (pour validation admin)
+      allow read: if true;
+      
+      // Écriture: Propriétaire seulement
+      allow write: if isAuthenticated() && 
+                      isOwner(userId) && 
+                      isValidSize() && 
+                      isImage();
+    }
+    
+    // ============================================
+    // DOSSIER: artisans/{userId}/atelier/
+    // ============================================
+    match /artisans/{userId}/atelier/{fileName} {
+      // Lecture: Tous (photos publiques)
+      allow read: if true;
+      
+      // Écriture: Propriétaire seulement
+      allow write: if isAuthenticated() && 
+                      isOwner(userId) && 
+                      isValidSize() && 
+                      isImage();
+    }
+    
+    // ============================================
+    // DOSSIER: artisans/{userId}/profile/
+    // ============================================
+    match /artisans/{userId}/profile/{fileName} {
+      // Lecture: Tous (photo de profil publique)
+      allow read: if true;
+      
+      // Écriture: Propriétaire seulement
+      allow write: if isAuthenticated() && 
+                      isOwner(userId) && 
+                      isValidSize() && 
+                      isImage();
+    }
+    
+    // ============================================
+    // DOSSIER: users/{userId}/
+    // ============================================
+    match /users/{userId}/{allPaths=**} {
+      // Lecture: Tous (photos de profil publiques)
+      allow read: if true;
+      
+      // Écriture: Propriétaire seulement
+      allow write: if isAuthenticated() && 
+                      isOwner(userId) && 
+                      isValidSize() && 
+                      isImage();
+    }
+    
+    // ============================================
+    // DOSSIER: commandes/{commandeId}/
+    // ============================================
+    match /commandes/{commandeId}/{allPaths=**} {
+      // Lecture: Utilisateurs authentifiés (client et artisan concernés)
+      allow read: if isAuthenticated();
+      
+      // Écriture: Utilisateurs authentifiés
+      allow write: if isAuthenticated() && 
+                      isValidSize() && 
+                      isImage();
+    }
+    
+    // ============================================
+    // DOSSIER: commandes/{commandeId}/photos/
+    // ============================================
+    match /commandes/{commandeId}/photos/{fileName} {
+      // Lecture: Utilisateurs authentifiés
+      allow read: if isAuthenticated();
+      
+      // Écriture: Utilisateurs authentifiés
+      allow write: if isAuthenticated() && 
+                      isValidSize() && 
+                      isImage();
+    }
+    
+    // ============================================
+    // DOSSIER: chat/{chatId}/
+    // ============================================
+    match /chat/{chatId}/{allPaths=**} {
+      // Lecture: Utilisateurs authentifiés
+      allow read: if isAuthenticated();
+      
+      // Écriture: Utilisateurs authentifiés
+      allow write: if isAuthenticated() && 
+                      isValidSize() && 
+                      isImage();
+    }
+    
+    // ============================================
+    // DOSSIER: temp/ (fichiers temporaires)
+    // ============================================
+    match /temp/{userId}/{allPaths=**} {
+      // Lecture: Propriétaire seulement
+      allow read: if isAuthenticated() && isOwner(userId);
+      
+      // Écriture: Propriétaire seulement
+      allow write: if isAuthenticated() && 
+                      isOwner(userId) && 
+                      isValidSize();
+      
+      // Suppression automatique après 24h (via Cloud Functions)
+    }
+    
+    // ============================================
+    // RÈGLE PAR DÉFAUT: TOUT REFUSER
+    // ============================================
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}

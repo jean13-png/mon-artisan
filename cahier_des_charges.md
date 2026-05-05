@@ -105,3 +105,6 @@ Back-office adminInterface web de gestion des artisans, commandes et paiements
 Code sourceCode source complet, documenté et versionné (Git)
 Documentation techniqueGuide d'installation, d'utilisation et de maintenance
 Maquettes UI/UXMaquettes validées de toutes les interfaces de l'application
+
+
+
