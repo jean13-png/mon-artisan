@@ -102,13 +102,23 @@ class _VerifyLocalAuthScreenState extends State<VerifyLocalAuthScreen> {
   }
 
   void _navigateToDashboard() {
+    // Vérifier si on est dans un dialog (utilisé par AuthLockWrapper)
+    if (ModalRoute.of(context)?.settings.name == null) {
+      // C'est un dialog, retourner true
+      Navigator.of(context).pop(true);
+      return;
+    }
+    
+    // Sinon, navigation normale
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
     final role = authProvider.userModel?.role;
     
     if (role == 'client') {
       context.go(AppRouter.homeClient);
-    } else {
+    } else if (role == 'artisan') {
       context.go(AppRouter.homeArtisan);
+    } else if (role == 'admin') {
+      context.go(AppRouter.adminDashboard);
     }
   }
 

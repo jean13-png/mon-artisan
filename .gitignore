@@ -54,3 +54,17 @@ firebase-debug.log
 
 # API Keys
 **/api_keys.dart
+
+# APK/IPA builds
+*.apk
+*.aab
+*.ipa
+
+# Temporary files
+*.tmp
+*.temp
+*~
+
+# Documentation temporaire
+**/CORRECTIONS_*.md
+**/RESOLUTION_*.md

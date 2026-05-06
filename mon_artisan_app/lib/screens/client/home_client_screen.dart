@@ -9,6 +9,7 @@ import '../../core/routes/app_router.dart';
 import '../../providers/auth_provider.dart';
 import '../../widgets/metier_card.dart';
 import '../../widgets/double_tap_to_exit.dart';
+import '../../widgets/auth_lock_wrapper.dart';
 
 class HomeClientScreen extends StatefulWidget {
   const HomeClientScreen({super.key});
@@ -55,8 +56,10 @@ class _HomeClientScreenState extends State<HomeClientScreen> {
       );
     }
 
-    return DoubleTapToExit(
-      child: Scaffold(
+    return AuthLockWrapper(
+      isMainScreen: true,
+      child: DoubleTapToExit(
+        child: Scaffold(
         backgroundColor: AppColors.greyLight,
         appBar: AppBar(
         backgroundColor: AppColors.primaryBlue,
@@ -338,7 +341,8 @@ class _HomeClientScreenState extends State<HomeClientScreen> {
         ),
       ),
       ), // Fermeture du Scaffold
-    ); // Fermeture du PopScope
+    ), // Fermeture du DoubleTapToExit
+    ); // Fermeture du AuthLockWrapper
   }
 
   Widget _buildPopularCategory(String name, IconData icon, String metier) {
@@ -398,12 +402,13 @@ class _HomeClientScreenState extends State<HomeClientScreen> {
           mainAxisSize: MainAxisSize.min,
           children: [
             DropdownButtonFormField<String>(
-              initialValue: _selectedVille,
+              value: _selectedVille,
               decoration: const InputDecoration(
                 labelText: 'Ville',
                 border: OutlineInputBorder(),
               ),
               items: const [
+                DropdownMenuItem(value: null, child: Text('Toutes les villes')),
                 DropdownMenuItem(value: 'Cotonou', child: Text('Cotonou')),
                 DropdownMenuItem(value: 'Porto-Novo', child: Text('Porto-Novo')),
                 DropdownMenuItem(value: 'Parakou', child: Text('Parakou')),
@@ -415,12 +420,13 @@ class _HomeClientScreenState extends State<HomeClientScreen> {
             ),
             const SizedBox(height: 16),
             DropdownButtonFormField<String>(
-              initialValue: _selectedQuartier,
+              value: _selectedQuartier,
               decoration: const InputDecoration(
                 labelText: 'Quartier',
                 border: OutlineInputBorder(),
               ),
               items: const [
+                DropdownMenuItem(value: null, child: Text('Tous les quartiers')),
                 DropdownMenuItem(value: 'Akpakpa', child: Text('Akpakpa')),
                 DropdownMenuItem(value: 'Ganhi', child: Text('Ganhi')),
                 DropdownMenuItem(value: 'Cadjehoun', child: Text('Cadjehoun')),

@@ -387,10 +387,17 @@ class FirestoreService {
           .get();
 
       return querySnapshot.docs
-          .map((doc) => doc.data() as Map<String, dynamic>)
+          .map((doc) {
+            final data = doc.data() as Map<String, dynamic>;
+            data['id'] = doc.id; // Ajouter l'ID du document
+            return data;
+          })
           .toList();
     } catch (e) {
-      throw Exception('Erreur lors de la récupération des notifications: $e');
+      // Si l'index n'existe pas encore, retourner une liste vide
+      // au lieu de crasher l'application
+      print('Erreur notifications (index manquant?): $e');
+      return [];
     }
   }
 

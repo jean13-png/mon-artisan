@@ -10,6 +10,7 @@ import '../../providers/artisan_provider.dart';
 import '../../providers/commande_provider.dart';
 import '../../widgets/double_tap_to_exit.dart';
 import '../../widgets/loading_widget.dart';
+import '../../widgets/auth_lock_wrapper.dart';
 
 class HomeArtisanScreen extends StatefulWidget {
   const HomeArtisanScreen({super.key});
@@ -66,8 +67,10 @@ class _HomeArtisanScreenState extends State<HomeArtisanScreen> {
       return const LoadingWidget(message: 'Chargement de votre profil...');
     }
 
-    return DoubleTapToExit(
-      child: Scaffold(
+    return AuthLockWrapper(
+      isMainScreen: true,
+      child: DoubleTapToExit(
+        child: Scaffold(
       backgroundColor: AppColors.greyLight,
       appBar: AppBar(
         backgroundColor: AppColors.accentRed,
@@ -552,9 +555,10 @@ class _HomeArtisanScreenState extends State<HomeArtisanScreen> {
         ),
       ),
       ), // Fermeture du Scaffold
-    ); // Fermeture du DoubleTapToExit
+    ), // Fermeture du DoubleTapToExit
+    ); // Fermeture du AuthLockWrapper
   }
-}
+
   Widget _buildStatCard(String value, String label, IconData icon, Color color) {
     return Container(
       padding: const EdgeInsets.all(16),

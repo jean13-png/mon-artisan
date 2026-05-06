@@ -4,6 +4,8 @@ import 'package:go_router/go_router.dart';
 import '../../core/constants/colors.dart';
 import '../../core/constants/text_styles.dart';
 import '../../core/services/firebase_service.dart';
+import '../../widgets/auth_lock_wrapper.dart';
+import '../../widgets/double_tap_to_exit.dart';
 
 class AdminDashboardScreen extends StatefulWidget {
   const AdminDashboardScreen({super.key});
@@ -80,9 +82,12 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.greyLight,
-      appBar: AppBar(
+    return AuthLockWrapper(
+      isMainScreen: true,
+      child: DoubleTapToExit(
+        child: Scaffold(
+          backgroundColor: AppColors.greyLight,
+          appBar: AppBar(
         backgroundColor: AppColors.primaryBlue,
         elevation: 0,
         title: Text(
@@ -241,7 +246,9 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                 ),
               ),
             ),
-    );
+        ), // Fermeture du Scaffold
+      ), // Fermeture du DoubleTapToExit
+    ); // Fermeture du AuthLockWrapper
   }
 
   Widget _buildStatCard(String title, String value, IconData icon, Color color) {

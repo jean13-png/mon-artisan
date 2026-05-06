@@ -1,0 +1,46 @@
+{
+  "indexes": [
+    {
+      "collectionGroup": "notifications",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "userId", "order": "ASCENDING" },
+        { "fieldPath": "createdAt", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "commandes",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "artisanId", "order": "ASCENDING" },
+        { "fieldPath": "createdAt", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "commandes",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "clientId", "order": "ASCENDING" },
+        { "fieldPath": "createdAt", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "artisans",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "metier", "order": "ASCENDING" },
+        { "fieldPath": "ville", "order": "ASCENDING" },
+        { "fieldPath": "isVerified", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "artisans",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "ville", "order": "ASCENDING" },
+        { "fieldPath": "noteGlobale", "order": "DESCENDING" }
+      ]
+    }
+  ],
+  "fieldOverrides": []
+}
