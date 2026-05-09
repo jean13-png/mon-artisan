@@ -1,14 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import '../../core/constants/colors.dart';
 import '../../core/constants/text_styles.dart';
 import '../../core/routes/app_router.dart';
 import '../../widgets/custom_button.dart';
 import '../../widgets/custom_textfield.dart';
 import '../../providers/auth_provider.dart';
-import '../../core/services/biometric_service.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -22,62 +20,12 @@ class _LoginScreenState extends State<LoginScreen> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   bool _obscurePassword = true;
-  bool _biometricEnabled = false;
-  bool _canUseBiometric = false;
-
-  @override
-  void initState() {
-    super.initState();
-    _checkBiometricAvailability();
-    _tryBiometricLogin();
-  }
 
   @override
   void dispose() {
     _emailController.dispose();
     _passwordController.dispose();
     super.dispose();
-  }
-
-  Future<void> _checkBiometricAvailability() async {
-    final canCheck = await BiometricService.isBiometricAvailable();
-    final prefs = await SharedPreferences.getInstance();
-    final enabled = prefs.getBool('biometric_enabled') ?? false;
-    
-    setState(() {
-      _canUseBiometric = canCheck;
-      _biometricEnabled = enabled && canCheck;
-    });
-  }
-
-  Future<void> _tryBiometricLogin() async {
-    final prefs = await SharedPreferences.getInstance();
-    final biometricEnabled = prefs.getBool('biometric_enabled') ?? false;
-    
-    if (!biometricEnabled) return;
-
-    final savedEmail = prefs.getString('saved_email');
-    final savedPassword = prefs.getString('saved_password');
-    
-    if (savedEmail == null || savedPassword == null) return;
-
-    final authenticated = await BiometricService.authenticate(
-      reason: 'Authentifiez-vous pour accéder à Mon Artisan',
-    );
-
-    if (authenticated && mounted) {
-      final authProvider = Provider.of<AuthProvider>(context, listen: false);
-      final success = await authProvider.signIn(savedEmail, savedPassword);
-
-      if (success && mounted) {
-        final role = authProvider.userModel?.role;
-        if (role == 'client') {
-          context.go(AppRouter.homeClient);
-        } else if (role == 'artisan') {
-          context.go(AppRouter.homeArtisan);
-        }
-      }
-    }
   }
 
   Future<void> _handleLogin() async {
@@ -90,17 +38,20 @@ class _LoginScreenState extends State<LoginScreen> {
       );
 
       if (success && mounted) {
-        // Proposer d'activer la biométrie si disponible et pas encore activée
-        if (_canUseBiometric && !_biometricEnabled) {
-          _showEnableBiometricDialog();
-        } else {
-          // Rediriger selon le rôle de l'utilisateur
-          final role = authProvider.userModel?.role;
-          if (role == 'client') {
-            context.go(AppRouter.homeClient);
-          } else if (role == 'artisan') {
-            context.go(AppRouter.homeArtisan);
-          }
+        final user = authProvider.userModel;
+        
+        // Vérifier si c'est un admin
+        if (user != null && user.hasRole('admin')) {
+          context.go(AppRouter.adminDashboard);
+          return;
+        }
+        
+        // Rediriger selon le rôle de l'utilisateur
+        final role = authProvider.userModel?.role;
+        if (role == 'client') {
+          context.go(AppRouter.homeClient);
+        } else if (role == 'artisan') {
+          context.go(AppRouter.homeArtisan);
         }
       } else if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -109,74 +60,6 @@ class _LoginScreenState extends State<LoginScreen> {
             backgroundColor: AppColors.accentRed,
           ),
         );
-      }
-    }
-  }
-
-  Future<void> _showEnableBiometricDialog() async {
-    final result = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text('Activer l\'authentification biométrique', style: AppTextStyles.h3),
-        content: Text(
-          'Voulez-vous activer l\'authentification par empreinte digitale ou reconnaissance faciale pour un accès rapide ?',
-          style: AppTextStyles.bodyMedium,
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Plus tard'),
-          ),
-          ElevatedButton(
-            onPressed: () => Navigator.pop(context, true),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.primaryBlue,
-            ),
-            child: const Text('Activer'),
-          ),
-        ],
-      ),
-    );
-
-    if (result == true && mounted) {
-      await _enableBiometric();
-    } else if (mounted) {
-      // Rediriger sans activer la biométrie
-      final authProvider = Provider.of<AuthProvider>(context, listen: false);
-      final role = authProvider.userModel?.role;
-      if (role == 'client') {
-        context.go(AppRouter.homeClient);
-      } else if (role == 'artisan') {
-        context.go(AppRouter.homeArtisan);
-      }
-    }
-  }
-
-  Future<void> _enableBiometric() async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool('biometric_enabled', true);
-    await prefs.setString('saved_email', _emailController.text.trim());
-    await prefs.setString('saved_password', _passwordController.text);
-
-    setState(() {
-      _biometricEnabled = true;
-    });
-
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Authentification biométrique activée'),
-          backgroundColor: AppColors.success,
-        ),
-      );
-
-      // Rediriger selon le rôle
-      final authProvider = Provider.of<AuthProvider>(context, listen: false);
-      final role = authProvider.userModel?.role;
-      if (role == 'client') {
-        context.go(AppRouter.homeClient);
-      } else if (role == 'artisan') {
-        context.go(AppRouter.homeArtisan);
       }
     }
   }
@@ -190,7 +73,13 @@ class _LoginScreenState extends State<LoginScreen> {
         elevation: 0,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: AppColors.primaryBlue),
-          onPressed: () => context.go(AppRouter.roleSelection),
+          onPressed: () {
+            if (Navigator.canPop(context)) {
+              Navigator.pop(context);
+            } else {
+              context.go(AppRouter.roleSelection);
+            }
+          },
         ),
       ),
       body: SafeArea(
@@ -272,36 +161,6 @@ class _LoginScreenState extends State<LoginScreen> {
                     );
                   },
                 ),
-                if (_canUseBiometric) ...[
-                  const SizedBox(height: 16),
-                  Center(
-                    child: Column(
-                      children: [
-                        Text(
-                          'ou',
-                          style: AppTextStyles.bodyMedium.copyWith(
-                            color: AppColors.greyMedium,
-                          ),
-                        ),
-                        const SizedBox(height: 16),
-                        IconButton(
-                          onPressed: _tryBiometricLogin,
-                          icon: const Icon(
-                            Icons.fingerprint,
-                            size: 48,
-                            color: AppColors.primaryBlue,
-                          ),
-                        ),
-                        Text(
-                          'Connexion biométrique',
-                          style: AppTextStyles.bodySmall.copyWith(
-                            color: AppColors.greyMedium,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
                 const SizedBox(height: 16),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
@@ -311,7 +170,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       style: AppTextStyles.bodyMedium,
                     ),
                     TextButton(
-                      onPressed: () => context.go(AppRouter.roleSelection),
+                      onPressed: () => Navigator.pop(context),
                       child: Text(
                         'S\'inscrire',
                         style: AppTextStyles.bodyMedium.copyWith(

@@ -1,5 +1,50 @@
 # Changelog - Mon Artisan
 
+## [Non publié] - 2026-05-06
+
+### ✨ Améliorations - Profil Artisan (Simplification pour utilisateurs illettrés)
+
+#### Interface simplifiée
+- **Dropdowns au lieu de champs texte** : Ville et Quartier sélectionnables facilement
+- **Bouton GPS optionnel** : "📍 Utiliser ma position actuelle" pour localisation précise
+- **Messages avec emojis** : ❌ pour erreurs, ✅ pour succès, 📍 pour localisation
+- **Terminologie adaptée** :
+  - "Zone de travail" au lieu de "Atelier" (plus général)
+  - "Photos de votre matériel" au lieu de "Photos de l'atelier"
+  - Messages courts et simples
+
+#### Amélioration des uploads
+- **Logs détaillés** : 📤 Upload, ✅ Succès, ❌ Erreur pour faciliter le debug
+- **Vérifications avant upload** :
+  - Taille fichier (max 5MB)
+  - Existence du fichier
+  - Connexion internet
+- **Messages d'erreur clairs** :
+  - "Pas de connexion internet" au lieu de "Network error"
+  - "Fichier trop volumineux" au lieu de "File size exceeded"
+  - "Pas d'autorisation" au lieu de "Permission denied"
+- **Chemins Storage corrects** : `artisans/{userId}/diplome/` et `artisans/{userId}/atelier/`
+
+#### Géolocalisation intelligente
+- **Sélection simple** : Ville → Quartier → GPS (optionnel)
+- **Géolocalisation automatique** : Si GPS non utilisé, l'adresse est géolocalisée
+- **Position précise** : Si GPS activé, coordonnées exactes enregistrées
+- **Fonctionne sans GPS** : Pas obligatoire, juste optionnel
+
+### 📚 Documentation
+- **DEBUG_RECHERCHE.md** : Ajout section "Upload de fichiers"
+  - Guide de vérification des règles Firebase Storage
+  - Checklist de test complète
+  - Commandes utiles pour debug
+  - Problèmes courants et solutions
+
+### 🔧 Fichiers Modifiés
+- `lib/screens/artisan/complete_profile_screen.dart` - Interface simplifiée
+- `lib/providers/artisan_provider.dart` - Meilleure gestion des uploads
+- `DEBUG_RECHERCHE.md` - Documentation étendue
+
+---
+
 ## [1.0.0] - 2026-05-06
 
 ### ✨ Nouvelles Fonctionnalités

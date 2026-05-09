@@ -20,6 +20,8 @@ class UserModel {
   final String? agentParrainId; // ID de l'agent qui a inscrit l'artisan
   final String? codeAgentParrain; // Code de parrainage de l'agent
   final DateTime? datePaiementInscription;
+  final bool? isBanned; // Si l'utilisateur est banni
+  final DateTime? bannedAt; // Date du bannissement
 
   UserModel({
     required this.id,
@@ -41,6 +43,8 @@ class UserModel {
     this.agentParrainId,
     this.codeAgentParrain,
     this.datePaiementInscription,
+    this.isBanned,
+    this.bannedAt,
   });
 
   // Getter pour compatibilité avec l'ancien code (retourne le premier rôle)
@@ -78,8 +82,12 @@ class UserModel {
       ville: data['ville'] ?? '',
       quartier: data['quartier'] ?? '',
       position: data['position'] ?? const GeoPoint(0, 0),
-      createdAt: (data['createdAt'] as Timestamp).toDate(),
-      updatedAt: (data['updatedAt'] as Timestamp).toDate(),
+      createdAt: data['createdAt'] != null 
+          ? (data['createdAt'] as Timestamp).toDate() 
+          : DateTime.now(),
+      updatedAt: data['updatedAt'] != null 
+          ? (data['updatedAt'] as Timestamp).toDate() 
+          : DateTime.now(),
       isActive: data['isActive'] ?? true,
       contratAccepte: data['contratAccepte'] ?? false,
       dateAcceptationContrat: data['dateAcceptationContrat'] != null 
@@ -90,6 +98,10 @@ class UserModel {
       codeAgentParrain: data['codeAgentParrain'],
       datePaiementInscription: data['datePaiementInscription'] != null 
           ? (data['datePaiementInscription'] as Timestamp).toDate() 
+          : null,
+      isBanned: data['isBanned'],
+      bannedAt: data['bannedAt'] != null 
+          ? (data['bannedAt'] as Timestamp).toDate() 
           : null,
     );
   }
@@ -117,6 +129,10 @@ class UserModel {
       'codeAgentParrain': codeAgentParrain,
       'datePaiementInscription': datePaiementInscription != null 
           ? Timestamp.fromDate(datePaiementInscription!) 
+          : null,
+      'isBanned': isBanned,
+      'bannedAt': bannedAt != null 
+          ? Timestamp.fromDate(bannedAt!) 
           : null,
     };
   }
@@ -147,6 +163,8 @@ class UserModel {
       agentParrainId: agentParrainId,
       codeAgentParrain: codeAgentParrain,
       datePaiementInscription: datePaiementInscription,
+      isBanned: isBanned,
+      bannedAt: bannedAt,
     );
   }
 }

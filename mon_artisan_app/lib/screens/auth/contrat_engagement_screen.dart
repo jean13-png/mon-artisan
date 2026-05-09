@@ -39,11 +39,14 @@ class _ContratEngagementScreenState extends State<ContratEngagementScreen> {
         'dateInscription': Timestamp.now(), // Pour calculer les 7 jours
       });
 
+      print('[SUCCESS] Contrat accepté');
+
       if (mounted) {
-        // Rediriger vers la configuration du PIN (pas la complétion de profil)
-        context.go(AppRouter.setupLocalAuth);
+        // Rediriger vers le dashboard artisan
+        context.go(AppRouter.homeArtisan);
       }
     } catch (e) {
+      print('[ERROR] Erreur acceptation contrat: $e');
       _showError('Erreur lors de l\'acceptation du contrat: $e');
     } finally {
       setState(() => _isLoading = false);

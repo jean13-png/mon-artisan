@@ -2,16 +2,17 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:go_router/go_router.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'dart:io';
 import '../../core/constants/colors.dart';
 import '../../core/constants/text_styles.dart';
-import '../../core/constants/villes_benin.dart';
 import '../../core/routes/app_router.dart';
 import '../../providers/auth_provider.dart';
 import '../../core/services/firebase_service.dart';
-import '../../core/services/geolocation_service.dart';
 import '../../widgets/custom_button.dart';
 import '../../widgets/loading_widget.dart';
+import '../../widgets/ville_quartier_selector.dart';
+import '../../widgets/position_client_widget.dart';
 
 class EditProfileScreen extends StatefulWidget {
   const EditProfileScreen({super.key});
@@ -29,10 +30,8 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   
   String? _selectedVille;
   String? _selectedQuartier;
-  List<String> _quartiers = [];
   File? _imageFile;
   bool _isLoading = false;
-  bool _isLoadingLocation = false;
 
   @override
   void initState() {
@@ -43,7 +42,6 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   void _loadUserData() {
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
     final user = authProvider.userModel;
-    
     if (user != null) {
       _nomController.text = user.nom;
       _prenomController.text = user.prenom;
@@ -51,17 +49,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       _emailController.text = user.email;
       _selectedVille = user.ville;
       _selectedQuartier = user.quartier;
-      
-      if (_selectedVille != null) {
-        _loadQuartiers(_selectedVille!);
-      }
     }
-  }
-
-  void _loadQuartiers(String ville) {
-    setState(() {
-      _quartiers = villesBenin[ville] ?? [];
-    });
   }
 
   Future<void> _pickImage() async {
@@ -77,34 +65,6 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       setState(() {
         _imageFile = File(pickedFile.path);
       });
-    }
-  }
-
-  Future<void> _updateLocation() async {
-    setState(() => _isLoadingLocation = true);
-    
-    try {
-      final position = await GeolocationService.getCurrentGeoPoint();
-      
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Localisation mise à jour'),
-            backgroundColor: AppColors.success,
-          ),
-        );
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Erreur: $e'),
-            backgroundColor: AppColors.error,
-          ),
-        );
-      }
-    } finally {
-      setState(() => _isLoadingLocation = false);
     }
   }
 
@@ -164,9 +124,21 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
           const SnackBar(
             content: Text('Profil mis à jour avec succès'),
             backgroundColor: AppColors.success,
+            duration: Duration(seconds: 2),
           ),
         );
-        Navigator.pop(context);
+
+        // Retour à l'écran précédent ou dashboard
+        if (Navigator.canPop(context)) {
+          Navigator.pop(context);
+        } else {
+          final updatedUser = authProvider.userModel;
+          if (updatedUser != null && updatedUser.hasRole('artisan')) {
+            context.go(AppRouter.homeArtisan);
+          } else {
+            context.go(AppRouter.homeClient);
+          }
+        }
       }
     } catch (e) {
       if (mounted) {
@@ -210,12 +182,15 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: AppColors.white),
           onPressed: () {
-            final authProvider = Provider.of<AuthProvider>(context, listen: false);
-            final role = authProvider.userModel?.role;
-            if (role == 'client') {
-              context.go(AppRouter.homeClient);
+            if (Navigator.canPop(context)) {
+              Navigator.pop(context);
             } else {
-              context.go(AppRouter.homeArtisan);
+              final authProvider = Provider.of<AuthProvider>(context, listen: false);
+              if (authProvider.userModel?.hasRole('artisan') == true) {
+                context.go(AppRouter.homeArtisan);
+              } else {
+                context.go(AppRouter.homeClient);
+              }
             }
           },
         ),
@@ -232,56 +207,91 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                 key: _formKey,
                 child: Column(
                   children: [
-                    GestureDetector(
-                      onTap: _pickImage,
-                      child: Stack(
-                        children: [
-                          Container(
-                            width: 120,
-                            height: 120,
-                            decoration: BoxDecoration(
-                              color: AppColors.primaryBlue.withOpacity(0.1),
-                              shape: BoxShape.circle,
-                              image: _imageFile != null
-                                  ? DecorationImage(
-                                      image: FileImage(_imageFile!),
-                                      fit: BoxFit.cover,
-                                    )
-                                  : user.photoUrl != null
-                                      ? DecorationImage(
-                                          image: NetworkImage(user.photoUrl!),
-                                          fit: BoxFit.cover,
-                                        )
-                                      : null,
-                            ),
-                            child: _imageFile == null && user.photoUrl == null
-                                ? const Icon(
-                                    Icons.person,
-                                    size: 60,
-                                    color: AppColors.primaryBlue,
-                                  )
-                                : null,
-                          ),
-                          Positioned(
-                            bottom: 0,
-                            right: 0,
-                            child: Container(
-                              padding: const EdgeInsets.all(8),
-                              decoration: const BoxDecoration(
-                                color: AppColors.primaryBlue,
+                    // Photo de profil (seulement pour les artisans)
+                    if (user.isArtisan)
+                      GestureDetector(
+                        onTap: _pickImage,
+                        child: Stack(
+                          children: [
+                            Container(
+                              width: 120,
+                              height: 120,
+                              decoration: BoxDecoration(
+                                color: AppColors.primaryBlue.withOpacity(0.1),
                                 shape: BoxShape.circle,
+                                image: _imageFile != null
+                                    ? DecorationImage(
+                                        image: FileImage(_imageFile!),
+                                        fit: BoxFit.cover,
+                                      )
+                                    : user.photoUrl != null
+                                        ? DecorationImage(
+                                            image: NetworkImage(user.photoUrl!),
+                                            fit: BoxFit.cover,
+                                          )
+                                        : null,
                               ),
-                              child: const Icon(
-                                Icons.camera_alt,
-                                color: AppColors.white,
-                                size: 20,
+                              child: _imageFile == null && user.photoUrl == null
+                                  ? const Icon(
+                                      Icons.person,
+                                      size: 60,
+                                      color: AppColors.primaryBlue,
+                                    )
+                                  : null,
+                            ),
+                            Positioned(
+                              bottom: 0,
+                              right: 0,
+                              child: Container(
+                                padding: const EdgeInsets.all(8),
+                                decoration: const BoxDecoration(
+                                  color: AppColors.primaryBlue,
+                                  shape: BoxShape.circle,
+                                ),
+                                child: const Icon(
+                                  Icons.camera_alt,
+                                  color: AppColors.white,
+                                  size: 20,
+                                ),
                               ),
                             ),
-                          ),
-                        ],
+                          ],
+                        ),
+                      )
+                    else
+                      // Avatar par défaut pour les clients (non modifiable)
+                      Container(
+                        width: 120,
+                        height: 120,
+                        decoration: BoxDecoration(
+                          color: AppColors.primaryBlue.withOpacity(0.1),
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(
+                          Icons.person,
+                          size: 60,
+                          color: AppColors.primaryBlue,
+                        ),
                       ),
-                    ),
-
+                    
+                    const SizedBox(height: 16),
+                    
+                    if (user.isArtisan)
+                      Text(
+                        'Appuyez pour changer la photo',
+                        style: AppTextStyles.bodySmall.copyWith(
+                          color: AppColors.greyDark,
+                        ),
+                      )
+                    else
+                      Text(
+                        '${user.prenom} ${user.nom}',
+                        style: AppTextStyles.h3.copyWith(
+                          color: AppColors.primaryBlue,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    
                     const SizedBox(height: 32),
 
                     TextField(
@@ -338,76 +348,35 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
 
                     const SizedBox(height: 16),
 
-                    DropdownButtonFormField<String>(
-                      value: _selectedVille,
-                      decoration: InputDecoration(
-                        labelText: 'Ville',
-                        prefixIcon: const Icon(Icons.location_city),
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                      ),
-                      items: villesBenin.keys.map((ville) {
-                        return DropdownMenuItem(
-                          value: ville,
-                          child: Text(ville),
-                        );
-                      }).toList(),
-                      onChanged: (value) {
+                    // ── Ville + Quartier intelligent ──────────────────────
+                    VilleQuartierSelector(
+                      initialVille: _selectedVille,
+                      initialQuartier: _selectedQuartier,
+                      required: true,
+                      onChanged: (ville, quartier) {
                         setState(() {
-                          _selectedVille = value;
-                          _selectedQuartier = null;
-                          if (value != null) {
-                            _loadQuartiers(value);
-                          }
+                          _selectedVille = ville;
+                          _selectedQuartier = quartier;
                         });
                       },
                     ),
 
                     const SizedBox(height: 16),
 
-                    DropdownButtonFormField<String>(
-                      value: _quartiers.contains(_selectedQuartier) ? _selectedQuartier : null,
-                      decoration: InputDecoration(
-                        labelText: 'Quartier',
-                        prefixIcon: const Icon(Icons.location_on),
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                      ),
-                      items: _quartiers.isEmpty 
-                        ? [const DropdownMenuItem(value: null, child: Text('Sélectionnez d\'abord une ville'))]
-                        : _quartiers.map((quartier) {
-                            return DropdownMenuItem(
-                              value: quartier,
-                              child: Text(quartier),
-                            );
-                          }).toList(),
-                      onChanged: _quartiers.isEmpty ? null : (value) {
-                        setState(() {
-                          _selectedQuartier = value;
-                        });
+                    // ── Mise à jour de position GPS ───────────────────────
+                    PositionClientWidget(
+                      userId: Provider.of<AuthProvider>(context, listen: false).userModel!.id,
+                      onPositionMiseAJour: (adresse) {
+                        // Mettre à jour ville/quartier si détectés
+                        if (adresse.ville.isNotEmpty) {
+                          setState(() {
+                            _selectedVille = adresse.ville;
+                            _selectedQuartier = adresse.quartier.isNotEmpty
+                                ? adresse.quartier
+                                : _selectedQuartier;
+                          });
+                        }
                       },
-                    ),
-
-                    const SizedBox(height: 16),
-
-                    OutlinedButton.icon(
-                      onPressed: _isLoadingLocation ? null : _updateLocation,
-                      icon: _isLoadingLocation
-                          ? const SizedBox(
-                              width: 16,
-                              height: 16,
-                              child: CircularProgressIndicator(strokeWidth: 2),
-                            )
-                          : const Icon(Icons.my_location),
-                      label: Text(_isLoadingLocation
-                          ? 'Mise à jour...'
-                          : 'Mettre à jour ma position'),
-                      style: OutlinedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(vertical: 16),
-                        side: const BorderSide(color: AppColors.primaryBlue),
-                      ),
                     ),
 
                     const SizedBox(height: 32),

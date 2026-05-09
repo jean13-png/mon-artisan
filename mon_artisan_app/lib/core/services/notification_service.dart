@@ -141,7 +141,7 @@ class NotificationService {
       );
 
       await _localNotifications.show(
-        DateTime.now().millisecond,
+        DateTime.now().millisecondsSinceEpoch % 2147483647, // Mi2 — ID unique (int max safe)
         title,
         body,
         details,

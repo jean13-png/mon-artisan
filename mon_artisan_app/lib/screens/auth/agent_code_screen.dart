@@ -25,7 +25,7 @@ class _AgentCodeScreenState extends State<AgentCodeScreen> {
     final code = _codeController.text.trim().toUpperCase();
     
     // Rediriger vers l'inscription avec le code agent (ou vide si skip)
-    context.go('${AppRouter.register}?role=artisan&codeAgent=$code');
+    context.push('${AppRouter.register}?role=artisan&codeAgent=$code');
   }
 
   @override
@@ -37,7 +37,7 @@ class _AgentCodeScreenState extends State<AgentCodeScreen> {
         elevation: 0,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: AppColors.white),
-          onPressed: () => context.go(AppRouter.roleSelection),
+          onPressed: () => Navigator.pop(context),
         ),
         title: Text(
           'Code agent',

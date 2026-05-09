@@ -29,6 +29,9 @@ dependencies:
   # Paiement FedaPay
   http: ^1.2.2
   
+  # Upload d'images Cloudinary
+  cloudinary_public: ^0.23.1
+  
   # UI/UX
   flutter_svg: ^2.0.10
   cached_network_image: ^3.4.1
@@ -49,12 +52,20 @@ dependencies:
   flutter_local_notifications: ^17.1.2
   flutter_dotenv: ^5.1.0
   url_launcher: ^6.3.1
-  local_auth: ^2.3.0
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^5.0.0
+  flutter_launcher_icons: ^0.13.1
+
+flutter_launcher_icons:
+  android: true
+  ios: true
+  image_path: "assets/images/logo_mon_artisan.png"
+  adaptive_icon_background: "#1E3A8A"
+  adaptive_icon_foreground: "assets/images/logo_mon_artisan.png"
+  remove_alpha_ios: true
 
 flutter:
   uses-material-design: true

@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../core/constants/colors.dart';
 import '../../core/constants/text_styles.dart';
+import '../../core/constants/app_constants.dart';
 import '../../core/routes/app_router.dart';
 import '../../providers/auth_provider.dart';
 import '../../core/services/fedapay_service.dart';
@@ -25,9 +27,11 @@ class _ArtisanPaymentScreenState extends State<ArtisanPaymentScreen> {
   final _codeController = TextEditingController();
   bool _isLoading = false;
   bool _isValidatingCode = false;
+  bool _isProcessingPayment = false;
   String? _agentName;
   String? _agentId;
   String? _errorMessage;
+  String? _transactionId;
 
   static const double FRAIS_INSCRIPTION = 958.0;
   static const double COMMISSION_AGENT = 200.0; // Commission pour l'agent
@@ -102,6 +106,12 @@ class _ArtisanPaymentScreenState extends State<ArtisanPaymentScreen> {
   }
 
   Future<void> _processPayment() async {
+    // ✅ PROTECTION: Empêcher double clic
+    if (_isProcessingPayment) {
+      print('[WARNING] Paiement déjà en cours, ignoré');
+      return;
+    }
+
     if (_agentId == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -123,12 +133,189 @@ class _ArtisanPaymentScreenState extends State<ArtisanPaymentScreen> {
       return;
     }
 
-    setState(() => _isLoading = true);
+    setState(() {
+      _isLoading = true;
+      _isProcessingPayment = true;
+    });
 
     try {
-      // Simuler le paiement FedaPay (en production, utiliser la vraie API)
-      // Pour le MVP, on enregistre directement le paiement
+      print('[INFO] Création transaction FedaPay pour inscription artisan...');
       
+      // ✅ Créer la transaction FedaPay
+      final transactionData = await FedaPayService.createTransaction(
+        amount: FRAIS_INSCRIPTION,
+        description: 'Inscription artisan - ${authProvider.userModel!.nom} ${authProvider.userModel!.prenom}',
+        customerEmail: authProvider.userModel!.email,
+        customerPhone: authProvider.userModel!.telephone,
+        commandeId: 'inscription_${authProvider.userModel!.id}_${DateTime.now().millisecondsSinceEpoch}',
+      );
+
+      // ✅ Vérifier que transactionData n'est pas null
+      if (transactionData == null) {
+        throw Exception('Réponse FedaPay vide (null)');
+      }
+
+      print('[SUCCESS] Transaction créée: ${transactionData['v1']?['id'] ?? 'ID manquant'}');
+      
+      // ✅ Vérifier que les données existent
+      if (transactionData['v1'] == null) {
+        throw Exception('Format de réponse FedaPay invalide');
+      }
+      
+      if (transactionData['v1']['id'] == null) {
+        throw Exception('ID transaction manquant');
+      }
+      
+      _transactionId = transactionData['v1']['id'].toString();
+      final paymentUrl = transactionData['v1']['url'] as String?;
+
+      if (paymentUrl == null || paymentUrl.isEmpty) {
+        throw Exception('URL de paiement non disponible');
+      }
+
+      // Ouvrir la page de paiement FedaPay
+      final uri = Uri.parse(paymentUrl);
+      
+      // ✅ En mode simulation, ne pas ouvrir le navigateur
+      if (AppConstants.simulateFedaPay) {
+        print('[SIMULATION] Paiement simulé, pas de redirection');
+        if (mounted) {
+          _showPaymentVerificationDialog();
+        }
+      } else if (await canLaunchUrl(uri)) {
+        await launchUrl(uri, mode: LaunchMode.externalApplication);
+        
+        // Attendre que l'utilisateur revienne et vérifier le statut
+        if (mounted) {
+          _showPaymentVerificationDialog();
+        }
+      } else {
+        throw Exception('Impossible d\'ouvrir la page de paiement');
+      }
+    } catch (e) {
+      print('[ERROR] Erreur paiement inscription: $e');
+      setState(() {
+        _isLoading = false;
+        _isProcessingPayment = false;
+      });
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Erreur lors du paiement: $e'),
+            backgroundColor: AppColors.error,
+          ),
+        );
+      }
+    }
+  }
+
+  void _showPaymentVerificationDialog() {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const CircularProgressIndicator(),
+            const SizedBox(height: 24),
+            Text(
+              'Vérification du paiement...',
+              style: AppTextStyles.h3,
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 12),
+            Text(
+              'Veuillez patienter',
+              style: AppTextStyles.bodyMedium,
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
+      ),
+    );
+
+    // Vérifier le statut après 5 secondes
+    Future.delayed(const Duration(seconds: 5), () {
+      _verifyPaymentStatus();
+    });
+  }
+
+  Future<void> _verifyPaymentStatus() async {
+    if (_transactionId == null) {
+      if (mounted) {
+        Navigator.of(context).pop(); // Fermer le dialog
+        setState(() {
+          _isLoading = false;
+          _isProcessingPayment = false;
+        });
+      }
+      return;
+    }
+
+    try {
+      print('[INFO] Vérification statut transaction $_transactionId...');
+      
+      final status = await FedaPayService.checkTransactionStatus(_transactionId!);
+      print('[INFO] Statut: $status');
+
+      if (status == 'approved' || status == 'completed') {
+        // ✅ Paiement réussi, enregistrer dans Firestore
+        await _enregistrerPaiement();
+        
+        if (mounted) {
+          Navigator.of(context).pop(); // Fermer le dialog de vérification
+          _showSuccessDialog();
+        }
+      } else if (status == 'pending') {
+        // Toujours en attente, revérifier
+        if (mounted) {
+          Future.delayed(const Duration(seconds: 3), () {
+            _verifyPaymentStatus();
+          });
+        }
+      } else {
+        // Échec ou annulé
+        if (mounted) {
+          Navigator.of(context).pop(); // Fermer le dialog
+          setState(() {
+            _isLoading = false;
+            _isProcessingPayment = false;
+          });
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Paiement ${status == 'canceled' ? 'annulé' : 'échoué'}'),
+              backgroundColor: AppColors.error,
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      print('[ERROR] Erreur vérification: $e');
+      if (mounted) {
+        Navigator.of(context).pop(); // Fermer le dialog
+        setState(() {
+          _isLoading = false;
+          _isProcessingPayment = false;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Erreur lors de la vérification: $e'),
+            backgroundColor: AppColors.error,
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _enregistrerPaiement() async {
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    
+    try {
       // Enregistrer le paiement dans Firestore
       final paymentData = {
         'userId': authProvider.userModel!.id,
@@ -137,8 +324,9 @@ class _ArtisanPaymentScreenState extends State<ArtisanPaymentScreen> {
         'montant': FRAIS_INSCRIPTION,
         'commissionAgent': COMMISSION_AGENT,
         'type': 'inscription_artisan',
-        'statut': 'completed', // En production: 'pending' puis 'completed'
-        'methode': 'mobile_money', // ou 'cash' si paiement en espèces à l'agent
+        'statut': 'completed',
+        'methode': 'fedapay',
+        'transactionId': _transactionId,
         'createdAt': Timestamp.now(),
       };
 
@@ -161,32 +349,69 @@ class _ArtisanPaymentScreenState extends State<ArtisanPaymentScreen> {
       // Créditer la commission de l'agent
       await _crediterAgent(_agentId!, COMMISSION_AGENT);
 
-      setState(() => _isLoading = false);
-
-      if (!mounted) return;
-
-      // Afficher un message de succès
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Paiement effectué avec succès !'),
-          backgroundColor: AppColors.success,
-        ),
-      );
-
-      // Rediriger vers le contrat d'engagement
-      context.go(AppRouter.contratEngagement);
+      print('[SUCCESS] Paiement inscription enregistré');
     } catch (e) {
-      setState(() => _isLoading = false);
-
-      if (!mounted) return;
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Erreur lors du paiement: $e'),
-          backgroundColor: AppColors.error,
-        ),
-      );
+      print('[ERROR] Erreur enregistrement paiement: $e');
+      throw e;
     }
+  }
+
+  void _showSuccessDialog() {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 80,
+              height: 80,
+              decoration: BoxDecoration(
+                color: AppColors.success.withOpacity(0.1),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(
+                Icons.check_circle,
+                color: AppColors.success,
+                size: 50,
+              ),
+            ),
+            const SizedBox(height: 24),
+            Text(
+              'Paiement réussi !',
+              style: AppTextStyles.h2.copyWith(
+                color: AppColors.success,
+              ),
+            ),
+            const SizedBox(height: 12),
+            Text(
+              'Votre inscription a été validée. Vous pouvez maintenant compléter votre profil.',
+              style: AppTextStyles.bodyMedium,
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 24),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+                context.go(AppRouter.contratEngagement);
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.success,
+                padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
+              ),
+              child: Text(
+                'Continuer',
+                style: AppTextStyles.button.copyWith(color: AppColors.white),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   Future<void> _crediterAgent(String agentId, double montant) async {
@@ -457,7 +682,7 @@ class _ArtisanPaymentScreenState extends State<ArtisanPaymentScreen> {
 
                   // Note
                   Text(
-                    'Note: Le paiement est sécurisé via Mobile Money (MTN, Moov)',
+                    'Note: Le paiement est sécurisé via FedaPay (Mobile Money)',
                     style: AppTextStyles.bodySmall.copyWith(
                       color: AppColors.greyDark,
                       fontStyle: FontStyle.italic,

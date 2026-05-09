@@ -28,6 +28,13 @@ class ArtisanModel {
   final String? cip; // Numéro CIP (Carte d'Identité Professionnelle)
   final List<String> atelierPhotos; // Photos de l'atelier/matériel
   final String? atelierAdresse; // Adresse de l'atelier
+  
+  // Disponibilité dynamique
+  final String? commandeEnCours; // ID de la commande en cours
+  final String? raisonIndisponibilite; // 'commande_en_cours', 'conge', 'autre'
+  final DateTime? dateDebutIndisponibilite;
+  final DateTime? dateFinIndisponibilite;
+  
   final DateTime createdAt;
   final DateTime updatedAt;
   
@@ -66,6 +73,10 @@ class ArtisanModel {
     this.cip,
     this.atelierPhotos = const [],
     this.atelierAdresse,
+    this.commandeEnCours,
+    this.raisonIndisponibilite,
+    this.dateDebutIndisponibilite,
+    this.dateFinIndisponibilite,
     required this.createdAt,
     required this.updatedAt,
     this.nom,
@@ -74,6 +85,11 @@ class ArtisanModel {
     this.telephone,
     this.email,
   });
+  
+  // Calculer si vraiment disponible
+  bool get estRealementDisponible {
+    return disponibilite && commandeEnCours == null;
+  }
 
   factory ArtisanModel.fromFirestore(DocumentSnapshot doc) {
     Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
@@ -105,6 +121,14 @@ class ArtisanModel {
       cip: data['cip'],
       atelierPhotos: List<String>.from(data['atelierPhotos'] ?? []),
       atelierAdresse: data['atelierAdresse'],
+      commandeEnCours: data['commandeEnCours'],
+      raisonIndisponibilite: data['raisonIndisponibilite'],
+      dateDebutIndisponibilite: data['dateDebutIndisponibilite'] != null 
+          ? (data['dateDebutIndisponibilite'] as Timestamp).toDate() 
+          : null,
+      dateFinIndisponibilite: data['dateFinIndisponibilite'] != null 
+          ? (data['dateFinIndisponibilite'] as Timestamp).toDate() 
+          : null,
       createdAt: (data['createdAt'] as Timestamp).toDate(),
       updatedAt: (data['updatedAt'] as Timestamp).toDate(),
       nom: data['nom'],
@@ -145,8 +169,22 @@ class ArtisanModel {
       'cip': cip,
       'atelierPhotos': atelierPhotos,
       'atelierAdresse': atelierAdresse,
+      'commandeEnCours': commandeEnCours,
+      'raisonIndisponibilite': raisonIndisponibilite,
+      'dateDebutIndisponibilite': dateDebutIndisponibilite != null
+          ? Timestamp.fromDate(dateDebutIndisponibilite!)
+          : null,
+      'dateFinIndisponibilite': dateFinIndisponibilite != null
+          ? Timestamp.fromDate(dateFinIndisponibilite!)
+          : null,
       'createdAt': Timestamp.fromDate(createdAt),
       'updatedAt': Timestamp.fromDate(updatedAt),
+      // Mi7 — Inclure les champs dénormalisés depuis UserModel
+      'nom': nom,
+      'prenom': prenom,
+      'photoUrl': photoUrl,
+      'telephone': telephone,
+      'email': email,
     };
   }
 }

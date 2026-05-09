@@ -1,0 +1,25 @@
+INSTRUCTIONS POUR VÉRIFIER LES ARTISANS DANS FIRESTORE:
+
+1. Va sur https://console.firebase.google.com
+2. Sélectionne ton projet "mon-artisan-6eccb"
+3. Clique sur "Firestore Database"
+4. Ouvre la collection "artisans"
+5. Vérifie pour chaque artisan:
+   - Le champ "metier" existe et contient exactement "Électricien" (avec accent)
+   - Le champ "isVerified" existe (true ou false)
+   - Le champ "disponibilite" existe (true ou false)
+   - Le champ "ville" existe
+
+PROBLÈMES POSSIBLES:
+- Métier écrit différemment: "electricien" vs "Électricien"
+- Champs manquants
+- Artisan créé manuellement sans tous les champs
+
+SOLUTION RAPIDE:
+Modifie un artisan existant et ajoute/corrige:
+- metier: "Électricien" (exactement comme ça)
+- isVerified: false
+- disponibilite: true
+- ville: "Cotonou"
+
+Puis teste la recherche dans l'app.

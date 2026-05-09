@@ -24,7 +24,13 @@ class _AgentsManagementScreenState extends State<AgentsManagementScreen> {
         elevation: 0,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: AppColors.white),
-          onPressed: () => context.go(AppRouter.adminDashboard),
+          onPressed: () {
+            if (Navigator.canPop(context)) {
+              Navigator.pop(context);
+            } else {
+              context.go(AppRouter.adminDashboard);
+            }
+          },
         ),
         title: Text(
           'Gestion des agents',

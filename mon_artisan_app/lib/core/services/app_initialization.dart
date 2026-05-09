@@ -14,9 +14,9 @@ class AppInitialization {
       // Initialiser les notifications
       await NotificationService.initialize();
 
-      print('✅ Application initialisée avec succès');
+      print('[SUCCESS] Application initialisée avec succès');
     } catch (e) {
-      print('❌ Erreur lors de l\'initialisation: $e');
+      print('[ERROR] Erreur lors de l\'initialisation: $e');
       rethrow;
     }
   }

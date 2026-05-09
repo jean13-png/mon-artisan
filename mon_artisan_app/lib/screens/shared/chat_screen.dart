@@ -5,17 +5,15 @@ import 'package:go_router/go_router.dart';
 import '../../core/constants/colors.dart';
 import '../../core/constants/text_styles.dart';
 import '../../core/routes/app_router.dart';
+import '../../core/services/chat_service.dart';
 import '../../providers/auth_provider.dart';
-import '../../core/services/firebase_service.dart';
 
 class ChatScreen extends StatefulWidget {
-  final String commandeId;
   final String otherUserId;
   final String otherUserName;
 
   const ChatScreen({
     super.key,
-    required this.commandeId,
     required this.otherUserId,
     required this.otherUserName,
   });
@@ -27,7 +25,43 @@ class ChatScreen extends StatefulWidget {
 class _ChatScreenState extends State<ChatScreen> {
   final _messageController = TextEditingController();
   final _scrollController = ScrollController();
-  bool _showWarning = true;
+  String? _chatId;
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _initializeChat();
+  }
+
+  Future<void> _initializeChat() async {
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    final currentUserId = authProvider.userModel!.id;
+    final currentUserName = '${authProvider.userModel!.prenom} ${authProvider.userModel!.nom}';
+
+    try {
+      final chatId = await ChatService.getOrCreateChat(
+        currentUserId: currentUserId,
+        otherUserId: widget.otherUserId,
+        currentUserName: currentUserName,
+        otherUserName: widget.otherUserName,
+      );
+
+      setState(() {
+        _chatId = chatId;
+        _isLoading = false;
+      });
+
+      // Marquer les messages comme lus
+      await ChatService.markMessagesAsRead(
+        chatId: chatId,
+        userId: currentUserId,
+      );
+    } catch (e) {
+      print('[ERROR] Erreur initialisation chat: $e');
+      setState(() => _isLoading = false);
+    }
+  }
 
   @override
   void dispose() {
@@ -72,7 +106,7 @@ class _ChatScreenState extends State<ChatScreen> {
 
   Future<void> _sendMessage() async {
     final text = _messageController.text.trim();
-    if (text.isEmpty) return;
+    if (text.isEmpty || _chatId == null) return;
 
     // Vérifier si le message contient du contenu interdit
     if (_containsForbiddenContent(text)) {
@@ -114,17 +148,12 @@ class _ChatScreenState extends State<ChatScreen> {
     final currentUserId = authProvider.userModel!.id;
 
     try {
-      await FirebaseService.firestore
-          .collection('chats')
-          .doc(widget.commandeId)
-          .collection('messages')
-          .add({
-        'senderId': currentUserId,
-        'receiverId': widget.otherUserId,
-        'message': text,
-        'timestamp': Timestamp.now(),
-        'isRead': false,
-      });
+      await ChatService.sendMessage(
+        chatId: _chatId!,
+        senderId: currentUserId,
+        receiverId: widget.otherUserId,
+        message: text,
+      );
 
       _messageController.clear();
       _scrollToBottom();
@@ -155,6 +184,28 @@ class _ChatScreenState extends State<ChatScreen> {
     final authProvider = Provider.of<AuthProvider>(context);
     final currentUserId = authProvider.userModel!.id;
 
+    if (_isLoading) {
+      return Scaffold(
+        backgroundColor: AppColors.greyLight,
+        appBar: AppBar(
+          backgroundColor: AppColors.primaryBlue,
+          elevation: 0,
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back, color: AppColors.white),
+            onPressed: () => Navigator.pop(context),
+          ),
+          title: Text(
+            widget.otherUserName,
+            style: AppTextStyles.bodyLarge.copyWith(
+              color: AppColors.white,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ),
+        body: const Center(child: CircularProgressIndicator()),
+      );
+    }
+
     return Scaffold(
       backgroundColor: AppColors.greyLight,
       appBar: AppBar(
@@ -162,7 +213,7 @@ class _ChatScreenState extends State<ChatScreen> {
         elevation: 0,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: AppColors.white),
-          onPressed: () => context.go(AppRouter.homeClient),
+          onPressed: () => Navigator.pop(context),
         ),
         title: Row(
           children: [
@@ -194,69 +245,58 @@ class _ChatScreenState extends State<ChatScreen> {
       ),
       body: Column(
         children: [
-          // Message d'avertissement automatique
-          if (_showWarning)
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: AppColors.error.withOpacity(0.1),
-                border: Border(
-                  bottom: BorderSide(
-                    color: AppColors.error.withOpacity(0.3),
-                    width: 1,
-                  ),
+          // Message d'avertissement avec apparence douce
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: AppColors.warning.withOpacity(0.1),
+              border: Border(
+                left: BorderSide(
+                  color: AppColors.warning,
+                  width: 4,
                 ),
               ),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Icon(
-                    Icons.warning_amber_rounded,
-                    color: AppColors.error,
-                    size: 20,
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'AVERTISSEMENT IMPORTANT',
-                          style: AppTextStyles.bodySmall.copyWith(
-                            color: AppColors.error,
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          'Tout appel ou échange en dehors de la plateforme Mon Artisan (WhatsApp, SMS, appel direct...) est strictement interdit. En cas de litige survenant suite à une communication externe, la plateforme se désengage totalement de toute responsabilité. Pour votre sécurité, utilisez UNIQUEMENT la messagerie officielle.',
-                          style: AppTextStyles.bodySmall.copyWith(
-                            color: AppColors.error,
-                            fontSize: 11,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  IconButton(
-                    icon: Icon(Icons.close, size: 18, color: AppColors.error),
-                    padding: EdgeInsets.zero,
-                    constraints: const BoxConstraints(),
-                    onPressed: () {
-                      setState(() {
-                        _showWarning = false;
-                      });
-                    },
-                  ),
-                ],
-              ),
             ),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Icon(
+                  Icons.info_outline,
+                  color: AppColors.warning,
+                  size: 24,
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Communication officielle',
+                        style: AppTextStyles.bodyMedium.copyWith(
+                          color: AppColors.greyDark,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      Text(
+                        'Toutes les transactions et communications doivent se faire uniquement via Mon Artisan. Tout échange externe (WhatsApp, appel, SMS) dégage la plateforme de toute responsabilité en cas de litige.',
+                        style: AppTextStyles.bodySmall.copyWith(
+                          color: AppColors.greyDark,
+                          height: 1.4,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
           Expanded(
             child: StreamBuilder<QuerySnapshot>(
-              stream: FirebaseService.firestore
+              stream: FirebaseFirestore.instance
                   .collection('chats')
-                  .doc(widget.commandeId)
+                  .doc(_chatId)
                   .collection('messages')
                   .orderBy('timestamp', descending: false)
                   .snapshots(),

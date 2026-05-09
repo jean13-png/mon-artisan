@@ -34,12 +34,18 @@ class AuthProvider extends ChangeNotifier {
 
   Future<void> _loadUserData(String userId) async {
     try {
+      print('[LOAD] Loading user data for: $userId');
       final doc = await FirebaseService.usersCollection.doc(userId).get();
       if (doc.exists) {
+        print('[INFO] Document exists, data: ${doc.data()}');
         _userModel = UserModel.fromFirestore(doc);
+        print('[SUCCESS] UserModel created: roles=${_userModel?.roles}, hasAdmin=${_userModel?.hasRole('admin')}');
         notifyListeners();
+      } else {
+        print('[ERROR] Document does not exist');
       }
     } catch (e) {
+      print('[ERROR] Error loading user data: $e');
       _errorMessage = 'Erreur lors du chargement des données utilisateur';
       notifyListeners();
     }
@@ -78,6 +84,7 @@ class AuthProvider extends ChangeNotifier {
     required String ville,
     required String quartier,
     required GeoPoint position,
+    String? metier, // ✅ Ajout du paramètre métier
   }) async {
     _isLoading = true;
     _errorMessage = null;
@@ -111,7 +118,7 @@ class AuthProvider extends ChangeNotifier {
         
         // Si le nouveau rôle est artisan, créer le profil artisan
         if (role == 'artisan') {
-          await _createBasicArtisanProfile(existingUser.id, updatedUser);
+          await _createBasicArtisanProfile(existingUser.id, updatedUser, metier: metier);
         }
         
         // Si l'utilisateur n'est pas encore connecté, le connecter
@@ -146,7 +153,7 @@ class AuthProvider extends ChangeNotifier {
 
       // Si c'est un artisan, créer un profil artisan de base
       if (role == 'artisan') {
-        await _createBasicArtisanProfile(userId, newUser);
+        await _createBasicArtisanProfile(userId, newUser, metier: metier);
       }
 
       _isLoading = false;
@@ -240,17 +247,78 @@ class AuthProvider extends ChangeNotifier {
     return _userModel != null && _userModel!.roles.length > 1;
   }
 
-  // Créer un profil artisan de base lors de l'inscription
-  Future<void> _createBasicArtisanProfile(String userId, UserModel user) async {
+  // C8 — Créer un profil artisan de base lors de l'inscription
+  // Utilise .set() avec l'UID comme ID de document (pas .add() qui génère un ID aléatoire)
+  Future<void> _createBasicArtisanProfile(String userId, UserModel user, {String? metier}) async {
     try {
+      // Mo6 — Catégories alignées avec metiers_data.dart (10 catégories complètes)
+      String finalMetier = metier ?? 'Artisan';
+      String metierCategorie = 'Autre';
+
+      if (metier != null && metier.isNotEmpty) {
+        const Map<String, List<String>> metiersByCategorie = {
+          'BTP & Construction': [
+            'Électricien', 'Plombier', 'Maçon', 'Peintre', 'Menuisier',
+            'Carreleur', 'Charpentier', 'Soudeur', 'Plafonneur',
+            'Serrurier / Métallier', 'Couvreur / Zingueur', 'Vitrier / Miroitier',
+            'Poseur de Parquet', 'Poseur Faux-Plafond',
+          ],
+          'Énergie & Climatisation': [
+            'Panneaux Solaires', 'Climatisation', 'Chauffagiste',
+            'Installateur Gaz', 'Électricité Industrielle',
+          ],
+          'Aménagement & Finitions': [
+            'Paysagiste', 'Étanchéité', 'Isolation Thermique',
+            'Plâtrier / Stucateur', 'Peintre Industriel',
+          ],
+          'Gros Œuvre': [
+            'Démolition', 'Terrassement', 'Béton Armé / Ferrailleur',
+            'Coffreur / Bancheur', 'Échafaudeur',
+          ],
+          'Études & Conception': [
+            'Architecte / Dessinateur', 'Bureau d\'étude BTP',
+            'Géotechnicien', 'Topographe', 'Expert en Bâtiment',
+          ],
+          'Équipements & Installations': [
+            'Ascensoriste', 'Domotique / Smart Home', 'Alarme / Sécurité',
+            'Technicien Fibre Optique',
+          ],
+          'Eau & Assainissement': [
+            'Foreur / Puits', 'Assainissement', 'Construction Piscine',
+          ],
+          'Services & Maintenance': [
+            'Rénovation Générale', 'Nettoyage Chantier',
+            'Location Engins BTP', 'Monteur Préfabriqué',
+          ],
+          'Services à la personne': [
+            'Coiffeuse', 'Maquilleuse', 'Esthéticienne', 'Tresse africaine',
+            'Femme de ménage', 'Nounou', 'Garde malade',
+          ],
+          'Événementiel': [
+            'Traiteur', 'Pâtissier', 'Décorateur', 'Photographe',
+            'Vidéaste', 'DJ', 'Wedding planner',
+          ],
+          'Réparation': [
+            'Mécanicien', 'Carrossier', 'Réparateur téléphone',
+          ],
+        };
+
+        for (final entry in metiersByCategorie.entries) {
+          if (entry.value.contains(metier)) {
+            metierCategorie = entry.key;
+            break;
+          }
+        }
+      }
+
       final artisanData = {
         'userId': userId,
-        'metier': 'Artisan', // Sera mis à jour lors de la complétion
-        'metierCategorie': 'Autre',
+        'metier': finalMetier,
+        'metierCategorie': metierCategorie,
         'description': '',
         'experience': 0,
         'tarifs': {'horaire': 5000},
-        'disponibilite': false, // Désactivé jusqu'à validation
+        'disponibilite': false,
         'rayonAction': 10.0,
         'position': user.position,
         'geohash': '',
@@ -268,6 +336,7 @@ class AuthProvider extends ChangeNotifier {
         'isProfileComplete': false,
         'diplome': null,
         'cip': null,
+        'cipPhoto': null,
         'atelierPhotos': [],
         'atelierAdresse': null,
         'nom': user.nom,
@@ -279,12 +348,15 @@ class AuthProvider extends ChangeNotifier {
         'updatedAt': Timestamp.now(),
       };
 
+      // C8 — Utiliser .set() avec l'UID comme ID de document
+      // Cela garantit l'unicité (pas de doublons si l'inscription est appelée deux fois)
+      // et permet les règles Firestore basées sur l'ID du document.
       await FirebaseService.firestore
           .collection('artisans')
-          .add(artisanData);
+          .doc(userId) // ← ID = UID Firebase Auth
+          .set(artisanData, SetOptions(merge: true)); // merge: true = idempotent
     } catch (e) {
       print('Erreur création profil artisan: $e');
-      // Ne pas bloquer l'inscription si la création du profil échoue
     }
   }
 }

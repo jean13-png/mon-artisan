@@ -6,8 +6,10 @@ import '../../core/constants/text_styles.dart';
 import '../../core/routes/app_router.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/commande_provider.dart';
+import '../../models/commande_model.dart';
 import '../../widgets/loading_widget.dart';
 import 'rate_artisan_screen.dart';
+import 'devis_detail_screen.dart';
 
 class CommandesHistoryScreen extends StatefulWidget {
   const CommandesHistoryScreen({super.key});
@@ -41,11 +43,16 @@ class _CommandesHistoryScreenState extends State<CommandesHistoryScreen> {
         : commandeProvider.commandes.where((c) {
             switch (_selectedFilter) {
               case 'En cours':
-                return c.statut == 'en_attente' || c.statut == 'acceptee' || c.statut == 'en_cours';
+                return c.statut == 'en_attente' ||
+                    c.statut == 'diagnostic_demande' ||
+                    c.statut == 'devis_envoye' ||
+                    c.statut == 'devis_accepte' ||
+                    c.statut == 'acceptee' ||
+                    c.statut == 'en_cours';
               case 'Terminées':
-                return c.statut == 'terminee';
+                return c.statut == 'terminee' || c.statut == 'validee';
               case 'Annulées':
-                return c.statut == 'annulee';
+                return c.statut == 'annulee' || c.statut == 'devis_refuse' || c.statut == 'refusee';
               default:
                 return true;
             }
@@ -59,7 +66,7 @@ class _CommandesHistoryScreenState extends State<CommandesHistoryScreen> {
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: AppColors.white),
           onPressed: () {
-            context.go(AppRouter.homeClient);
+            Navigator.pop(context);
           },
         ),
         title: Text(
@@ -174,7 +181,15 @@ class _CommandesHistoryScreenState extends State<CommandesHistoryScreen> {
   Widget _buildCommandeCard(dynamic commande) {
     return GestureDetector(
       onTap: () {
-        // TODO: Navigate to commande detail for client
+        // Naviguer vers le détail selon le statut
+        if (commande.statut == 'devis_envoye') {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => DevisDetailScreen(commande: commande as CommandeModel),
+            ),
+          );
+        }
       },
       child: Container(
         margin: const EdgeInsets.only(bottom: 16),
@@ -269,13 +284,37 @@ class _CommandesHistoryScreenState extends State<CommandesHistoryScreen> {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
-                  '${commande.montant.toStringAsFixed(0)} FCFA',
+                  commande.montant > 0 
+                      ? '${commande.montant.toStringAsFixed(0)} FCFA'
+                      : 'En attente de devis',
                   style: AppTextStyles.bodyLarge.copyWith(
-                    color: AppColors.primaryBlue,
+                    color: commande.montant > 0 ? AppColors.primaryBlue : AppColors.warning,
                     fontWeight: FontWeight.w600,
                   ),
                 ),
-                if (commande.statut == 'terminee' && commande.paiementStatut != 'debloque')
+                if (commande.statut == 'devis_envoye')
+                  ElevatedButton(
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => DevisDetailScreen(commande: commande),
+                        ),
+                      );
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.primaryBlue,
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    ),
+                    child: Text(
+                      'Voir le devis',
+                      style: AppTextStyles.bodySmall.copyWith(
+                        color: AppColors.white,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  )
+                else if (commande.statut == 'terminee' && commande.paiementStatut == 'bloque')
                   ElevatedButton(
                     onPressed: () => _validerPrestation(commande.id),
                     style: ElevatedButton.styleFrom(
@@ -290,7 +329,22 @@ class _CommandesHistoryScreenState extends State<CommandesHistoryScreen> {
                       ),
                     ),
                   )
-                else if (commande.statut == 'terminee' && commande.paiementStatut == 'debloque')
+                else if (commande.statut == 'terminee' && commande.paiementStatut != 'bloque')
+                  ElevatedButton(
+                    onPressed: () => _effectuerPaiement(commande),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.primaryBlue,
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    ),
+                    child: Text(
+                      'Payer',
+                      style: AppTextStyles.bodySmall.copyWith(
+                        color: AppColors.white,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  )
+                else if ((commande.statut == 'validee' || commande.paiementStatut == 'debloque') && commande.noteArtisan == null)
                   TextButton(
                     onPressed: () async {
                       final result = await Navigator.push(
@@ -299,13 +353,11 @@ class _CommandesHistoryScreenState extends State<CommandesHistoryScreen> {
                           builder: (context) => RateArtisanScreen(
                             commandeId: commande.id,
                             artisanId: commande.artisanId,
-                            artisanName: 'Artisan', // TODO: Get artisan name
+                            artisanName: 'Artisan',
                           ),
                         ),
                       );
-                      
                       if (result == true && context.mounted) {
-                        // Recharger les commandes
                         final authProvider = Provider.of<AuthProvider>(context, listen: false);
                         if (authProvider.userModel != null) {
                           Provider.of<CommandeProvider>(context, listen: false)
@@ -384,13 +436,24 @@ class _CommandesHistoryScreenState extends State<CommandesHistoryScreen> {
   Color _getStatutColor(String statut) {
     switch (statut) {
       case 'en_attente':
+      case 'diagnostic_demande':
         return AppColors.warning;
+      case 'devis_envoye':
+        return AppColors.primaryBlue;
+      case 'devis_accepte':
+        return AppColors.success;
+      case 'devis_refuse':
+        return AppColors.error;
       case 'acceptee':
       case 'en_cours':
         return AppColors.primaryBlue;
       case 'terminee':
+        return AppColors.warning;
+      case 'validee':
         return AppColors.success;
       case 'annulee':
+        return AppColors.error;
+      case 'refusee':
         return AppColors.error;
       default:
         return AppColors.greyDark;
@@ -401,14 +464,26 @@ class _CommandesHistoryScreenState extends State<CommandesHistoryScreen> {
     switch (statut) {
       case 'en_attente':
         return 'En attente';
+      case 'diagnostic_demande':
+        return 'Diagnostic demandé';
+      case 'devis_envoye':
+        return 'Devis reçu';
+      case 'devis_accepte':
+        return 'Devis accepté';
+      case 'devis_refuse':
+        return 'Devis refusé';
       case 'acceptee':
         return 'Acceptée';
       case 'en_cours':
         return 'En cours';
       case 'terminee':
-        return 'Terminée';
+        return 'À valider';
+      case 'validee':
+        return 'Validée';
       case 'annulee':
         return 'Annulée';
+      case 'refusee':
+        return 'Refusée';
       default:
         return statut;
     }
@@ -485,6 +560,112 @@ class _CommandesHistoryScreenState extends State<CommandesHistoryScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(commandeProvider.errorMessage ?? 'Erreur lors de la validation'),
+          backgroundColor: AppColors.error,
+        ),
+      );
+    }
+  }
+
+  Future<void> _effectuerPaiement(dynamic commande) async {
+    // Dialogue de confirmation
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(
+          'Effectuer le paiement',
+          style: AppTextStyles.h3,
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Montant à payer: ${commande.montant.toStringAsFixed(0)} FCFA',
+              style: AppTextStyles.bodyLarge.copyWith(
+                fontWeight: FontWeight.w600,
+                color: AppColors.primaryBlue,
+              ),
+            ),
+            const SizedBox(height: 12),
+            Text(
+              'Le travail a été terminé. Confirmez-vous le paiement ?',
+              style: AppTextStyles.bodyMedium,
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'L\'argent sera crédité sur le portefeuille de l\'artisan.',
+              style: AppTextStyles.bodySmall.copyWith(
+                color: AppColors.greyDark,
+                fontStyle: FontStyle.italic,
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: Text(
+              'Annuler',
+              style: AppTextStyles.bodyMedium.copyWith(
+                color: AppColors.greyDark,
+              ),
+            ),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.primaryBlue,
+            ),
+            child: Text(
+              'Payer',
+              style: AppTextStyles.bodyMedium.copyWith(
+                color: AppColors.white,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true) return;
+
+    // Afficher un loader
+    if (!mounted) return;
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const Center(
+        child: CircularProgressIndicator(),
+      ),
+    );
+
+    // Effectuer le paiement
+    final commandeProvider = Provider.of<CommandeProvider>(context, listen: false);
+    final success = await commandeProvider.effectuerPaiement(commande.id);
+
+    // Fermer le loader
+    if (!mounted) return;
+    Navigator.pop(context);
+
+    // Afficher le résultat
+    if (success) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Paiement effectué ! L\'artisan a été crédité.'),
+          backgroundColor: AppColors.success,
+          duration: Duration(seconds: 3),
+        ),
+      );
+      
+      // Recharger les commandes
+      final authProvider = Provider.of<AuthProvider>(context, listen: false);
+      if (authProvider.userModel != null) {
+        await commandeProvider.loadClientCommandes(authProvider.userModel!.id);
+      }
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(commandeProvider.errorMessage ?? 'Erreur lors du paiement'),
           backgroundColor: AppColors.error,
         ),
       );

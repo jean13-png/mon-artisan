@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../core/constants/colors.dart';
 import '../../core/constants/text_styles.dart';
 import '../../core/routes/app_router.dart';
 import '../../models/artisan_model.dart';
 import '../../widgets/custom_button.dart';
+import '../shared/chat_screen.dart';
 
 class ArtisanProfileScreen extends StatelessWidget {
   final ArtisanModel artisan;
@@ -24,7 +26,7 @@ class ArtisanProfileScreen extends StatelessWidget {
             backgroundColor: AppColors.primaryBlue,
             leading: IconButton(
               icon: const Icon(Icons.arrow_back, color: AppColors.white),
-              onPressed: () => context.go(AppRouter.homeClient),
+              onPressed: () => Navigator.pop(context),
             ),
             flexibleSpace: FlexibleSpaceBar(
               background: artisan.photoUrl != null
@@ -220,7 +222,11 @@ class ArtisanProfileScreen extends StatelessWidget {
                           Expanded(
                             child: _buildTarifCard(
                               'Tarif horaire',
-                              '${artisan.tarifs['tarifHoraire']} FCFA',
+                              artisan.tarifs['tarifHoraire'] != null 
+                                  ? '${artisan.tarifs['tarifHoraire']} FCFA'
+                                  : (artisan.tarifs['horaire'] != null 
+                                      ? '${artisan.tarifs['horaire']} FCFA'
+                                      : 'Sur devis'),
                               Icons.access_time,
                             ),
                           ),
@@ -228,7 +234,11 @@ class ArtisanProfileScreen extends StatelessWidget {
                           Expanded(
                             child: _buildTarifCard(
                               'Tarif journalier',
-                              '${artisan.tarifs['tarifJournalier']} FCFA',
+                              artisan.tarifs['tarifJournalier'] != null 
+                                  ? '${artisan.tarifs['tarifJournalier']} FCFA'
+                                  : (artisan.tarifs['journalier'] != null 
+                                      ? '${artisan.tarifs['journalier']} FCFA'
+                                      : 'Sur devis'),
                               Icons.calendar_today,
                             ),
                           ),
@@ -412,8 +422,22 @@ class ArtisanProfileScreen extends StatelessWidget {
           child: Row(
             children: [
               IconButton(
-                onPressed: () {
-                  // TODO: Appeler l'artisan
+                onPressed: () async {
+                  // Appeler l'artisan si le numéro est disponible
+                  final tel = artisan.telephone;
+                  if (tel == null || tel.isEmpty) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Numéro non disponible'),
+                        backgroundColor: AppColors.error,
+                      ),
+                    );
+                    return;
+                  }
+                  final uri = Uri(scheme: 'tel', path: tel);
+                  if (await canLaunchUrl(uri)) {
+                    await launchUrl(uri);
+                  }
                 },
                 icon: const Icon(
                   Icons.phone,
@@ -424,13 +448,36 @@ class ArtisanProfileScreen extends StatelessWidget {
                   padding: const EdgeInsets.all(12),
                 ),
               ),
+              const SizedBox(width: 8),
+              IconButton(
+                onPressed: () {
+                  // Ouvrir le chat avec l'artisan
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => ChatScreen(
+                        otherUserId: artisan.userId,
+                        otherUserName: artisan.fullName.isNotEmpty ? artisan.fullName : 'Artisan',
+                      ),
+                    ),
+                  );
+                },
+                icon: const Icon(
+                  Icons.chat_bubble_outline,
+                  color: AppColors.success,
+                ),
+                style: IconButton.styleFrom(
+                  backgroundColor: AppColors.success.withOpacity(0.1),
+                  padding: const EdgeInsets.all(12),
+                ),
+              ),
               const SizedBox(width: 12),
               Expanded(
                 child: CustomButton(
                   text: 'Commander',
                   onPressed: () {
-                    context.go(
-                      AppRouter.createCommande,
+                    context.push(
+                      AppRouter.selectCommandeType,
                       extra: artisan,
                     );
                   },

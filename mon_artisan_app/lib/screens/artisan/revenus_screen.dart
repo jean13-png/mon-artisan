@@ -19,6 +19,7 @@ class RevenusScreen extends StatefulWidget {
 
 class _RevenusScreenState extends State<RevenusScreen> {
   String _selectedPeriod = 'mois';
+  final _firestore = FirebaseFirestore.instance;
 
   @override
   Widget build(BuildContext context) {
@@ -46,7 +47,11 @@ class _RevenusScreenState extends State<RevenusScreen> {
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: AppColors.white),
           onPressed: () {
-            context.go(AppRouter.homeArtisan);
+            if (Navigator.canPop(context)) {
+              Navigator.pop(context);
+            } else {
+              context.go(AppRouter.homeArtisan);
+            }
           },
         ),
         title: Text(
@@ -353,7 +358,7 @@ class _RevenusScreenState extends State<RevenusScreen> {
 
   void _showWithdrawalDialog(BuildContext context, double montantDisponible) {
     final montantController = TextEditingController();
-    
+
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -364,10 +369,8 @@ class _RevenusScreenState extends State<RevenusScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Montant disponible: ${montantDisponible.toStringAsFixed(0)} FCFA',
-              style: AppTextStyles.bodyMedium.copyWith(
-                color: AppColors.greyDark,
-              ),
+              'Disponible: ${montantDisponible.toStringAsFixed(0)} FCFA',
+              style: AppTextStyles.bodyMedium.copyWith(color: AppColors.greyDark),
             ),
             const SizedBox(height: 16),
             TextField(
@@ -375,7 +378,7 @@ class _RevenusScreenState extends State<RevenusScreen> {
               keyboardType: TextInputType.number,
               decoration: InputDecoration(
                 labelText: 'Montant à retirer',
-                hintText: 'Ex: 10000',
+                hintText: 'Min. 5 000 FCFA',
                 suffixText: 'FCFA',
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(8),
@@ -390,21 +393,77 @@ class _RevenusScreenState extends State<RevenusScreen> {
             child: Text('Annuler', style: AppTextStyles.bodyMedium),
           ),
           ElevatedButton(
-            onPressed: () {
+            onPressed: () async {
               final montant = double.tryParse(montantController.text);
-              if (montant != null && montant >= 5000 && montant <= montantDisponible) {
-                Navigator.pop(context);
+              if (montant == null || montant < 5000) {
                 ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text('Demande de retrait de ${montant.toStringAsFixed(0)} FCFA envoyée'),
-                    backgroundColor: AppColors.success,
+                  const SnackBar(
+                    content: Text('Montant minimum: 5 000 FCFA'),
+                    backgroundColor: AppColors.error,
                   ),
                 );
+                return;
+              }
+              if (montant > montantDisponible) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Montant supérieur au solde disponible'),
+                    backgroundColor: AppColors.error,
+                  ),
+                );
+                return;
+              }
+
+              Navigator.pop(context);
+
+              try {
+                final artisanProvider =
+                    Provider.of<ArtisanProvider>(context, listen: false);
+                final artisan = artisanProvider.currentArtisan!;
+
+                // Enregistrer la demande de retrait dans Firestore
+                await _firestore.collection('retraits').add({
+                  'artisanId': artisan.userId,
+                  'artisanDocId': artisan.id,
+                  'montant': montant,
+                  'statut': 'en_attente',
+                  'createdAt': Timestamp.now(),
+                });
+
+                // Déduire du solde disponible
+                await _firestore
+                    .collection('artisans')
+                    .doc(artisan.id)
+                    .update({
+                  'revenusDisponibles':
+                      FieldValue.increment(-montant),
+                  'updatedAt': Timestamp.now(),
+                });
+
+                // Recharger le profil
+                await artisanProvider.loadArtisanProfile(artisan.userId);
+
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(
+                          'Demande de retrait de ${montant.toStringAsFixed(0)} FCFA envoyée'),
+                      backgroundColor: AppColors.success,
+                    ),
+                  );
+                }
+              } catch (e) {
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Erreur: $e'),
+                      backgroundColor: AppColors.error,
+                    ),
+                  );
+                }
               }
             },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.success,
-            ),
+            style: ElevatedButton.styleFrom(backgroundColor: AppColors.success),
             child: Text('Confirmer', style: AppTextStyles.button),
           ),
         ],

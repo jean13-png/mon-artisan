@@ -5,6 +5,8 @@ class CommandeModel {
   final String clientId;
   final String artisanId;
   final String metier;
+  final String typeCommande; // 'panne_connue' ou 'diagnostic_requis'
+  final String titre; // Titre de la commande
   final String description;
   final String adresse;
   final GeoPoint position;
@@ -14,6 +16,14 @@ class CommandeModel {
   final String heureIntervention;
   final String statut;
   final double montant;
+  final double? montantDevis; // Montant proposé par l'artisan dans le devis
+  final String? messageDevis; // Message de l'artisan avec le devis
+  final double? fraisDeplacement; // Frais de déplacement pour diagnostic (500-1000 FCFA)
+  final bool? fraisDeplacementPayes; // Si les frais de déplacement ont été payés
+  final String? fedapayTransactionIdDeplacement; // ID transaction FedaPay pour frais déplacement
+  final double? distanceKm; // Distance calculée entre artisan et client
+  final DateTime? dateDevis; // Date d'envoi du devis
+  final DateTime? dateAcceptationDevis; // Date d'acceptation du devis par le client
   final double commission;
   final double montantArtisan;
   final String paiementStatut; // 'en_attente', 'bloque', 'debloque', 'rembourse'
@@ -25,6 +35,13 @@ class CommandeModel {
   final double? noteArtisan;
   final String? commentaireClient;
   final String? commentaireArtisan;
+  
+  // Partage de localisation
+  final GeoPoint? clientPosition; // Position GPS exacte du client
+  final String? clientAdresseExacte; // Adresse complète récupérée via geocoding
+  final bool clientPositionPartagee; // Si le client a partagé sa position
+  final DateTime? datePartagePosition; // Date du partage de position
+  
   final DateTime createdAt;
   final DateTime? acceptedAt;
   final DateTime? completedAt;
@@ -35,6 +52,8 @@ class CommandeModel {
     required this.clientId,
     required this.artisanId,
     required this.metier,
+    this.typeCommande = 'panne_connue', // Par défaut
+    this.titre = '',
     required this.description,
     required this.adresse,
     required this.position,
@@ -44,6 +63,14 @@ class CommandeModel {
     required this.heureIntervention,
     this.statut = 'en_attente',
     required this.montant,
+    this.montantDevis,
+    this.messageDevis,
+    this.fraisDeplacement,
+    this.fraisDeplacementPayes,
+    this.fedapayTransactionIdDeplacement,
+    this.distanceKm,
+    this.dateDevis,
+    this.dateAcceptationDevis,
     required this.commission,
     required this.montantArtisan,
     this.paiementStatut = 'en_attente',
@@ -55,6 +82,10 @@ class CommandeModel {
     this.noteArtisan,
     this.commentaireClient,
     this.commentaireArtisan,
+    this.clientPosition,
+    this.clientAdresseExacte,
+    this.clientPositionPartagee = false,
+    this.datePartagePosition,
     required this.createdAt,
     this.acceptedAt,
     this.completedAt,
@@ -68,6 +99,8 @@ class CommandeModel {
       clientId: data['clientId'] ?? '',
       artisanId: data['artisanId'] ?? '',
       metier: data['metier'] ?? '',
+      typeCommande: data['typeCommande'] ?? 'panne_connue',
+      titre: data['titre'] ?? '',
       description: data['description'] ?? '',
       adresse: data['adresse'] ?? '',
       position: data['position'] ?? const GeoPoint(0, 0),
@@ -77,6 +110,14 @@ class CommandeModel {
       heureIntervention: data['heureIntervention'] ?? '',
       statut: data['statut'] ?? 'en_attente',
       montant: (data['montant'] ?? 0.0).toDouble(),
+      montantDevis: data['montantDevis']?.toDouble(),
+      messageDevis: data['messageDevis'],
+      fraisDeplacement: data['fraisDeplacement']?.toDouble(),
+      fraisDeplacementPayes: data['fraisDeplacementPayes'],
+      fedapayTransactionIdDeplacement: data['fedapayTransactionIdDeplacement'],
+      distanceKm: data['distanceKm']?.toDouble(),
+      dateDevis: data['dateDevis'] != null ? (data['dateDevis'] as Timestamp).toDate() : null,
+      dateAcceptationDevis: data['dateAcceptationDevis'] != null ? (data['dateAcceptationDevis'] as Timestamp).toDate() : null,
       commission: (data['commission'] ?? 0.0).toDouble(),
       montantArtisan: (data['montantArtisan'] ?? 0.0).toDouble(),
       paiementStatut: data['paiementStatut'] ?? 'en_attente',
@@ -92,6 +133,12 @@ class CommandeModel {
       noteArtisan: data['noteArtisan']?.toDouble(),
       commentaireClient: data['commentaireClient'],
       commentaireArtisan: data['commentaireArtisan'],
+      clientPosition: data['clientPosition'],
+      clientAdresseExacte: data['clientAdresseExacte'],
+      clientPositionPartagee: data['clientPositionPartagee'] ?? false,
+      datePartagePosition: data['datePartagePosition'] != null 
+          ? (data['datePartagePosition'] as Timestamp).toDate() 
+          : null,
       createdAt: (data['createdAt'] as Timestamp).toDate(),
       acceptedAt: data['acceptedAt'] != null ? (data['acceptedAt'] as Timestamp).toDate() : null,
       completedAt: data['completedAt'] != null ? (data['completedAt'] as Timestamp).toDate() : null,
@@ -104,6 +151,8 @@ class CommandeModel {
       'clientId': clientId,
       'artisanId': artisanId,
       'metier': metier,
+      'typeCommande': typeCommande,
+      'titre': titre,
       'description': description,
       'adresse': adresse,
       'position': position,
@@ -113,6 +162,14 @@ class CommandeModel {
       'heureIntervention': heureIntervention,
       'statut': statut,
       'montant': montant,
+      'montantDevis': montantDevis,
+      'messageDevis': messageDevis,
+      'fraisDeplacement': fraisDeplacement,
+      'fraisDeplacementPayes': fraisDeplacementPayes,
+      'fedapayTransactionIdDeplacement': fedapayTransactionIdDeplacement,
+      'distanceKm': distanceKm,
+      'dateDevis': dateDevis != null ? Timestamp.fromDate(dateDevis!) : null,
+      'dateAcceptationDevis': dateAcceptationDevis != null ? Timestamp.fromDate(dateAcceptationDevis!) : null,
       'commission': commission,
       'montantArtisan': montantArtisan,
       'paiementStatut': paiementStatut,
@@ -128,6 +185,12 @@ class CommandeModel {
       'noteArtisan': noteArtisan,
       'commentaireClient': commentaireClient,
       'commentaireArtisan': commentaireArtisan,
+      'clientPosition': clientPosition,
+      'clientAdresseExacte': clientAdresseExacte,
+      'clientPositionPartagee': clientPositionPartagee,
+      'datePartagePosition': datePartagePosition != null 
+          ? Timestamp.fromDate(datePartagePosition!) 
+          : null,
       'createdAt': Timestamp.fromDate(createdAt),
       'acceptedAt': acceptedAt != null ? Timestamp.fromDate(acceptedAt!) : null,
       'completedAt': completedAt != null ? Timestamp.fromDate(completedAt!) : null,
@@ -140,6 +203,8 @@ class CommandeModel {
     String? clientId,
     String? artisanId,
     String? metier,
+    String? typeCommande,
+    String? titre,
     String? description,
     String? adresse,
     GeoPoint? position,
@@ -149,6 +214,14 @@ class CommandeModel {
     String? heureIntervention,
     String? statut,
     double? montant,
+    double? montantDevis,
+    String? messageDevis,
+    double? fraisDeplacement,
+    bool? fraisDeplacementPayes,
+    String? fedapayTransactionIdDeplacement,
+    double? distanceKm,
+    DateTime? dateDevis,
+    DateTime? dateAcceptationDevis,
     double? commission,
     double? montantArtisan,
     String? paiementStatut,
@@ -160,6 +233,10 @@ class CommandeModel {
     double? noteArtisan,
     String? commentaireClient,
     String? commentaireArtisan,
+    GeoPoint? clientPosition,
+    String? clientAdresseExacte,
+    bool? clientPositionPartagee,
+    DateTime? datePartagePosition,
     DateTime? createdAt,
     DateTime? acceptedAt,
     DateTime? completedAt,
@@ -170,6 +247,8 @@ class CommandeModel {
       clientId: clientId ?? this.clientId,
       artisanId: artisanId ?? this.artisanId,
       metier: metier ?? this.metier,
+      typeCommande: typeCommande ?? this.typeCommande,
+      titre: titre ?? this.titre,
       description: description ?? this.description,
       adresse: adresse ?? this.adresse,
       position: position ?? this.position,
@@ -179,6 +258,14 @@ class CommandeModel {
       heureIntervention: heureIntervention ?? this.heureIntervention,
       statut: statut ?? this.statut,
       montant: montant ?? this.montant,
+      montantDevis: montantDevis ?? this.montantDevis,
+      messageDevis: messageDevis ?? this.messageDevis,
+      fraisDeplacement: fraisDeplacement ?? this.fraisDeplacement,
+      fraisDeplacementPayes: fraisDeplacementPayes ?? this.fraisDeplacementPayes,
+      fedapayTransactionIdDeplacement: fedapayTransactionIdDeplacement ?? this.fedapayTransactionIdDeplacement,
+      distanceKm: distanceKm ?? this.distanceKm,
+      dateDevis: dateDevis ?? this.dateDevis,
+      dateAcceptationDevis: dateAcceptationDevis ?? this.dateAcceptationDevis,
       commission: commission ?? this.commission,
       montantArtisan: montantArtisan ?? this.montantArtisan,
       paiementStatut: paiementStatut ?? this.paiementStatut,
@@ -190,6 +277,10 @@ class CommandeModel {
       noteArtisan: noteArtisan ?? this.noteArtisan,
       commentaireClient: commentaireClient ?? this.commentaireClient,
       commentaireArtisan: commentaireArtisan ?? this.commentaireArtisan,
+      clientPosition: clientPosition ?? this.clientPosition,
+      clientAdresseExacte: clientAdresseExacte ?? this.clientAdresseExacte,
+      clientPositionPartagee: clientPositionPartagee ?? this.clientPositionPartagee,
+      datePartagePosition: datePartagePosition ?? this.datePartagePosition,
       createdAt: createdAt ?? this.createdAt,
       acceptedAt: acceptedAt ?? this.acceptedAt,
       completedAt: completedAt ?? this.completedAt,

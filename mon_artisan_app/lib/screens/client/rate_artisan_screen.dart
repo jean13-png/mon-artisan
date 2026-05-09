@@ -4,9 +4,7 @@ import 'package:go_router/go_router.dart';
 import '../../core/constants/colors.dart';
 import '../../core/constants/text_styles.dart';
 import '../../core/routes/app_router.dart';
-import '../../providers/auth_provider.dart';
-import '../../core/services/firestore_service.dart';
-import '../../core/services/notification_service.dart';
+import '../../providers/commande_provider.dart';
 import '../../widgets/custom_button.dart';
 
 class RateArtisanScreen extends StatefulWidget {
@@ -50,47 +48,33 @@ class _RateArtisanScreenState extends State<RateArtisanScreen> {
     setState(() => _isSubmitting = true);
 
     try {
-      final authProvider = Provider.of<AuthProvider>(context, listen: false);
-      final clientId = authProvider.userModel!.id;
+      final commandeProvider =
+          Provider.of<CommandeProvider>(context, listen: false);
 
-      // Créer l'avis
-      await FirestoreService.createAvis(
+      final success = await commandeProvider.noterArtisan(
         commandeId: widget.commandeId,
         artisanId: widget.artisanId,
-        clientId: clientId,
         note: _rating.toDouble(),
         commentaire: _commentController.text.trim(),
       );
 
-      // Mettre à jour la note de l'artisan
-      await FirestoreService.updateArtisanRating(widget.artisanId);
-
-      // Créer une notification pour l'artisan
-      await FirestoreService.createNotification({
-        'userId': widget.artisanId,
-        'type': 'nouvel_avis',
-        'titre': 'Nouvel avis reçu',
-        'message': 'Un client vous a noté $_rating/5 étoiles',
-        'data': {
-          'commandeId': widget.commandeId,
-          'note': _rating,
-        },
-      });
-
-      // Notification locale
-      await NotificationService.showReviewReceivedNotification(
-        clientName: 'Un client',
-        note: _rating.toDouble(),
-      );
-
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Merci pour votre avis !'),
-            backgroundColor: AppColors.success,
-          ),
-        );
-        Navigator.pop(context, true);
+        if (success) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Merci pour votre avis !'),
+              backgroundColor: AppColors.success,
+            ),
+          );
+          Navigator.pop(context, true);
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(commandeProvider.errorMessage ?? 'Erreur lors de l\'envoi'),
+              backgroundColor: AppColors.error,
+            ),
+          );
+        }
       }
     } catch (e) {
       if (mounted) {
@@ -102,9 +86,7 @@ class _RateArtisanScreenState extends State<RateArtisanScreen> {
         );
       }
     } finally {
-      if (mounted) {
-        setState(() => _isSubmitting = false);
-      }
+      if (mounted) setState(() => _isSubmitting = false);
     }
   }
 
@@ -118,7 +100,7 @@ class _RateArtisanScreenState extends State<RateArtisanScreen> {
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: AppColors.white),
           onPressed: () {
-            context.go(AppRouter.commandesHistory);
+            Navigator.pop(context);
           },
         ),
         title: Text(

@@ -1,12 +1,11 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
 import '../../core/constants/colors.dart';
 import '../../core/constants/text_styles.dart';
 import '../../core/routes/app_router.dart';
-import '../../core/services/local_auth_service.dart';
 import '../../providers/auth_provider.dart';
-import '../../scripts/create_admin.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -16,6 +15,13 @@ class SplashScreen extends StatefulWidget {
 }
 
 class _SplashScreenState extends State<SplashScreen> {
+  /// Durée minimale d'affichage du splash (animation).
+  static const _kMinSplashDuration = Duration(milliseconds: 1500);
+
+  /// Timeout maximal pour que Firestore charge le userModel.
+  /// Sur réseau très lent (3G), 8 secondes est un seuil raisonnable.
+  static const _kUserModelTimeout = Duration(seconds: 8);
+
   @override
   void initState() {
     super.initState();
@@ -23,60 +29,82 @@ class _SplashScreenState extends State<SplashScreen> {
   }
 
   Future<void> _navigateToNext() async {
-    await Future.delayed(const Duration(seconds: 2));
-    
-    if (mounted) {
-      final authProvider = Provider.of<AuthProvider>(context, listen: false);
-      
-      if (authProvider.isAuthenticated && authProvider.userModel != null) {
-        // Utilisateur connecté - vérifier si l'auth locale est configurée
-        final isAuthConfigured = await LocalAuthService.isAuthConfigured();
-        
-        if (isAuthConfigured) {
-          // Auth locale configurée - demander vérification
-          context.go(AppRouter.verifyLocalAuth);
-        } else {
-          // Auth locale non configurée - proposer la configuration
-          _showSetupAuthDialog();
-        }
-      } else {
-        // Utilisateur non connecté, aller à la sélection de rôle
-        context.go(AppRouter.roleSelection);
+    if (!mounted) return;
+
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+
+    // Lancer l'animation du splash ET l'attente du userModel en parallèle.
+    // On attend que LES DEUX soient terminés avant de naviguer.
+    await Future.wait([
+      _waitForUserModel(authProvider),
+      Future.delayed(_kMinSplashDuration),
+    ]);
+
+    if (!mounted) return;
+    _redirect(authProvider);
+  }
+
+  /// Attend de façon réactive que [authProvider.userModel] soit chargé.
+  ///
+  /// - Si l'utilisateur n'est pas authentifié, résout immédiatement.
+  /// - Si [userModel] est déjà disponible, résout immédiatement.
+  /// - Sinon, écoute les changements du provider jusqu'à ce que [userModel]
+  ///   soit non-null OU que le [_kUserModelTimeout] soit atteint.
+  Future<void> _waitForUserModel(AuthProvider authProvider) async {
+    // Pas d'utilisateur Firebase → rien à attendre.
+    if (authProvider.firebaseUser == null) return;
+
+    // userModel déjà chargé (Auth + Firestore rapides) → résout immédiatement.
+    if (authProvider.userModel != null) return;
+
+    final completer = Completer<void>();
+
+    void listener() {
+      // userModel chargé ou utilisateur déconnecté entre-temps.
+      if (authProvider.userModel != null || authProvider.firebaseUser == null) {
+        if (!completer.isCompleted) completer.complete();
       }
+    }
+
+    authProvider.addListener(listener);
+
+    try {
+      // Race entre la résolution du completer et le timeout.
+      await completer.future.timeout(
+        _kUserModelTimeout,
+        onTimeout: () {
+          // Timeout dépassé : on continue quand même.
+          // _redirect() gérera l'état (userModel toujours null → roleSelection).
+          print('[SPLASH] Timeout: userModel non chargé après ${_kUserModelTimeout.inSeconds}s — réseau lent ?');
+        },
+      );
+    } finally {
+      authProvider.removeListener(listener);
     }
   }
 
-  void _showSetupAuthDialog() {
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) => AlertDialog(
-        title: Text('Sécuriser votre compte', style: AppTextStyles.h3),
-        content: Text(
-          'Configurez un code PIN et votre empreinte digitale pour un accès rapide et sécurisé',
-          style: AppTextStyles.bodyMedium,
-        ),
-        actions: [
-          TextButton(
-            onPressed: () {
-              Navigator.pop(context);
-              _navigateToRoleDashboard();
-            },
-            child: const Text('Plus tard'),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              Navigator.pop(context);
-              context.go(AppRouter.setupLocalAuth);
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.primaryBlue,
-            ),
-            child: const Text('Configurer'),
-          ),
-        ],
-      ),
-    );
+  /// Choisit la route de destination selon l'état d'authentification.
+  void _redirect(AuthProvider authProvider) {
+    if (authProvider.isAuthenticated && authProvider.userModel != null) {
+      final user = authProvider.userModel!;
+
+      print('[AUTH] User authenticated: ${user.email}');
+      print('[AUTH] User roles: ${user.roles}');
+      print('[AUTH] Has admin role: ${user.hasRole("admin")}');
+
+      if (user.hasRole('admin')) {
+        print('[REDIRECT] Redirecting to admin dashboard');
+        context.go(AppRouter.adminDashboard);
+        return;
+      }
+
+      _navigateToRoleDashboard();
+    } else {
+      // userModel null après timeout = réseau trop lent ou utilisateur non inscrit.
+      // On redirige vers la sélection de rôle (l'utilisateur sera invité à se reconnecter).
+      print('[AUTH] User not authenticated or userModel unavailable → roleSelection');
+      context.go(AppRouter.roleSelection);
+    }
   }
 
   void _navigateToRoleDashboard() {
@@ -209,29 +237,6 @@ class _SplashScreenState extends State<SplashScreen> {
               valueColor: AlwaysStoppedAnimation<Color>(AppColors.white),
             ),
             const SizedBox(height: 48),
-            // BOUTON TEMPORAIRE POUR CRÉER LE COMPTE ADMIN
-            // ⚠️ À SUPPRIMER APRÈS CRÉATION DU COMPTE
-            ElevatedButton(
-              onPressed: () async {
-                await createAdminAccount();
-                if (mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Compte admin créé ! Vérifiez les logs.'),
-                      backgroundColor: Colors.green,
-                    ),
-                  );
-                }
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.warning,
-                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-              ),
-              child: const Text(
-                '🔧 CRÉER COMPTE ADMIN',
-                style: TextStyle(color: AppColors.white, fontWeight: FontWeight.bold),
-              ),
-            ),
           ],
         ),
       ),

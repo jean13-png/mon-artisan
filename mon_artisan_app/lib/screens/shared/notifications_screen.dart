@@ -79,12 +79,16 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: AppColors.white),
           onPressed: () {
-            final authProvider = Provider.of<AuthProvider>(context, listen: false);
-            final role = authProvider.userModel?.role;
-            if (role == 'client') {
-              context.go(AppRouter.homeClient);
+            if (Navigator.canPop(context)) {
+              Navigator.pop(context);
             } else {
-              context.go(AppRouter.homeArtisan);
+              final authProvider = Provider.of<AuthProvider>(context, listen: false);
+              final role = authProvider.userModel?.role;
+              if (role == 'client') {
+                context.go(AppRouter.homeClient);
+              } else {
+                context.go(AppRouter.homeArtisan);
+              }
             }
           },
         ),

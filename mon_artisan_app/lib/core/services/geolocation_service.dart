@@ -1,6 +1,7 @@
 import 'package:geolocator/geolocator.dart';
 import 'package:geocoding/geocoding.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:geoflutterfire_plus/geoflutterfire_plus.dart';
 import 'dart:math';
 
 class GeolocationService {
@@ -31,20 +32,36 @@ class GeolocationService {
   /// Obtenir la position actuelle
   static Future<Position> getCurrentPosition() async {
     try {
-      final hasPermission = await requestLocationPermission();
-      
-      if (!hasPermission) {
-        throw Exception('Permission de localisation refusée');
+      // Vérifier si le service de localisation est activé
+      final serviceEnabled = await Geolocator.isLocationServiceEnabled();
+      if (!serviceEnabled) {
+        throw Exception('Le service de localisation est désactivé. Activez-le dans les paramètres.');
       }
 
+      // Vérifier les permissions
+      LocationPermission permission = await Geolocator.checkPermission();
+      
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+        if (permission == LocationPermission.denied) {
+          throw Exception('Permission de localisation refusée');
+        }
+      }
+      
+      if (permission == LocationPermission.deniedForever) {
+        throw Exception('Permission de localisation refusée définitivement. Autorisez l\'accès dans les paramètres.');
+      }
+
+      // Obtenir la position
       final position = await Geolocator.getCurrentPosition(
         desiredAccuracy: LocationAccuracy.high,
-        timeLimit: const Duration(seconds: 10),
+        timeLimit: const Duration(seconds: 15),
       );
 
       return position;
     } catch (e) {
-      throw Exception('Erreur lors de la récupération de la position: $e');
+      print('[ERROR] Erreur getCurrentPosition: $e');
+      rethrow;
     }
   }
 
@@ -173,11 +190,10 @@ class GeolocationService {
     return itemsWithDistance.map((e) => e['item'] as T).toList();
   }
 
-  /// Générer un geohash pour les requêtes géospatiales
+  /// Générer un geohash réel via geoflutterfire_plus
   static String generateGeohash(double latitude, double longitude) {
-    // Implémentation simplifiée du geohash
-    // Pour une implémentation complète, utiliser le package geoflutterfire_plus
-    return '${latitude.toStringAsFixed(4)}_${longitude.toStringAsFixed(4)}';
+    final point = GeoFirePoint(GeoPoint(latitude, longitude));
+    return point.geohash;
   }
 
   /// Vérifier si la localisation est activée

@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:go_router/go_router.dart';
+import 'package:provider/provider.dart';
 import '../../core/constants/colors.dart';
 import '../../core/constants/text_styles.dart';
+import '../../core/routes/app_router.dart';
 import '../../core/services/firebase_service.dart';
-import '../../widgets/auth_lock_wrapper.dart';
+import '../../providers/auth_provider.dart';
 import '../../widgets/double_tap_to_exit.dart';
 
 class AdminDashboardScreen extends StatefulWidget {
@@ -39,11 +40,25 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       _totalArtisans = artisansSnapshot.docs.length;
 
       // Compter les artisans en attente de validation
-      final artisansEnAttenteSnapshot = await FirebaseService.firestore
+      // Chercher ceux avec verificationStatus='pending' OU (isProfileComplete=true ET isVerified=false)
+      final artisansEnAttenteSnapshot1 = await FirebaseService.firestore
           .collection('artisans')
           .where('verificationStatus', isEqualTo: 'pending')
           .get();
-      _artisansEnAttente = artisansEnAttenteSnapshot.docs.length;
+      
+      final artisansEnAttenteSnapshot2 = await FirebaseService.firestore
+          .collection('artisans')
+          .where('isProfileComplete', isEqualTo: true)
+          .where('isVerified', isEqualTo: false)
+          .get();
+      
+      // Combiner les résultats en évitant les doublons
+      final Set<String> artisanIds = {};
+      artisanIds.addAll(artisansEnAttenteSnapshot1.docs.map((d) => d.id));
+      artisanIds.addAll(artisansEnAttenteSnapshot2.docs.map((d) => d.id));
+      _artisansEnAttente = artisanIds.length;
+      
+      print('[STATS] Artisans en attente: $_artisansEnAttente');
 
       // Compter les clients
       final clientsSnapshot = await FirebaseService.firestore
@@ -80,12 +95,48 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     }
   }
 
+  Future<void> _logout() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('Déconnexion', style: AppTextStyles.h3),
+        content: Text(
+          'Voulez-vous vraiment vous déconnecter ?',
+          style: AppTextStyles.bodyMedium,
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: Text('Annuler', style: AppTextStyles.bodyMedium),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.error,
+            ),
+            child: Text(
+              'Déconnexion',
+              style: AppTextStyles.bodyMedium.copyWith(color: AppColors.white),
+            ),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true && mounted) {
+      final authProvider = Provider.of<AuthProvider>(context, listen: false);
+      await authProvider.signOut();
+      
+      if (mounted) {
+        context.go(AppRouter.login);
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    return AuthLockWrapper(
-      isMainScreen: true,
-      child: DoubleTapToExit(
-        child: Scaffold(
+    return DoubleTapToExit(
+      child: Scaffold(
           backgroundColor: AppColors.greyLight,
           appBar: AppBar(
         backgroundColor: AppColors.primaryBlue,
@@ -123,9 +174,9 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                       crossAxisCount: 2,
                       shrinkWrap: true,
                       physics: const NeverScrollableScrollPhysics(),
-                      crossAxisSpacing: 16,
-                      mainAxisSpacing: 16,
-                      childAspectRatio: 1.5,
+                      crossAxisSpacing: 12,
+                      mainAxisSpacing: 12,
+                      childAspectRatio: 1.3,
                       children: [
                         _buildStatCard(
                           'Artisans',
@@ -160,9 +211,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                     Container(
                       padding: const EdgeInsets.all(20),
                       decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          colors: [AppColors.primaryBlue, AppColors.primaryBlue.withOpacity(0.7)],
-                        ),
+                        color: AppColors.primaryBlue,
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: Column(
@@ -218,6 +267,17 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                     const SizedBox(height: 12),
 
                     _buildActionButton(
+                      'Gestion des utilisateurs',
+                      Icons.people,
+                      AppColors.info,
+                      () {
+                        context.go('/admin/manage-users');
+                      },
+                    ),
+
+                    const SizedBox(height: 12),
+
+                    _buildActionButton(
                       'Signalements et litiges',
                       Icons.report_problem,
                       AppColors.warning,
@@ -242,13 +302,24 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                         );
                       },
                     ),
+
+                    const SizedBox(height: 32),
+
+                    // Bouton de déconnexion
+                    _buildActionButton(
+                      'Déconnexion',
+                      Icons.logout,
+                      AppColors.error,
+                      _logout,
+                    ),
+
+                    const SizedBox(height: 16),
                   ],
                 ),
               ),
             ),
-        ), // Fermeture du Scaffold
-      ), // Fermeture du DoubleTapToExit
-    ); // Fermeture du AuthLockWrapper
+      ),
+    );
   }
 
   Widget _buildStatCard(String title, String value, IconData icon, Color color) {

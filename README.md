@@ -64,3 +64,10 @@ L'APK sera dans : `build/app/outputs/flutter-apk/`
 ## 📄 Licence
 
 Copyright © 2026 Mon Artisan. Tous droits réservés.
+
+
+
+
+
+
+

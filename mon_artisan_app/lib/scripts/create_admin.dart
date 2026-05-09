@@ -10,7 +10,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 
 Future<void> createAdminAccount() async {
   try {
-    print('🔄 Création du compte administrateur...');
+    print('[CREATE] Création du compte administrateur...');
     
     final email = 'tossajean13@gmail.com';
     final password = 'TOSjea13#';
@@ -23,7 +23,7 @@ Future<void> createAdminAccount() async {
     );
     
     final userId = userCredential.user!.uid;
-    print('✅ Utilisateur créé avec UID: $userId');
+    print('[SUCCESS] Utilisateur créé avec UID: $userId');
     
     // 2. Créer le document dans Firestore
     await FirebaseFirestore.instance.collection('users').doc(userId).set({
@@ -42,18 +42,18 @@ Future<void> createAdminAccount() async {
       'updatedAt': FieldValue.serverTimestamp(),
     });
     
-    print('✅ Document Firestore créé');
+    print('[SUCCESS] Document Firestore créé');
     print('');
-    print('🎉 COMPTE ADMIN CRÉÉ AVEC SUCCÈS !');
-    print('📧 Email: $email');
-    print('🔑 Password: $password');
-    print('🆔 UID: $userId');
+    print('[SUCCESS] COMPTE ADMIN CRÉÉ AVEC SUCCÈS !');
+    print('Email: $email');
+    print('Password: $password');
+    print('UID: $userId');
     print('');
-    print('⚠️  IMPORTANT: Supprimez ce script après utilisation pour la sécurité !');
+    print('[WARNING] IMPORTANT: Supprimez ce script après utilisation pour la sécurité !');
     
   } on FirebaseAuthException catch (e) {
     if (e.code == 'email-already-in-use') {
-      print('⚠️  Le compte existe déjà. Tentative de mise à jour du rôle...');
+      print('[WARNING] Le compte existe déjà. Tentative de mise à jour du rôle...');
       
       // Si le compte existe, on met juste à jour le rôle
       try {
@@ -72,16 +72,16 @@ Future<void> createAdminAccount() async {
           'updatedAt': FieldValue.serverTimestamp(),
         });
         
-        print('✅ Rôle admin ajouté au compte existant');
-        print('🆔 UID: $userId');
+        print('[SUCCESS] Rôle admin ajouté au compte existant');
+        print('UID: $userId');
         
       } catch (e) {
-        print('❌ Erreur lors de la mise à jour: $e');
+        print('[ERROR] Erreur lors de la mise à jour: $e');
       }
     } else {
-      print('❌ Erreur Firebase Auth: ${e.code} - ${e.message}');
+      print('[ERROR] Erreur Firebase Auth: ${e.code} - ${e.message}');
     }
   } catch (e) {
-    print('❌ Erreur: $e');
+    print('[ERROR] Erreur: $e');
   }
 }

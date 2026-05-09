@@ -11,7 +11,7 @@ class RoleSelectionScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.white,
+      backgroundColor: AppColors.surface,
       body: SingleChildScrollView(
         child: Column(
           children: [
@@ -26,21 +26,6 @@ class RoleSelectionScreen extends StatelessWidget {
                   image: AssetImage('assets/images/banner.png'),
                   fit: BoxFit.cover,
                   alignment: Alignment.topCenter,
-                ),
-              ),
-              child: Container(
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter,
-                    colors: [
-                      Colors.transparent,
-                      Colors.transparent,
-                      AppColors.white.withOpacity(0.5),
-                      AppColors.white,
-                    ],
-                    stops: const [0.0, 0.65, 0.85, 1.0],
-                  ),
                 ),
               ),
             ),

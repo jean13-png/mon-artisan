@@ -2,15 +2,21 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../core/constants/colors.dart';
 import '../../core/constants/text_styles.dart';
 import '../../core/routes/app_router.dart';
+import '../../core/services/firebase_service.dart';
+import '../../core/services/chat_service.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/artisan_provider.dart';
 import '../../providers/commande_provider.dart';
 import '../../widgets/double_tap_to_exit.dart';
 import '../../widgets/loading_widget.dart';
-import '../../widgets/auth_lock_wrapper.dart';
+import '../../widgets/location_permission_dialog.dart';
+import '../../widgets/badge_icon.dart';
+import '../shared/conversations_list_screen.dart';
 
 class HomeArtisanScreen extends StatefulWidget {
   const HomeArtisanScreen({super.key});
@@ -20,18 +26,110 @@ class HomeArtisanScreen extends StatefulWidget {
 }
 
 class _HomeArtisanScreenState extends State<HomeArtisanScreen> {
+  int _unreadNotificationsCount = 0;
+  int _unreadMessagesCount = 0;
+  bool _autoRefreshActive = true;
+
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final authProvider = Provider.of<AuthProvider>(context, listen: false);
       if (authProvider.userModel != null) {
-        // Charger le profil artisan seulement si l'utilisateur est artisan
         if (authProvider.userModel!.isArtisan) {
           _loadArtisanData();
+          _checkLocationPermission();
+          _loadUnreadCounts();
+          _startAutoRefresh();
         }
       }
     });
+  }
+
+  @override
+  void dispose() {
+    _autoRefreshActive = false;
+    super.dispose();
+  }
+
+  void _startAutoRefresh() {
+    Future.delayed(const Duration(seconds: 30), () {
+      if (!_autoRefreshActive || !mounted) return;
+      final authProvider = Provider.of<AuthProvider>(context, listen: false);
+      if (authProvider.userModel != null) {
+        _loadArtisanData();
+        _loadUnreadCounts();
+        _startAutoRefresh();
+      }
+    });
+  }
+
+  Future<void> _loadUnreadCounts() async {
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    final currentUserId = authProvider.userModel?.id;
+    
+    if (currentUserId == null) return;
+
+    // Initialiser à 0 par défaut
+    int notifCount = 0;
+    int msgCount = 0;
+
+    try {
+      // Compter les notifications non lues
+      try {
+        final notificationsSnapshot = await FirebaseService.firestore
+            .collection('notifications')
+            .where('userId', isEqualTo: currentUserId)
+            .where('isRead', isEqualTo: false)
+            .get();
+        notifCount = notificationsSnapshot.docs.length;
+      } catch (e) {
+        print('[ERROR] Erreur comptage notifications: $e');
+      }
+
+      // Compter les messages non lus avec ChatService
+      try {
+        msgCount = await ChatService.getUnreadMessagesCount(currentUserId);
+      } catch (e) {
+        print('[ERROR] Erreur comptage messages: $e');
+      }
+
+      if (mounted) {
+        setState(() {
+          _unreadNotificationsCount = notifCount;
+          _unreadMessagesCount = msgCount;
+        });
+      }
+    } catch (e) {
+      print('[ERROR] Erreur chargement compteurs: $e');
+      if (mounted) {
+        setState(() {
+          _unreadNotificationsCount = 0;
+          _unreadMessagesCount = 0;
+        });
+      }
+    }
+  }
+
+  Future<void> _checkLocationPermission() async {
+    // Vérifier si on a déjà demandé la permission
+    final prefs = await SharedPreferences.getInstance();
+    final hasAskedPermission = prefs.getBool('artisan_has_asked_location_permission') ?? false;
+    
+    if (!hasAskedPermission && mounted) {
+      // Attendre 2 secondes pour que l'UI soit chargée
+      await Future.delayed(const Duration(seconds: 2));
+      
+      if (mounted) {
+        final granted = await LocationPermissionDialog.show(context);
+        await prefs.setBool('artisan_has_asked_location_permission', true);
+        
+        if (granted) {
+          // Permission accordée
+          setState(() {});
+        }
+      }
+    }
   }
 
   Future<void> _loadArtisanData() async {
@@ -67,58 +165,70 @@ class _HomeArtisanScreenState extends State<HomeArtisanScreen> {
       return const LoadingWidget(message: 'Chargement de votre profil...');
     }
 
-    return AuthLockWrapper(
-      isMainScreen: true,
-      child: DoubleTapToExit(
-        child: Scaffold(
+    return DoubleTapToExit(
+      child: Scaffold(
       backgroundColor: AppColors.greyLight,
       appBar: AppBar(
         backgroundColor: AppColors.accentRed,
         elevation: 0,
         title: Row(
+          mainAxisSize: MainAxisSize.min,
           children: [
             Image.asset(
               'assets/images/logo_mon_artisan.png',
-              height: 50,
-              width: 50,
+              height: 36,
               fit: BoxFit.contain,
             ),
-            const SizedBox(width: 12),
+            const SizedBox(width: 8),
             Text(
-              'Mon Artisan Pro',
+              'Mon Artisan',
               style: AppTextStyles.h3.copyWith(
                 color: AppColors.white,
-                fontSize: 20,
+                fontSize: 19,
               ),
             ),
           ],
         ),
         actions: [
-          IconButton(
-            icon: const Icon(Icons.notifications_outlined, color: AppColors.white),
+          BadgeIcon(
+            icon: Icons.chat_bubble_outline,
+            count: _unreadMessagesCount,
             onPressed: () {
-              context.go(AppRouter.notifications);
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const ConversationsListScreen(),
+                ),
+              ).then((_) => _loadUnreadCounts());
             },
           ),
+          BadgeIcon(
+            icon: Icons.notifications_outlined,
+            count: _unreadNotificationsCount,
+            onPressed: () {
+              context.push(AppRouter.notifications);
+            },
+          ),
+          const SizedBox(width: 4),
           PopupMenuButton<String>(
             icon: const Icon(Icons.menu, color: AppColors.white),
             onSelected: (value) {
               switch (value) {
                 case 'profile':
-                  context.go(AppRouter.editProfile);
+                  context.push(AppRouter.editProfile);
                   break;
                 case 'revenus':
-                  context.go(AppRouter.revenus);
+                  context.push(AppRouter.revenus);
                   break;
                 case 'switch_client':
-                  context.go(AppRouter.homeClient);
+                  context.go(AppRouter.homeClient); // Garder go() pour switch de rôle
                   break;
                 case 'settings':
-                  // TODO: Navigate to settings
+                  context.push(AppRouter.settings);
                   break;
                 case 'logout':
                   authProvider.signOut();
-                  context.go(AppRouter.roleSelection);
+                  context.go(AppRouter.roleSelection); // Garder go() pour logout
                   break;
               }
             },
@@ -247,6 +357,37 @@ class _HomeArtisanScreenState extends State<HomeArtisanScreen> {
                         ),
                       ],
                     ),
+                    
+                    // Badge "En mission" si commande en cours
+                    if (!artisan.estRealementDisponible && artisan.commandeEnCours != null)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 12),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                          decoration: BoxDecoration(
+                            color: AppColors.warning.withOpacity(0.2),
+                            borderRadius: BorderRadius.circular(20),
+                            border: Border.all(
+                              color: AppColors.warning.withOpacity(0.5),
+                              width: 1,
+                            ),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(Icons.work, size: 18, color: AppColors.warning),
+                              const SizedBox(width: 6),
+                              Text(
+                                'En mission - Invisible dans les recherches',
+                                style: AppTextStyles.bodyMedium.copyWith(
+                                  color: AppColors.white,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
                   ],
                 ),
               ),
@@ -298,7 +439,7 @@ class _HomeArtisanScreenState extends State<HomeArtisanScreen> {
                           width: double.infinity,
                           child: ElevatedButton(
                             onPressed: () {
-                              context.go(AppRouter.completeProfile);
+                              context.push(AppRouter.completeProfile);
                             },
                             style: ElevatedButton.styleFrom(
                               backgroundColor: AppColors.warning,
@@ -409,7 +550,7 @@ class _HomeArtisanScreenState extends State<HomeArtisanScreen> {
                         child: ElevatedButton(
                           onPressed: artisan.revenusDisponibles > 0 
                               ? () {
-                                  context.go(AppRouter.revenus);
+                                  context.push(AppRouter.revenus);
                                 }
                               : null,
                           style: ElevatedButton.styleFrom(
@@ -494,7 +635,7 @@ class _HomeArtisanScreenState extends State<HomeArtisanScreen> {
                         ),
                         TextButton(
                           onPressed: () {
-                            // TODO: Navigate to commandes list
+                            context.push(AppRouter.commandesHistory);
                           },
                           child: Text(
                             'Voir tout',
@@ -555,8 +696,7 @@ class _HomeArtisanScreenState extends State<HomeArtisanScreen> {
         ),
       ),
       ), // Fermeture du Scaffold
-    ), // Fermeture du DoubleTapToExit
-    ); // Fermeture du AuthLockWrapper
+    ); // Fermeture du DoubleTapToExit
   }
 
   Widget _buildStatCard(String value, String label, IconData icon, Color color) {
@@ -599,7 +739,7 @@ class _HomeArtisanScreenState extends State<HomeArtisanScreen> {
   Widget _buildCommandeCard(BuildContext context, dynamic commande) {
     return GestureDetector(
       onTap: () {
-        context.go(AppRouter.commandeDetail, extra: commande);
+        context.push(AppRouter.commandeDetail, extra: commande);
       },
       child: Container(
         margin: const EdgeInsets.only(bottom: 16),

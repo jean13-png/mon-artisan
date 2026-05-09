@@ -1,30 +1,108 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:go_router/go_router.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../core/constants/colors.dart';
 import '../../core/constants/text_styles.dart';
 import '../../core/routes/app_router.dart';
+import '../../core/services/firebase_service.dart';
 import '../../models/commande_model.dart';
 import '../../providers/commande_provider.dart';
 import '../../widgets/custom_button.dart';
 import '../shared/chat_screen.dart';
+import 'envoyer_devis_screen.dart';
 
-class CommandeDetailScreen extends StatelessWidget {
+class CommandeDetailScreen extends StatefulWidget {
   final CommandeModel commande;
 
   const CommandeDetailScreen({super.key, required this.commande});
 
-  Future<void> _callClient(String telephone) async {
-    final Uri phoneUri = Uri(scheme: 'tel', path: telephone);
+  @override
+  State<CommandeDetailScreen> createState() => _CommandeDetailScreenState();
+}
+
+class _CommandeDetailScreenState extends State<CommandeDetailScreen> {
+  String? _clientTelephone;
+  String? _clientNom;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadClientInfo();
+  }
+
+  Future<void> _loadClientInfo() async {
+    try {
+      final doc = await FirebaseService.usersCollection
+          .doc(widget.commande.clientId)
+          .get();
+      if (doc.exists && mounted) {
+        final data = doc.data() as Map<String, dynamic>;
+        setState(() {
+          _clientTelephone = data['telephone'] as String?;
+          final prenom = data['prenom'] as String? ?? '';
+          final nom = data['nom'] as String? ?? '';
+          _clientNom = '$prenom $nom'.trim();
+        });
+      }
+    } catch (e) {
+      print('[ERROR] Impossible de charger les infos client: $e');
+    }
+  }
+
+  Future<void> _callClient() async {
+    final tel = _clientTelephone;
+    if (tel == null || tel.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Numéro de téléphone non disponible'),
+          backgroundColor: AppColors.error,
+        ),
+      );
+      return;
+    }
+    final Uri phoneUri = Uri(scheme: 'tel', path: tel);
     if (await canLaunchUrl(phoneUri)) {
       await launchUrl(phoneUri);
     }
   }
 
-  Future<void> _accepterCommande(BuildContext context) async {
-    final commandeProvider = Provider.of<CommandeProvider>(context, listen: false);
-    
+  Future<void> _ouvrirGoogleMaps(double latitude, double longitude) async {
+    final url =
+        'https://www.google.com/maps/dir/?api=1&destination=$latitude,$longitude';
+    if (await canLaunchUrl(Uri.parse(url))) {
+      await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
+    } else {
+      final fallbackUrl =
+          'https://www.google.com/maps/search/?api=1&query=$latitude,$longitude';
+      await launchUrl(Uri.parse(fallbackUrl),
+          mode: LaunchMode.externalApplication);
+    }
+  }
+
+  void _copierAdresse(String adresse) {
+    Clipboard.setData(ClipboardData(text: adresse));
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Row(
+          children: [
+            Icon(Icons.check_circle, color: AppColors.white),
+            SizedBox(width: 12),
+            Text('Adresse copiée'),
+          ],
+        ),
+        backgroundColor: AppColors.success,
+        duration: Duration(seconds: 2),
+      ),
+    );
+  }
+
+  Future<void> _accepterCommande() async {
+    final commandeProvider =
+        Provider.of<CommandeProvider>(context, listen: false);
+
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
@@ -41,19 +119,18 @@ class CommandeDetailScreen extends StatelessWidget {
           ),
           ElevatedButton(
             onPressed: () => Navigator.pop(context, true),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.success,
-            ),
+            style:
+                ElevatedButton.styleFrom(backgroundColor: AppColors.success),
             child: Text('Accepter', style: AppTextStyles.button),
           ),
         ],
       ),
     );
 
-    if (confirmed == true && context.mounted) {
-      final success = await commandeProvider.accepterCommande(commande.id);
-      
-      if (success && context.mounted) {
+    if (confirmed == true && mounted) {
+      final success =
+          await commandeProvider.accepterCommande(widget.commande.id);
+      if (success && mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('Commande acceptée avec succès'),
@@ -65,9 +142,10 @@ class CommandeDetailScreen extends StatelessWidget {
     }
   }
 
-  Future<void> _refuserCommande(BuildContext context) async {
-    final commandeProvider = Provider.of<CommandeProvider>(context, listen: false);
-    
+  Future<void> _refuserCommande() async {
+    final commandeProvider =
+        Provider.of<CommandeProvider>(context, listen: false);
+
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
@@ -84,19 +162,17 @@ class CommandeDetailScreen extends StatelessWidget {
           ),
           ElevatedButton(
             onPressed: () => Navigator.pop(context, true),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.error,
-            ),
+            style: ElevatedButton.styleFrom(backgroundColor: AppColors.error),
             child: Text('Refuser', style: AppTextStyles.button),
           ),
         ],
       ),
     );
 
-    if (confirmed == true && context.mounted) {
-      final success = await commandeProvider.refuserCommande(commande.id);
-      
-      if (success && context.mounted) {
+    if (confirmed == true && mounted) {
+      final success =
+          await commandeProvider.refuserCommande(widget.commande.id);
+      if (success && mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('Commande refusée'),
@@ -108,9 +184,10 @@ class CommandeDetailScreen extends StatelessWidget {
     }
   }
 
-  Future<void> _terminerCommande(BuildContext context) async {
-    final commandeProvider = Provider.of<CommandeProvider>(context, listen: false);
-    
+  Future<void> _terminerCommande() async {
+    final commandeProvider =
+        Provider.of<CommandeProvider>(context, listen: false);
+
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
@@ -127,19 +204,18 @@ class CommandeDetailScreen extends StatelessWidget {
           ),
           ElevatedButton(
             onPressed: () => Navigator.pop(context, true),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.success,
-            ),
+            style:
+                ElevatedButton.styleFrom(backgroundColor: AppColors.success),
             child: Text('Terminer', style: AppTextStyles.button),
           ),
         ],
       ),
     );
 
-    if (confirmed == true && context.mounted) {
-      final success = await commandeProvider.terminerCommande(commande.id);
-      
-      if (success && context.mounted) {
+    if (confirmed == true && mounted) {
+      final success =
+          await commandeProvider.terminerCommande(widget.commande.id);
+      if (success && mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('Commande marquée comme terminée'),
@@ -153,6 +229,8 @@ class CommandeDetailScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final commande = widget.commande;
+
     return Scaffold(
       backgroundColor: AppColors.greyLight,
       appBar: AppBar(
@@ -160,7 +238,7 @@ class CommandeDetailScreen extends StatelessWidget {
         elevation: 0,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: AppColors.white),
-          onPressed: () => context.go(AppRouter.homeArtisan),
+          onPressed: () => Navigator.pop(context),
         ),
         title: Text(
           'Détails de la commande',
@@ -207,16 +285,179 @@ class CommandeDetailScreen extends StatelessWidget {
                 children: [
                   Text('Informations client', style: AppTextStyles.h3),
                   const SizedBox(height: 16),
-                  _buildInfoRow(Icons.person_outline, 'Client', 'Client #${commande.clientId.substring(0, 8)}'),
+                  _buildInfoRow(
+                    Icons.person_outline,
+                    'Client',
+                    _clientNom?.isNotEmpty == true
+                        ? _clientNom!
+                        : 'Client #${commande.clientId.substring(0, 8)}',
+                  ),
                   const SizedBox(height: 12),
-                  _buildInfoRow(Icons.location_on_outlined, 'Adresse', commande.adresse),
+                  if (_clientTelephone != null && _clientTelephone!.isNotEmpty)
+                    _buildInfoRow(
+                        Icons.phone, 'Téléphone', _clientTelephone!),
+                  if (_clientTelephone != null && _clientTelephone!.isNotEmpty)
+                    const SizedBox(height: 12),
+                  _buildInfoRow(
+                      Icons.location_on_outlined, 'Adresse', commande.adresse),
                   const SizedBox(height: 12),
-                  _buildInfoRow(Icons.location_city, 'Ville', '${commande.ville} - ${commande.quartier}'),
+                  _buildInfoRow(Icons.location_city, 'Ville',
+                      '${commande.ville} - ${commande.quartier}'),
                 ],
               ),
             ),
 
             const SizedBox(height: 16),
+
+            // Position du client (si partagée)
+            if (commande.clientPositionPartagee &&
+                commande.clientPosition != null) ...[
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(24),
+                color: AppColors.white,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        const Icon(Icons.location_on,
+                            color: AppColors.primaryBlue, size: 24),
+                        const SizedBox(width: 8),
+                        Text('Position du client', style: AppTextStyles.h3),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+                    Container(
+                      height: 160,
+                      decoration: BoxDecoration(
+                        color: AppColors.greyLight,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: AppColors.greyMedium),
+                      ),
+                      child: Stack(
+                        children: [
+                          Center(
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                const Icon(Icons.map,
+                                    size: 48, color: AppColors.greyMedium),
+                                const SizedBox(height: 8),
+                                Text(
+                                  'Lat: ${commande.clientPosition!.latitude.toStringAsFixed(5)}',
+                                  style: AppTextStyles.bodySmall
+                                      .copyWith(color: AppColors.greyDark),
+                                ),
+                                Text(
+                                  'Lng: ${commande.clientPosition!.longitude.toStringAsFixed(5)}',
+                                  style: AppTextStyles.bodySmall
+                                      .copyWith(color: AppColors.greyDark),
+                                ),
+                              ],
+                            ),
+                          ),
+                          Positioned(
+                            top: 8,
+                            right: 8,
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 10, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: AppColors.success,
+                                borderRadius: BorderRadius.circular(20),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  const Icon(Icons.check_circle,
+                                      color: AppColors.white, size: 14),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    'Position partagée',
+                                    style: AppTextStyles.bodySmall.copyWith(
+                                        color: AppColors.white,
+                                        fontWeight: FontWeight.w600),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    if (commande.clientAdresseExacte != null) ...[
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: AppColors.greyLight,
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Row(
+                          children: [
+                            const Icon(Icons.place,
+                                color: AppColors.greyDark, size: 20),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                commande.clientAdresseExacte!,
+                                style: AppTextStyles.bodyMedium
+                                    .copyWith(fontWeight: FontWeight.w500),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                    ],
+                    Row(
+                      children: [
+                        Expanded(
+                          child: ElevatedButton.icon(
+                            onPressed: () => _ouvrirGoogleMaps(
+                              commande.clientPosition!.latitude,
+                              commande.clientPosition!.longitude,
+                            ),
+                            icon: const Icon(Icons.directions, size: 20),
+                            label: const Text('Itinéraire'),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: AppColors.primaryBlue,
+                              foregroundColor: AppColors.white,
+                              padding:
+                                  const EdgeInsets.symmetric(vertical: 12),
+                              shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(8)),
+                            ),
+                          ),
+                        ),
+                        if (commande.clientAdresseExacte != null) ...[
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: OutlinedButton.icon(
+                              onPressed: () =>
+                                  _copierAdresse(commande.clientAdresseExacte!),
+                              icon: const Icon(Icons.copy, size: 20),
+                              label: const Text('Copier'),
+                              style: OutlinedButton.styleFrom(
+                                foregroundColor: AppColors.primaryBlue,
+                                side: const BorderSide(
+                                    color: AppColors.primaryBlue),
+                                padding:
+                                    const EdgeInsets.symmetric(vertical: 12),
+                                shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(8)),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 16),
+            ],
 
             // Détails de la prestation
             Container(
@@ -236,21 +477,24 @@ class CommandeDetailScreen extends StatelessWidget {
                     '${commande.dateIntervention.day}/${commande.dateIntervention.month}/${commande.dateIntervention.year}',
                   ),
                   const SizedBox(height: 12),
-                  _buildInfoRow(Icons.access_time, 'Heure', commande.heureIntervention),
+                  _buildInfoRow(
+                      Icons.access_time, 'Heure', commande.heureIntervention),
+                  if (commande.distanceKm != null) ...[
+                    const SizedBox(height: 12),
+                    _buildInfoRow(Icons.route, 'Distance',
+                        '${commande.distanceKm!.toStringAsFixed(2)} km'),
+                  ],
                   const SizedBox(height: 16),
                   Text(
                     'Description',
-                    style: AppTextStyles.bodyMedium.copyWith(
-                      fontWeight: FontWeight.w600,
-                    ),
+                    style: AppTextStyles.bodyMedium
+                        .copyWith(fontWeight: FontWeight.w600),
                   ),
                   const SizedBox(height: 8),
                   Text(
                     commande.description,
                     style: AppTextStyles.bodyMedium.copyWith(
-                      color: AppColors.greyDark,
-                      height: 1.5,
-                    ),
+                        color: AppColors.greyDark, height: 1.5),
                   ),
                 ],
               ),
@@ -297,71 +541,77 @@ class CommandeDetailScreen extends StatelessWidget {
             ],
 
             // Montant
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(24),
-              color: AppColors.white,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('Rémunération', style: AppTextStyles.h3),
-                  const SizedBox(height: 16),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        'Montant total',
-                        style: AppTextStyles.bodyMedium.copyWith(
-                          color: AppColors.greyDark,
-                        ),
+            if (commande.montant > 0 || commande.montantDevis != null) ...[
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(24),
+                color: AppColors.white,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('Rémunération', style: AppTextStyles.h3),
+                    const SizedBox(height: 16),
+                    if (commande.montantDevis != null) ...[
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text('Montant du devis',
+                              style: AppTextStyles.bodyMedium
+                                  .copyWith(color: AppColors.greyDark)),
+                          Text(
+                              '${commande.montantDevis!.toStringAsFixed(0)} FCFA',
+                              style: AppTextStyles.bodyMedium),
+                        ],
                       ),
-                      Text(
-                        '${commande.montant.toStringAsFixed(0)} FCFA',
-                        style: AppTextStyles.bodyMedium,
+                      const SizedBox(height: 8),
+                    ],
+                    if (commande.montant > 0) ...[
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text('Montant total',
+                              style: AppTextStyles.bodyMedium
+                                  .copyWith(color: AppColors.greyDark)),
+                          Text('${commande.montant.toStringAsFixed(0)} FCFA',
+                              style: AppTextStyles.bodyMedium),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text('Commission (10%)',
+                              style: AppTextStyles.bodyMedium
+                                  .copyWith(color: AppColors.greyDark)),
+                          Text(
+                              '- ${commande.commission.toStringAsFixed(0)} FCFA',
+                              style: AppTextStyles.bodyMedium
+                                  .copyWith(color: AppColors.error)),
+                        ],
+                      ),
+                      const Divider(height: 24),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text('Vous recevrez', style: AppTextStyles.h3),
+                          Text(
+                            '${commande.montantArtisan.toStringAsFixed(0)} FCFA',
+                            style: AppTextStyles.h2
+                                .copyWith(color: AppColors.success),
+                          ),
+                        ],
                       ),
                     ],
-                  ),
-                  const SizedBox(height: 8),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        'Commission (10%)',
-                        style: AppTextStyles.bodyMedium.copyWith(
-                          color: AppColors.greyDark,
-                        ),
-                      ),
-                      Text(
-                        '- ${commande.commission.toStringAsFixed(0)} FCFA',
-                        style: AppTextStyles.bodyMedium.copyWith(
-                          color: AppColors.error,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const Divider(height: 24),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text('Vous recevrez', style: AppTextStyles.h3),
-                      Text(
-                        '${commande.montantArtisan.toStringAsFixed(0)} FCFA',
-                        style: AppTextStyles.h2.copyWith(
-                          color: AppColors.success,
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
+                  ],
+                ),
               ),
-            ),
+              const SizedBox(height: 16),
+            ],
 
-            const SizedBox(height: 100),
+            const SizedBox(height: 80),
           ],
         ),
       ),
-
-      // Actions selon le statut
       bottomNavigationBar: _buildBottomActions(context),
     );
   }
@@ -376,19 +626,13 @@ class CommandeDetailScreen extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                label,
-                style: AppTextStyles.bodySmall.copyWith(
-                  color: AppColors.greyDark,
-                ),
-              ),
+              Text(label,
+                  style: AppTextStyles.bodySmall
+                      .copyWith(color: AppColors.greyDark)),
               const SizedBox(height: 4),
-              Text(
-                value,
-                style: AppTextStyles.bodyMedium.copyWith(
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
+              Text(value,
+                  style: AppTextStyles.bodyMedium
+                      .copyWith(fontWeight: FontWeight.w600)),
             ],
           ),
         ),
@@ -397,7 +641,9 @@ class CommandeDetailScreen extends StatelessWidget {
   }
 
   Widget? _buildBottomActions(BuildContext context) {
-    if (commande.statut == 'en_attente') {
+    final statut = widget.commande.statut;
+
+    if (statut == 'en_attente' || statut == 'diagnostic_demande') {
       return Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
@@ -416,7 +662,7 @@ class CommandeDetailScreen extends StatelessWidget {
               Expanded(
                 child: CustomButton(
                   text: 'Refuser',
-                  onPressed: () => _refuserCommande(context),
+                  onPressed: _refuserCommande,
                   backgroundColor: AppColors.white,
                   textColor: AppColors.error,
                   borderColor: AppColors.error,
@@ -426,16 +672,26 @@ class CommandeDetailScreen extends StatelessWidget {
               Expanded(
                 flex: 2,
                 child: CustomButton(
-                  text: 'Accepter',
-                  onPressed: () => _accepterCommande(context),
-                  backgroundColor: AppColors.success,
+                  text: 'Envoyer un devis',
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) =>
+                            EnvoyerDevisScreen(commande: widget.commande),
+                      ),
+                    );
+                  },
+                  backgroundColor: AppColors.accentRed,
                 ),
               ),
             ],
           ),
         ),
       );
-    } else if (commande.statut == 'acceptee' || commande.statut == 'en_cours') {
+    } else if (statut == 'devis_accepte' ||
+        statut == 'acceptee' ||
+        statut == 'en_cours') {
       return Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
@@ -457,14 +713,14 @@ class CommandeDetailScreen extends StatelessWidget {
                     context,
                     MaterialPageRoute(
                       builder: (context) => ChatScreen(
-                        commandeId: commande.id,
-                        otherUserId: commande.clientId,
-                        otherUserName: 'Client',
+                        otherUserId: widget.commande.clientId,
+                        otherUserName: _clientNom ?? 'Client',
                       ),
                     ),
                   );
                 },
-                icon: const Icon(Icons.chat_bubble_outline, color: AppColors.primaryBlue),
+                icon: const Icon(Icons.chat_bubble_outline,
+                    color: AppColors.primaryBlue),
                 style: IconButton.styleFrom(
                   backgroundColor: AppColors.primaryBlue.withOpacity(0.1),
                   padding: const EdgeInsets.all(12),
@@ -472,10 +728,7 @@ class CommandeDetailScreen extends StatelessWidget {
               ),
               const SizedBox(width: 8),
               IconButton(
-                onPressed: () {
-                  // TODO: Appeler le client
-                  _callClient('0000000000');
-                },
+                onPressed: _callClient,
                 icon: const Icon(Icons.phone, color: AppColors.primaryBlue),
                 style: IconButton.styleFrom(
                   backgroundColor: AppColors.primaryBlue.withOpacity(0.1),
@@ -486,7 +739,7 @@ class CommandeDetailScreen extends StatelessWidget {
               Expanded(
                 child: CustomButton(
                   text: 'Marquer comme terminée',
-                  onPressed: () => _terminerCommande(context),
+                  onPressed: _terminerCommande,
                   backgroundColor: AppColors.success,
                 ),
               ),
@@ -501,14 +754,23 @@ class CommandeDetailScreen extends StatelessWidget {
   Color _getStatutColor(String statut) {
     switch (statut) {
       case 'en_attente':
+      case 'diagnostic_demande':
         return AppColors.warning;
-      case 'acceptee':
+      case 'devis_envoye':
         return AppColors.primaryBlue;
+      case 'devis_accepte':
+        return AppColors.success;
+      case 'devis_refuse':
+        return AppColors.error;
+      case 'acceptee':
       case 'en_cours':
         return AppColors.primaryBlue;
       case 'terminee':
+      case 'validee':
         return AppColors.success;
       case 'annulee':
+        return AppColors.error;
+      case 'refusee':
         return AppColors.error;
       default:
         return AppColors.greyDark;
@@ -518,14 +780,25 @@ class CommandeDetailScreen extends StatelessWidget {
   IconData _getStatutIcon(String statut) {
     switch (statut) {
       case 'en_attente':
+      case 'diagnostic_demande':
         return Icons.schedule;
+      case 'devis_envoye':
+        return Icons.description;
+      case 'devis_accepte':
+        return Icons.check_circle;
+      case 'devis_refuse':
+        return Icons.cancel;
       case 'acceptee':
         return Icons.check_circle;
       case 'en_cours':
         return Icons.build;
       case 'terminee':
         return Icons.done_all;
+      case 'validee':
+        return Icons.verified;
       case 'annulee':
+        return Icons.cancel;
+      case 'refusee':
         return Icons.cancel;
       default:
         return Icons.info;
@@ -536,14 +809,26 @@ class CommandeDetailScreen extends StatelessWidget {
     switch (statut) {
       case 'en_attente':
         return 'En attente de votre réponse';
+      case 'diagnostic_demande':
+        return 'Diagnostic demandé';
+      case 'devis_envoye':
+        return 'Devis envoyé - En attente du client';
+      case 'devis_accepte':
+        return 'Devis accepté - En attente du paiement';
+      case 'devis_refuse':
+        return 'Devis refusé par le client';
       case 'acceptee':
-        return 'Commande acceptée';
+        return 'Commande acceptée - Paiement sécurisé';
       case 'en_cours':
         return 'En cours';
       case 'terminee':
-        return 'Terminée';
+        return 'Terminée - En attente de validation';
+      case 'validee':
+        return 'Validée - Paiement débloqué';
       case 'annulee':
         return 'Annulée';
+      case 'refusee':
+        return 'Refusée par l\'artisan';
       default:
         return statut;
     }

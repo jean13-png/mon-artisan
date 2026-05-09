@@ -3,12 +3,16 @@ class AppConstants {
   static const String appName = 'Mon Artisan';
   static const String appVersion = '1.0.0';
   
-  // FedaPay
-  static const String fedapayPublicKey = 'pk_live_IDtylXn9RdMm5EVefFX1ifZt';
-  static const String fedapaySecretKey = 'sk_live_3KyG5_jI3QsfFqon1WzIDd8z';
-  static const String fedapayApiKey = fedapaySecretKey; // Utiliser la clé secrète pour l'API
-  static const String fedapayBaseUrl = 'https://api.fedapay.com/v1';
+  // FedaPay - MODE TEST
+  // ⚠️ IMPORTANT: Utiliser les clés SANDBOX pour les tests
+  static const String fedapayPublicKey = 'pk_sandbox_YOUR_TEST_KEY'; // À remplacer
+  static const String fedapaySecretKey = 'sk_sandbox_YOUR_TEST_KEY'; // À remplacer
+  static const String fedapayApiKey = fedapaySecretKey;
+  static const String fedapayBaseUrl = 'https://sandbox-api.fedapay.com/v1';
   static const double commissionRate = 0.10; // 10%
+  
+  // ⚠️ MODE SIMULATION: Activer pour tester sans vraie API FedaPay
+  static const bool simulateFedaPay = true; // ✅ Mettre à false quand les clés sont bonnes
   
   // Mode test (désactiver le paiement obligatoire)
   static const bool isTestMode = true; // Mettre à false en production

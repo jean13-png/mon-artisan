@@ -64,7 +64,11 @@ class ArtisanCard extends StatelessWidget {
                         children: [
                           Expanded(
                             child: Text(
-                              '${artisan.userId}', // TODO: Get user name
+                              artisan.fullName.isNotEmpty
+                                  ? artisan.fullName
+                                  : artisan.prenom != null
+                                      ? '${artisan.prenom} ${artisan.nom ?? ''}'.trim()
+                                      : 'Artisan',
                               style: AppTextStyles.bodyLarge.copyWith(
                                 fontWeight: FontWeight.w600,
                               ),
@@ -165,7 +169,7 @@ class ArtisanCard extends StatelessWidget {
                           ),
                           const Spacer(),
                           Text(
-                            '${artisan.tarifs['tarifHoraire'] ?? 0} FCFA/h',
+                            '${(artisan.tarifs['horaire'] ?? artisan.tarifs['tarifHoraire'] ?? 0).toStringAsFixed(0)} FCFA/h',
                             style: AppTextStyles.bodyMedium.copyWith(
                               color: AppColors.primaryBlue,
                               fontWeight: FontWeight.w600,

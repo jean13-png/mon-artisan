@@ -123,7 +123,7 @@ class _FavorisScreenState extends State<FavorisScreen> {
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: AppColors.white),
           onPressed: () {
-            context.go(AppRouter.homeClient);
+            Navigator.pop(context);
           },
         ),
         title: Text(
@@ -188,7 +188,7 @@ class _FavorisScreenState extends State<FavorisScreen> {
                         child: ArtisanCard(
                           artisan: artisan,
                           onTap: () {
-                            context.go(AppRouter.artisanProfile, extra: artisan);
+                            context.push(AppRouter.artisanProfile, extra: artisan);
                           },
                         ),
                       );
