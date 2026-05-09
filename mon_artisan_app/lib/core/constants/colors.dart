@@ -20,8 +20,8 @@ class AppColors {
   /// Texte principal (contraste élevé sur fond clair).
   static const Color onSurface = Color(0xFF1C1C1E);
 
-  /// Texte secondaire, légendes.
-  static const Color onSurfaceMuted = Color(0xFF6E6E73);
+  /// Texte secondaire — suffisamment sombre pour rester lisible sur gris/blanc (WCAG).
+  static const Color onSurfaceMuted = Color(0xFF3C3C41);
 
   // États
   static const Color success = Color(0xFF27AE60);

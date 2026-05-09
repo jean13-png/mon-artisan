@@ -37,7 +37,7 @@ class CustomTextField extends StatelessWidget {
           label,
           style: AppTextStyles.bodyMedium.copyWith(
             fontWeight: FontWeight.w600,
-            color: AppColors.black,
+            color: AppColors.onSurface,
           ),
         ),
         const SizedBox(height: 8),
@@ -52,12 +52,12 @@ class CustomTextField extends StatelessWidget {
           decoration: InputDecoration(
             hintText: hint,
             hintStyle: AppTextStyles.bodyMedium.copyWith(
-              color: AppColors.greyMedium,
+              color: AppColors.greyDark,
             ),
             prefixIcon: prefixIcon,
             suffixIcon: suffixIcon,
             filled: true,
-            fillColor: enabled ? AppColors.white : AppColors.greyLight,
+            fillColor: enabled ? AppColors.surfaceCard : AppColors.surfaceCard.withValues(alpha: 0.5),
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(8),
               borderSide: const BorderSide(color: AppColors.greyMedium),

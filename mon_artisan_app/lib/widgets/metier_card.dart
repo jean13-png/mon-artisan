@@ -24,7 +24,7 @@ class MetierCard extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: AppColors.white,
+          color: AppColors.surfaceCard,
           borderRadius: BorderRadius.circular(12),
           boxShadow: [
             BoxShadow(
@@ -76,9 +76,9 @@ class MetierCard extends StatelessWidget {
                 ],
               ),
             ),
-            const Icon(
+            Icon(
               Icons.arrow_forward_ios,
-              color: AppColors.greyMedium,
+              color: AppColors.greyDark.withValues(alpha: 0.85),
               size: 16,
             ),
           ],

@@ -76,7 +76,7 @@ class _PositionClientWidgetState extends State<PositionClientWidget> {
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 0, vertical: 8),
       decoration: BoxDecoration(
-        color: AppColors.white,
+        color: AppColors.surfaceCard,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
           color: _etat == _Etat.succes

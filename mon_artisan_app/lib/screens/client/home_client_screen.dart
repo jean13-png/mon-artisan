@@ -85,16 +85,9 @@ class _HomeClientScreenState extends State<HomeClientScreen> {
     }
   }
 
-  void _searchByMetier(String metier) {
-    context.push(
-      '${AppRouter.searchArtisan}?metier=${Uri.encodeComponent(metier)}'
-      '&ville=${Uri.encodeComponent(_selectedVille ?? '')}',
-    );
-  }
-
   void _searchByCategorie(String categorie) {
     context.push(
-      '${AppRouter.searchArtisan}?categorie=${Uri.encodeComponent(categorie)}'
+      '${AppRouter.categoryMetiers}?categorie=${Uri.encodeComponent(categorie)}'
       '&ville=${Uri.encodeComponent(_selectedVille ?? '')}',
     );
   }
@@ -175,41 +168,51 @@ class _HomeClientScreenState extends State<HomeClientScreen> {
                 }
               },
               itemBuilder: (_) => [
-                const PopupMenuItem(
+                PopupMenuItem(
                     value: 'profile',
                     child: Row(children: [
-                      Icon(Icons.person_outline),
-                      SizedBox(width: 8),
-                      Text('Modifier mon profil')
+                      Icon(Icons.person_outline, color: AppColors.primaryBlue),
+                      const SizedBox(width: 8),
+                      Text('Modifier mon profil',
+                          style:
+                              TextStyle(color: AppColors.onSurface, fontWeight: FontWeight.w500)),
                     ])),
-                const PopupMenuItem(
+                PopupMenuItem(
                     value: 'history',
                     child: Row(children: [
-                      Icon(Icons.history),
-                      SizedBox(width: 8),
-                      Text('Mes commandes')
+                      Icon(Icons.history, color: AppColors.primaryBlue),
+                      const SizedBox(width: 8),
+                      Text('Mes commandes',
+                          style:
+                              TextStyle(color: AppColors.onSurface, fontWeight: FontWeight.w500)),
                     ])),
                 if (user.isArtisan)
-                  const PopupMenuItem(
+                  PopupMenuItem(
                       value: 'switch_artisan',
                       child: Row(children: [
-                        Icon(Icons.swap_horiz),
-                        SizedBox(width: 8),
-                        Text('Passer en mode Artisan')
+                        Icon(Icons.swap_horiz, color: AppColors.primaryBlue),
+                        const SizedBox(width: 8),
+                        Text('Passer en mode Artisan',
+                            style: TextStyle(
+                                color: AppColors.onSurface, fontWeight: FontWeight.w500)),
                       ])),
-                const PopupMenuItem(
+                PopupMenuItem(
                     value: 'settings',
                     child: Row(children: [
-                      Icon(Icons.settings),
-                      SizedBox(width: 8),
-                      Text('Paramètres')
+                      Icon(Icons.settings, color: AppColors.primaryBlue),
+                      const SizedBox(width: 8),
+                      Text('Paramètres',
+                          style:
+                              TextStyle(color: AppColors.onSurface, fontWeight: FontWeight.w500)),
                     ])),
-                const PopupMenuItem(
+                PopupMenuItem(
                     value: 'logout',
                     child: Row(children: [
-                      Icon(Icons.logout),
-                      SizedBox(width: 8),
-                      Text('Déconnexion')
+                      Icon(Icons.logout, color: AppColors.accentRed),
+                      const SizedBox(width: 8),
+                      Text('Déconnexion',
+                          style:
+                              TextStyle(color: AppColors.onSurface, fontWeight: FontWeight.w500)),
                     ])),
               ],
             ),
@@ -261,9 +264,9 @@ class _HomeClientScreenState extends State<HomeClientScreen> {
                         decoration: InputDecoration(
                           hintText: 'Maçon, coiffeur, mécanicien...',
                           hintStyle: AppTextStyles.bodyMedium
-                              .copyWith(color: AppColors.greyMedium),
-                          prefixIcon: const Icon(Icons.search,
-                              color: AppColors.greyMedium),
+                              .copyWith(color: AppColors.greyDark),
+                          prefixIcon:
+                              Icon(Icons.search, color: AppColors.greyDark.withValues(alpha: 0.95)),
                           suffixIcon: IconButton(
                             icon: const Icon(Icons.tune,
                                 color: AppColors.primaryBlue),
@@ -317,7 +320,13 @@ class _HomeClientScreenState extends State<HomeClientScreen> {
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text('Nos catégories', style: AppTextStyles.h3),
+                    Text(
+                      'Nos catégories',
+                      style: AppTextStyles.h3.copyWith(
+                        color: AppColors.primaryBlue,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
                     TextButton(
                       onPressed: () => context.push(AppRouter.searchArtisan),
                       child: Text('Voir tout',
@@ -538,10 +547,13 @@ class _HomeClientScreenState extends State<HomeClientScreen> {
                                 children: opts
                                     .map((o) => ListTile(
                                           leading: Icon(categoryIcon(o),
-                                              size: 20),
+                                              size: 22,
+                                              color: AppColors.primaryBlue),
                                           title: Text(o,
-                                              style:
-                                                  AppTextStyles.bodyMedium),
+                                              style: AppTextStyles.bodyMedium
+                                                  .copyWith(
+                                                      color:
+                                                          AppColors.onSurface)),
                                           onTap: () => onSel(o),
                                         ))
                                     .toList(),
@@ -736,58 +748,5 @@ class _HomeClientScreenState extends State<HomeClientScreen> {
         ),
       ),
     );
-  }
-
-  // ── Méthodes utilitaires ──────────────────────────────────────────────
-  
-  /// Retourne l'URL de l'image pour une catégorie donnée
-  String categoryImageUrl(String categorie) {
-    final imageMap = {
-      'Bâtiment et Construction': 'https://images.unsplash.com/photo-1504307651254-35680f356dfd?w=400',
-      'Électricité et Plomberie': 'https://images.unsplash.com/photo-1621905251918-48416bd8575a?w=400',
-      'Mécanique et Automobile': 'https://images.unsplash.com/photo-1486262715619-67b85e0b08d3?w=400',
-      'Beauté et Bien-être': 'https://images.unsplash.com/photo-1560066984-138dadb4c035?w=400',
-      'Couture et Mode': 'https://images.unsplash.com/photo-1558769132-cb1aea3c8565?w=400',
-      'Alimentation et Restauration': 'https://images.unsplash.com/photo-1414235077428-338989a2e8c0?w=400',
-      'Nettoyage et Entretien': 'https://images.unsplash.com/photo-1581578731548-c64695cc6952?w=400',
-      'Technologie et Réparation': 'https://images.unsplash.com/photo-1519389950473-47ba0277781c?w=400',
-      'Art et Décoration': 'https://images.unsplash.com/photo-1513519245088-0e12902e35ca?w=400',
-      'Agriculture et Jardinage': 'https://images.unsplash.com/photo-1464226184884-fa280b87c399?w=400',
-      'Transport et Logistique': 'https://images.unsplash.com/photo-1519003722824-194d4455a60c?w=400',
-      'Éducation et Formation': 'https://images.unsplash.com/photo-1503676260728-1c00da094a0b?w=400',
-      'Santé et Soins': 'https://images.unsplash.com/photo-1576091160399-112ba8d25d1d?w=400',
-      'Événementiel et Animation': 'https://images.unsplash.com/photo-1511578314322-379afb476865?w=400',
-      'Sécurité et Surveillance': 'https://images.unsplash.com/photo-1557597774-9d273605dfa9?w=400',
-    };
-    return imageMap[categorie] ?? 'https://images.unsplash.com/photo-1581578731548-c64695cc6952?w=400';
-  }
-
-  /// Retourne l'icône appropriée pour une catégorie
-  IconData categoryIcon(String categorie) {
-    final iconMap = {
-      'Bâtiment et Construction': Icons.construction,
-      'Électricité et Plomberie': Icons.electrical_services,
-      'Mécanique et Automobile': Icons.build,
-      'Beauté et Bien-être': Icons.spa,
-      'Couture et Mode': Icons.checkroom,
-      'Alimentation et Restauration': Icons.restaurant,
-      'Nettoyage et Entretien': Icons.cleaning_services,
-      'Technologie et Réparation': Icons.computer,
-      'Art et Décoration': Icons.palette,
-      'Agriculture et Jardinage': Icons.yard,
-      'Transport et Logistique': Icons.local_shipping,
-      'Éducation et Formation': Icons.school,
-      'Santé et Soins': Icons.medical_services,
-      'Événementiel et Animation': Icons.celebration,
-      'Sécurité et Surveillance': Icons.security,
-    };
-    return iconMap[categorie] ?? Icons.work;
-  }
-
-  /// Recherche de catégories avec autocomplétion
-  Iterable<String> searchCategories(String query) {
-    if (query.isEmpty) return metiersData.keys;
-    final q = query.toLowerCase();
-    return metiersData.keys.where((cat) => cat.toLowerCase().contains(q));
   }
 }

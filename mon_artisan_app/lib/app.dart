@@ -73,7 +73,7 @@ class _AppRouterState extends State<_AppRouter> {
       textTheme: baseText.copyWith(
         bodyLarge: baseText.bodyLarge?.copyWith(color: AppColors.onSurface),
         bodyMedium: baseText.bodyMedium?.copyWith(color: AppColors.onSurfaceMuted),
-        bodySmall: baseText.bodySmall?.copyWith(color: AppColors.onSurfaceMuted),
+        bodySmall: baseText.bodySmall?.copyWith(color: AppColors.greyDark),
         titleLarge: baseText.titleLarge?.copyWith(color: AppColors.primaryBlue),
         titleMedium: baseText.titleMedium?.copyWith(color: AppColors.primaryBlue),
       ),
@@ -107,7 +107,10 @@ class _AppRouterState extends State<_AppRouter> {
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
         fillColor: AppColors.surfaceCard,
-        labelStyle: GoogleFonts.poppins(color: AppColors.onSurfaceMuted),
+        labelStyle: GoogleFonts.poppins(
+          color: AppColors.onSurfaceMuted,
+          fontWeight: FontWeight.w500,
+        ),
         hintStyle: GoogleFonts.poppins(color: AppColors.greyDark),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(8),

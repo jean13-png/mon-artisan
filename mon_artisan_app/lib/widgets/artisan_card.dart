@@ -20,7 +20,7 @@ class ArtisanCard extends StatelessWidget {
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
       child: Material(
-        color: AppColors.white,
+        color: AppColors.surfaceCard,
         borderRadius: BorderRadius.circular(12),
         child: InkWell(
           onTap: onTap,
@@ -185,7 +185,7 @@ class ArtisanCard extends StatelessWidget {
                 Icon(
                   Icons.arrow_forward_ios,
                   size: 16,
-                  color: AppColors.greyMedium,
+                  color: AppColors.greyDark.withValues(alpha: 0.85),
                 ),
               ],
             ),

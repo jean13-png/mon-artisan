@@ -149,12 +149,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
     final isArtisan = widget.role == 'artisan';
 
     return Scaffold(
-      backgroundColor: AppColors.white,
       appBar: AppBar(
-        backgroundColor: AppColors.white,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: AppColors.primaryBlue),
+          icon: const Icon(Icons.arrow_back, color: AppColors.white),
           onPressed: () {
             if (Navigator.canPop(context)) {
               Navigator.pop(context);
@@ -165,7 +163,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
         ),
         title: Text(
           isArtisan ? 'Inscription Artisan' : 'Inscription Client',
-          style: AppTextStyles.h3.copyWith(color: AppColors.primaryBlue),
+          style: AppTextStyles.h3.copyWith(color: AppColors.white),
         ),
       ),
       body: SafeArea(
@@ -352,7 +350,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
       text,
       style: AppTextStyles.bodyMedium.copyWith(
         fontWeight: FontWeight.w600,
-        color: AppColors.black,
+        color: AppColors.onSurface,
       ),
     );
   }
@@ -366,7 +364,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
       hintStyle: AppTextStyles.bodyMedium.copyWith(color: AppColors.greyMedium),
       prefixIcon: Icon(icon, color: AppColors.greyDark),
       filled: true,
-      fillColor: AppColors.white,
+      fillColor: AppColors.surfaceCard,
       contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(8),

@@ -8,6 +8,7 @@ import '../../screens/auth/register_screen.dart';
 import '../../screens/auth/contrat_engagement_screen.dart';
 import '../../screens/auth/artisan_payment_screen.dart';
 import '../../screens/client/home_client_screen.dart';
+import '../../screens/client/category_metiers_screen.dart';
 import '../../screens/client/search_artisan_screen.dart';
 import '../../screens/client/artisan_profile_screen.dart';
 import '../../screens/client/select_commande_type_screen.dart';
@@ -41,6 +42,7 @@ class AppRouter {
 
   // ── Routes protégées : client ──────────────────────────────────────────────
   static const String homeClient = '/home-client';
+  static const String categoryMetiers = '/category-metiers';
   static const String searchArtisan = '/search-artisan';
   static const String artisanProfile = '/artisan-profile';
   static const String selectCommandeType = '/select-commande-type';
@@ -75,7 +77,7 @@ class AppRouter {
     adminDashboard, adminValidateArtisans, adminManageAgents, adminManageUsers,
   };
   static const _clientRoutes = {
-    homeClient, searchArtisan, artisanProfile, selectCommandeType,
+    homeClient, categoryMetiers, searchArtisan, artisanProfile, selectCommandeType,
     createCommande, payment, commandesHistory, rateArtisan,
   };
   static const _artisanRoutes = {
@@ -86,7 +88,9 @@ class AppRouter {
   static GoRouter create(AuthProvider authProvider) => GoRouter(
     initialLocation: splash,
     refreshListenable: authProvider,
-    redirect: (context, state) => _guard(authProvider, state.matchedLocation),
+    // Utiliser uri.path : matchedLocation peut être obsolète pendant la résolution
+    // (et GoRouter du hot reload peut rester sans les routes nouvellement ajoutées — redémarrage complet conseillé).
+    redirect: (context, state) => _guard(authProvider, state.uri.path),
     routes: [
       GoRoute(
         path: splash,
@@ -141,6 +145,16 @@ class AppRouter {
       GoRoute(
         path: adminManageUsers,
         builder: (context, state) => const UsersManagementScreen(),
+      ),
+      GoRoute(
+        path: categoryMetiers,
+        builder: (context, state) {
+          final p = state.uri.queryParameters;
+          return CategoryMetiersScreen(
+            categorie: p['categorie'] ?? '',
+            initialVille: p['ville'],
+          );
+        },
       ),
       GoRoute(
         path: searchArtisan,

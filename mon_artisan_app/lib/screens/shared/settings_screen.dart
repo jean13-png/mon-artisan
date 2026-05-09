@@ -15,7 +15,7 @@ class SettingsScreen extends StatelessWidget {
     final user = authProvider.userModel;
 
     return Scaffold(
-      backgroundColor: AppColors.white,
+      backgroundColor: AppColors.surface,
       appBar: AppBar(
         backgroundColor: AppColors.primaryBlue,
         elevation: 0,

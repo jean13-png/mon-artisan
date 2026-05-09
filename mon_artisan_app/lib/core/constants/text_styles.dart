@@ -39,7 +39,7 @@ class AppTextStyles {
   static TextStyle bodySmall = GoogleFonts.poppins(
     fontSize: 12,
     fontWeight: FontWeight.normal,
-    color: AppColors.onSurfaceMuted,
+    color: AppColors.greyDark,
     height: 1.3,
   );
 

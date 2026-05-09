@@ -67,12 +67,10 @@ class _LoginScreenState extends State<LoginScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.white,
       appBar: AppBar(
-        backgroundColor: AppColors.white,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: AppColors.primaryBlue),
+          icon: const Icon(Icons.arrow_back, color: AppColors.white),
           onPressed: () {
             if (Navigator.canPop(context)) {
               Navigator.pop(context);
