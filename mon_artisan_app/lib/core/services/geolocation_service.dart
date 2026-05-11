@@ -181,8 +181,10 @@ class GeolocationService {
   }
 
   /// Effectuer une recherche géospatiale d'artisans
+  /// Note: GeoCollectionReference ne supporte que CollectionReference (pas Query).
+  /// Les filtres supplémentaires doivent être appliqués manuellement sur les résultats.
   static Future<List<DocumentSnapshot<Map<String, dynamic>>>> getArtisansNear({
-    required Query<Map<String, dynamic>> baseQuery,
+    required CollectionReference<Map<String, dynamic>> collectionRef,
     required double latitude,
     required double longitude,
     double radiusKm = 50.0,
@@ -190,17 +192,27 @@ class GeolocationService {
   }) async {
     final center = GeoFirePoint(GeoPoint(latitude, longitude));
     
-    // geoflutterfire_plus utilise GeoCollectionReference
-    final geoCollection = GeoCollectionReference(baseQuery);
+    final geoCollection = GeoCollectionReference<Map<String, dynamic>>(collectionRef);
 
-    final querySnapshot = await geoCollection.fetchWithin(
+    final docs = await geoCollection.fetchWithin(
       center: center,
       radiusInKm: radiusKm,
       field: field,
-      geohashField: 'geohash', // ou le nom du champ geohash dans votre doc
+      geopointFrom: (data) {
+        // Extraire le GeoPoint depuis le champ 'position' du document
+        final pos = data[field];
+        if (pos is GeoPoint) return pos;
+        if (pos is Map) {
+          return GeoPoint(
+            (pos['latitude'] as num).toDouble(),
+            (pos['longitude'] as num).toDouble(),
+          );
+        }
+        return const GeoPoint(0, 0);
+      },
     );
     
-    return querySnapshot.map((doc) => doc).toList();
+    return docs;
   }
 
   /// Vérifier si la localisation est activée

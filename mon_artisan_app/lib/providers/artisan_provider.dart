@@ -132,50 +132,53 @@ class ArtisanProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
-      Query<ArtisanModel> baseQuery = FirebaseService.artisansCollection.withConverter<ArtisanModel>(
-        fromFirestore: (snapshot, _) => ArtisanModel.fromFirestore(snapshot),
-        toFirestore: (artisan, _) => artisan.toFirestore(),
-      );
-
-      // Appliquer les filtres non-géospatiaux
-      if (categorie != null && categorie.isNotEmpty) {
-        baseQuery = baseQuery.where('metierCategorie', isEqualTo: categorie);
-      }
-      if (metier != null && metier.isNotEmpty) {
-        baseQuery = baseQuery.where('metier', isEqualTo: metier);
-      }
-      if (ville != null && ville.isNotEmpty) {
-        baseQuery = baseQuery.where('ville', isEqualTo: ville);
-      }
-      if (quartier != null && quartier.isNotEmpty) {
-        baseQuery = baseQuery.where('quartier', isEqualTo: quartier);
-      }
-      // Exclure les artisans indisponibles
-      baseQuery = baseQuery.where('disponibilite', isEqualTo: true);
+      // Récupération de la CollectionReference brute (sans converter)
+      // GeoCollectionReference n'accepte pas de Query typée
+      final CollectionReference<Map<String, dynamic>> rawCollection =
+          FirebaseService.artisansCollection as CollectionReference<Map<String, dynamic>>;
 
       List<ArtisanModel> fetchedArtisans = [];
 
       if (latitude != null && longitude != null) {
-        // Recherche géospatiale avec geoflutterfire_plus
+        // Recherche géospatiale via geoflutterfire_plus (CollectionReference obligatoire)
         final center = gff.GeoFirePoint(GeoPoint(latitude, longitude));
-        final geoCollection = gff.GeoCollectionReference(baseQuery);
+        final geoCollection = gff.GeoCollectionReference<Map<String, dynamic>>(rawCollection);
 
         final docs = await geoCollection.fetchWithin(
           center: center,
           radiusInKm: radiusKm,
           field: 'position',
-          geohashField: 'geohash',
+          geopointFrom: (data) {
+            final pos = data['position'];
+            if (pos is GeoPoint) return pos;
+            if (pos is Map) {
+              return GeoPoint(
+                (pos['latitude'] as num).toDouble(),
+                (pos['longitude'] as num).toDouble(),
+              );
+            }
+            return const GeoPoint(0, 0);
+          },
         );
 
+        // Filtrer manuellement car geoflutterfire_plus ne supporte pas les Query composées
         for (var doc in docs) {
           try {
+            final data = doc.data() as Map<String, dynamic>;
+            // Appliquer les filtres
+            if (data['disponibilite'] != true) continue;
+            if (categorie != null && categorie.isNotEmpty && data['metierCategorie'] != categorie) continue;
+            if (metier != null && metier.isNotEmpty && data['metier'] != metier) continue;
+            if (ville != null && ville.isNotEmpty && data['ville'] != ville) continue;
+            if (quartier != null && quartier.isNotEmpty && data['quartier'] != quartier) continue;
+
             final artisan = ArtisanModel.fromFirestore(doc);
             fetchedArtisans.add(artisan);
           } catch (e) {
-            print('[ERROR] Erreur parsing artisan ${doc.id} lors de la recherche géospatiale: $e');
+            print('[ERROR] Erreur parsing artisan ${doc.id}: $e');
           }
         }
-        // Trier par distance après la recherche géospatiale
+        // Trier par distance
         fetchedArtisans.sort((a, b) {
           final distA = GeolocationService.calculateDistance(latitude, longitude, a.position.latitude, a.position.longitude);
           final distB = GeolocationService.calculateDistance(latitude, longitude, b.position.latitude, b.position.longitude);
@@ -183,17 +186,23 @@ class ArtisanProvider extends ChangeNotifier {
         });
 
       } else {
-        // Pas de localisation, appliquer uniquement les filtres non-géospatiaux
-        final querySnapshot = await baseQuery.get();
+        // Pas de localisation → query Firestore classique avec filtres
+        Query<Map<String, dynamic>> query = rawCollection;
+        query = query.where('disponibilite', isEqualTo: true);
+        if (categorie != null && categorie.isNotEmpty) query = query.where('metierCategorie', isEqualTo: categorie);
+        if (metier != null && metier.isNotEmpty) query = query.where('metier', isEqualTo: metier);
+        if (ville != null && ville.isNotEmpty) query = query.where('ville', isEqualTo: ville);
+        if (quartier != null && quartier.isNotEmpty) query = query.where('quartier', isEqualTo: quartier);
+
+        final querySnapshot = await query.get();
         for (var doc in querySnapshot.docs) {
           try {
             final artisan = ArtisanModel.fromFirestore(doc);
             fetchedArtisans.add(artisan);
           } catch (e) {
-            print('[ERROR] Erreur parsing artisan ${doc.id} lors de la recherche non-géospatiale: $e');
+            print('[ERROR] Erreur parsing artisan ${doc.id}: $e');
           }
         }
-        // Trier par note globale si pas de localisation
         fetchedArtisans.sort((a, b) => b.noteGlobale.compareTo(a.noteGlobale));
       }
       
