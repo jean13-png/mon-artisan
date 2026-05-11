@@ -35,24 +35,39 @@ class ArtisanProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
-      // C8 — Utilisation directe de l'ID de document (UID)
-      final doc = await FirebaseService.artisansCollection.doc(userId).get();
+      final querySnapshot = await FirebaseService.artisansCollection
+          .where('userId', isEqualTo: userId)
+          .limit(1)
+          .get();
 
-      if (doc.exists) {
-        _currentArtisan = ArtisanModel.fromFirestore(doc);
+      if (querySnapshot.docs.isNotEmpty) {
+        _currentArtisan = ArtisanModel.fromFirestore(querySnapshot.docs.first);
+        // M2 — Charger les commandes maintenant que l'index est géré en mémoire
         await _loadCommandes();
       } else {
-        // Fallback si l'ID n'est pas l'UID (migration ou ancien profil)
-        final querySnapshot = await FirebaseService.artisansCollection
-            .where('userId', isEqualTo: userId)
-            .limit(1)
-            .get();
-        
-        if (querySnapshot.docs.isNotEmpty) {
-          _currentArtisan = ArtisanModel.fromFirestore(querySnapshot.docs.first);
-          await _loadCommandes();
-        } else {
-          // Profil non trouvé...
+        // Profil artisan non trouvé - créer un profil minimal en mémoire
+        _currentArtisan = ArtisanModel(
+          id: '',
+          userId: userId,
+          metier: 'Artisan',
+          metierCategorie: 'Autre',
+          description: 'Profil à compléter',
+          tarifs: {'horaire': 5000},
+          experience: 0,
+          position: const GeoPoint(6.3703, 2.3912),
+          geohash: '',
+          ville: 'Cotonou',
+          quartier: '',
+          noteGlobale: 0,
+          nombreAvis: 0,
+          nombreCommandes: 0,
+          revenusTotal: 0,
+          revenusDisponibles: 0,
+          disponibilite: true,
+          createdAt: DateTime.now(),
+          updatedAt: DateTime.now(),
+        );
+      }
     } catch (e) {
       print('Erreur chargement profil: $e');
       _errorMessage = 'Erreur lors du chargement du profil';
@@ -116,127 +131,70 @@ class ArtisanProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
-      // RECHERCHE FLEXIBLE: Récupérer TOUS les artisans et filtrer en mémoire
-      print('[SEARCH] Récupération de tous les artisans...');
-      
-      final querySnapshot = await FirebaseService.artisansCollection.get();
-      
-      print('[SEARCH] Total documents: ${querySnapshot.docs.length}');
+      Query<ArtisanModel> baseQuery = FirebaseService.artisansCollection.withConverter<ArtisanModel>(
+        fromFirestore: (snapshot, _) => ArtisanModel.fromFirestore(snapshot),
+        toFirestore: (artisan, _) => artisan.toFirestore(),
+      );
 
-      List<ArtisanModel> allArtisans = [];
-      
-      for (var doc in querySnapshot.docs) {
-        try {
-          final data = doc.data() as Map<String, dynamic>;
-          print('[SEARCH] Document ${doc.id}: metier=${data['metier']}, ville=${data['ville']}');
-          
-          final artisan = ArtisanModel.fromFirestore(doc);
-
-          // Filtrer par catégorie
-          if (categorie != null && categorie.isNotEmpty) {
-            final catNorm = _normalizeString(categorie);
-            final artisanCatNorm = _normalizeString(artisan.metierCategorie);
-            if (!artisanCatNorm.contains(catNorm)) continue;
-          }
-
-          // Filtrer par métier ou query (insensible à la casse et aux accents)
-          if (metier != null && metier.isNotEmpty) {
-            final metierNormalized = _normalizeString(metier);
-            final artisanMetierNormalized = _normalizeString(artisan.metier);
-            if (!artisanMetierNormalized.contains(metierNormalized)) continue;
-          }
-
-          // Filtrer par ville (insensible à la casse)
-          if (ville != null && ville.isNotEmpty) {
-            if (!artisan.ville.toLowerCase().contains(ville.toLowerCase())) {
-              continue;
-            }
-          }
-
-          // Filtrer par quartier
-          if (quartier != null && quartier.isNotEmpty) {
-            if (!artisan.quartier.toLowerCase().contains(quartier.toLowerCase())) {
-              continue;
-            }
-          }
-
-          // Exclure les artisans indisponibles
-          if (!artisan.estRealementDisponible) continue;
-
-          allArtisans.add(artisan);
-        } catch (e) {
-          print('[ERROR] Erreur parsing artisan ${doc.id}: $e');
-        }
+      // Appliquer les filtres non-géospatiaux
+      if (categorie != null && categorie.isNotEmpty) {
+        baseQuery = baseQuery.where('metierCategorie', isEqualTo: categorie);
       }
-      
-      print('[SEARCH] Artisans après filtrage: ${allArtisans.length}');
+      if (metier != null && metier.isNotEmpty) {
+        baseQuery = baseQuery.where('metier', isEqualTo: metier);
+      }
+      if (ville != null && ville.isNotEmpty) {
+        baseQuery = baseQuery.where('ville', isEqualTo: ville);
+      }
+      if (quartier != null && quartier.isNotEmpty) {
+        baseQuery = baseQuery.where('quartier', isEqualTo: quartier);
+      }
+      // Exclure les artisans indisponibles
+      baseQuery = baseQuery.where('disponibilite', isEqualTo: true);
 
-      // Recherche intelligente par rayon (comme Gozem/Yango)
+      List<ArtisanModel> fetchedArtisans = [];
+
       if (latitude != null && longitude != null) {
-        // Calculer la distance pour chaque artisan
-        List<Map<String, dynamic>> artisansWithDistance = allArtisans.map((artisan) {
-          final distance = GeolocationService.calculateDistance(
-            latitude,
-            longitude,
-            artisan.position.latitude,
-            artisan.position.longitude,
-          );
-          return {
-            'artisan': artisan,
-            'distance': distance,
-          };
-        }).toList();
+        // Recherche géospatiale avec geoflutterfire_plus
+        final center = gff.GeoFirePoint(GeoPoint(latitude, longitude));
+        final geo = gff.GeoFlutterFire(firestore: FirebaseFirestore.instance);
 
-        // Trier par distance
-        artisansWithDistance.sort((a, b) => 
-          (a['distance'] as double).compareTo(b['distance'] as double));
+        final querySnapshot = await geo.collection(collectionRef: baseQuery)
+            .near(center: center, radius: radiusKm, field: 'position')
+            .get();
 
-        // Recherche par rayon progressif
-        List<ArtisanModel> nearbyArtisans = [];
-        
-        // 1. D'abord chercher dans 5km
-        nearbyArtisans = artisansWithDistance
-            .where((item) => (item['distance'] as double) <= 5.0)
-            .map((item) => item['artisan'] as ArtisanModel)
-            .toList();
-        
-        // 2. Si moins de 3 résultats, élargir à 10km
-        if (nearbyArtisans.length < 3) {
-          nearbyArtisans = artisansWithDistance
-              .where((item) => (item['distance'] as double) <= 10.0)
-              .map((item) => item['artisan'] as ArtisanModel)
-              .toList();
+        for (var doc in querySnapshot.docs) {
+          try {
+            final artisan = ArtisanModel.fromFirestore(doc);
+            fetchedArtisans.add(artisan);
+          } catch (e) {
+            print('[ERROR] Erreur parsing artisan ${doc.id} lors de la recherche géospatiale: $e');
+          }
         }
-        
-        // 3. Si toujours moins de 3, élargir à 20km
-        if (nearbyArtisans.length < 3) {
-          nearbyArtisans = artisansWithDistance
-              .where((item) => (item['distance'] as double) <= 20.0)
-              .map((item) => item['artisan'] as ArtisanModel)
-              .toList();
-        }
-        
-        // 4. Si toujours pas assez, prendre tous ceux de la ville (max 50km)
-        if (nearbyArtisans.length < 3) {
-          nearbyArtisans = artisansWithDistance
-              .where((item) => (item['distance'] as double) <= 50.0)
-              .map((item) => item['artisan'] as ArtisanModel)
-              .toList();
-        }
-        
-        _artisans = nearbyArtisans;
-        
-        print('[SEARCH] Recherche intelligente:');
-        print('  - Artisans dans 5km: ${artisansWithDistance.where((i) => (i['distance'] as double) <= 5.0).length}');
-        print('  - Artisans dans 10km: ${artisansWithDistance.where((i) => (i['distance'] as double) <= 10.0).length}');
-        print('  - Artisans dans 20km: ${artisansWithDistance.where((i) => (i['distance'] as double) <= 20.0).length}');
-        print('  - Total affichés: ${_artisans.length}');
+        // Trier par distance après la recherche géospatiale
+        fetchedArtisans.sort((a, b) {
+          final distA = GeolocationService.calculateDistance(latitude, longitude, a.position.latitude, a.position.longitude);
+          final distB = GeolocationService.calculateDistance(latitude, longitude, b.position.latitude, b.position.longitude);
+          return distA.compareTo(distB);
+        });
+
       } else {
-        // Pas de localisation, afficher tous les artisans de la ville
-        _artisans = allArtisans;
-        // Trier par note globale
-        _artisans.sort((a, b) => b.noteGlobale.compareTo(a.noteGlobale));
+        // Pas de localisation, appliquer uniquement les filtres non-géospatiaux
+        final querySnapshot = await baseQuery.get();
+        for (var doc in querySnapshot.docs) {
+          try {
+            final artisan = ArtisanModel.fromFirestore(doc);
+            fetchedArtisans.add(artisan);
+          } catch (e) {
+            print('[ERROR] Erreur parsing artisan ${doc.id} lors de la recherche non-géospatiale: $e');
+          }
+        }
+        // Trier par note globale si pas de localisation
+        fetchedArtisans.sort((a, b) => b.noteGlobale.compareTo(a.noteGlobale));
       }
+      
+      _artisans = fetchedArtisans;
+      print('[SEARCH] Artisans trouvés: ${_artisans.length}');
 
     } catch (e) {
       print('Erreur recherche artisans: $e');
@@ -381,7 +339,10 @@ class ArtisanProvider extends ChangeNotifier {
     }
   }
 
-
+  // M1 — Déléguer à GeolocationService (source unique de vérité)
+  double _calculateDistance(double lat1, double lon1, double lat2, double lon2) {
+    return GeolocationService.calculateDistance(lat1, lon1, lat2, lon2);
+  }
 
   // Nettoyer les erreurs
   void clearError() {
@@ -494,7 +455,7 @@ class ArtisanProvider extends ChangeNotifier {
   
   // Générer un geohash réel via geoflutterfire_plus
   String _generateGeohash(double lat, double lon) {
-    final point = GeoFirePoint(GeoPoint(lat, lon));
+    final point = gff.GeoFirePoint(GeoPoint(lat, lon));
     return point.geohash;
   }
   

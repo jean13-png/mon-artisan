@@ -180,6 +180,24 @@ class GeolocationService {
     return point.geohash;
   }
 
+  /// Effectuer une recherche géospatiale d'artisans
+  static Future<List<DocumentSnapshot<Map<String, dynamic>>>> getArtisansNear({
+    required Query<Map<String, dynamic>> baseQuery,
+    required double latitude,
+    required double longitude,
+    double radiusKm = 50.0,
+    String field = 'position',
+  }) async {
+    final center = GeoFirePoint(GeoPoint(latitude, longitude));
+    final geo = GeoFlutterFire(firestore: FirebaseFirestore.instance);
+
+    final querySnapshot = await geo.collection(collectionRef: baseQuery)
+        .near(center: center, radius: radiusKm, field: field)
+        .get();
+    
+    return querySnapshot.docs;
+  }
+
   /// Vérifier si la localisation est activée
   static Future<bool> isLocationServiceEnabled() async {
     try {
