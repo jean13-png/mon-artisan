@@ -35,39 +35,24 @@ class ArtisanProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
-      final querySnapshot = await FirebaseService.artisansCollection
-          .where('userId', isEqualTo: userId)
-          .limit(1)
-          .get();
+      // C8 — Utilisation directe de l'ID de document (UID)
+      final doc = await FirebaseService.artisansCollection.doc(userId).get();
 
-      if (querySnapshot.docs.isNotEmpty) {
-        _currentArtisan = ArtisanModel.fromFirestore(querySnapshot.docs.first);
-        // M2 — Charger les commandes maintenant que l'index est géré en mémoire
+      if (doc.exists) {
+        _currentArtisan = ArtisanModel.fromFirestore(doc);
         await _loadCommandes();
       } else {
-        // Profil artisan non trouvé - créer un profil minimal en mémoire
-        _currentArtisan = ArtisanModel(
-          id: '',
-          userId: userId,
-          metier: 'Artisan',
-          metierCategorie: 'Autre',
-          description: 'Profil à compléter',
-          tarifs: {'horaire': 5000},
-          experience: 0,
-          position: const GeoPoint(6.3703, 2.3912),
-          geohash: '',
-          ville: 'Cotonou',
-          quartier: '',
-          noteGlobale: 0,
-          nombreAvis: 0,
-          nombreCommandes: 0,
-          revenusTotal: 0,
-          revenusDisponibles: 0,
-          disponibilite: true,
-          createdAt: DateTime.now(),
-          updatedAt: DateTime.now(),
-        );
-      }
+        // Fallback si l'ID n'est pas l'UID (migration ou ancien profil)
+        final querySnapshot = await FirebaseService.artisansCollection
+            .where('userId', isEqualTo: userId)
+            .limit(1)
+            .get();
+        
+        if (querySnapshot.docs.isNotEmpty) {
+          _currentArtisan = ArtisanModel.fromFirestore(querySnapshot.docs.first);
+          await _loadCommandes();
+        } else {
+          // Profil non trouvé...
     } catch (e) {
       print('Erreur chargement profil: $e');
       _errorMessage = 'Erreur lors du chargement du profil';
@@ -190,7 +175,7 @@ class ArtisanProvider extends ChangeNotifier {
       if (latitude != null && longitude != null) {
         // Calculer la distance pour chaque artisan
         List<Map<String, dynamic>> artisansWithDistance = allArtisans.map((artisan) {
-          final distance = _calculateDistance(
+          final distance = GeolocationService.calculateDistance(
             latitude,
             longitude,
             artisan.position.latitude,
@@ -396,10 +381,7 @@ class ArtisanProvider extends ChangeNotifier {
     }
   }
 
-  // M1 — Déléguer à GeolocationService (source unique de vérité)
-  double _calculateDistance(double lat1, double lon1, double lat2, double lon2) {
-    return GeolocationService.calculateDistance(lat1, lon1, lat2, lon2);
-  }
+
 
   // Nettoyer les erreurs
   void clearError() {

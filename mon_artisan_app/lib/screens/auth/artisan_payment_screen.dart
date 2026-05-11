@@ -33,8 +33,8 @@ class _ArtisanPaymentScreenState extends State<ArtisanPaymentScreen> {
   String? _errorMessage;
   String? _transactionId;
 
-  static const double FRAIS_INSCRIPTION = 958.0;
-  static const double COMMISSION_AGENT = 200.0; // Commission pour l'agent
+  static const double fraisInscription = 958.0;
+  static const double commissionAgent = 200.0;
 
   @override
   void initState() {
@@ -143,17 +143,12 @@ class _ArtisanPaymentScreenState extends State<ArtisanPaymentScreen> {
       
       // ✅ Créer la transaction FedaPay
       final transactionData = await FedaPayService.createTransaction(
-        amount: FRAIS_INSCRIPTION,
+        amount: fraisInscription,
         description: 'Inscription artisan - ${authProvider.userModel!.nom} ${authProvider.userModel!.prenom}',
         customerEmail: authProvider.userModel!.email,
         customerPhone: authProvider.userModel!.telephone,
         commandeId: 'inscription_${authProvider.userModel!.id}_${DateTime.now().millisecondsSinceEpoch}',
       );
-
-      // ✅ Vérifier que transactionData n'est pas null
-      if (transactionData == null) {
-        throw Exception('Réponse FedaPay vide (null)');
-      }
 
       print('[SUCCESS] Transaction créée: ${transactionData['v1']?['id'] ?? 'ID manquant'}');
       
@@ -321,8 +316,8 @@ class _ArtisanPaymentScreenState extends State<ArtisanPaymentScreen> {
         'userId': authProvider.userModel!.id,
         'agentId': _agentId,
         'codeAgent': _codeController.text.trim().toUpperCase(),
-        'montant': FRAIS_INSCRIPTION,
-        'commissionAgent': COMMISSION_AGENT,
+        'montant': fraisInscription,
+        'commissionAgent': commissionAgent,
         'type': 'inscription_artisan',
         'statut': 'completed',
         'methode': 'fedapay',
@@ -347,12 +342,12 @@ class _ArtisanPaymentScreenState extends State<ArtisanPaymentScreen> {
       });
 
       // Créditer la commission de l'agent
-      await _crediterAgent(_agentId!, COMMISSION_AGENT);
+      await _crediterAgent(_agentId!, commissionAgent);
 
       print('[SUCCESS] Paiement inscription enregistré');
     } catch (e) {
       print('[ERROR] Erreur enregistrement paiement: $e');
-      throw e;
+      rethrow;
     }
   }
 
@@ -498,7 +493,7 @@ class _ArtisanPaymentScreenState extends State<ArtisanPaymentScreen> {
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Text(
-                      '${FRAIS_INSCRIPTION.toStringAsFixed(0)} FCFA',
+                      '${fraisInscription.toStringAsFixed(0)} FCFA',
                       style: AppTextStyles.h1.copyWith(
                         color: AppColors.primaryBlue,
                         fontWeight: FontWeight.w700,
@@ -670,7 +665,7 @@ class _ArtisanPaymentScreenState extends State<ArtisanPaymentScreen> {
                       disabledBackgroundColor: AppColors.greyMedium,
                     ),
                     child: Text(
-                      'Payer ${FRAIS_INSCRIPTION.toStringAsFixed(0)} FCFA',
+                      'Payer ${fraisInscription.toStringAsFixed(0)} FCFA',
                       style: AppTextStyles.bodyLarge.copyWith(
                         color: AppColors.white,
                         fontWeight: FontWeight.w600,

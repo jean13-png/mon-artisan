@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
 import '../../core/constants/colors.dart';
 import '../../core/constants/text_styles.dart';
 import '../../models/artisan_model.dart';

@@ -351,7 +351,7 @@ class ArtisanProfileScreen extends StatelessWidget {
                               ],
                             ),
                           );
-                        }).toList(),
+                        }),
                       ],
                     ),
                   ),

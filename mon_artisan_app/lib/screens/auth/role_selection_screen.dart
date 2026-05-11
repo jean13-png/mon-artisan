@@ -10,9 +10,17 @@ class RoleSelectionScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.surface,
-      body: SingleChildScrollView(
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) {
+        if (!didPop) {
+          // Empêcher la fermeture de l'app, ne rien faire
+          // L'utilisateur doit utiliser les boutons de l'interface
+        }
+      },
+      child: Scaffold(
+        backgroundColor: AppColors.surface,
+        body: SingleChildScrollView(
         child: Column(
           children: [
             const SizedBox(height: 25),
@@ -105,6 +113,7 @@ class RoleSelectionScreen extends StatelessWidget {
           ],
         ),
       ),
+    ),
     );
   }
 }

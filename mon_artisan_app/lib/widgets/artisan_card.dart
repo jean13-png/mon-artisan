@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import '../core/constants/colors.dart';
 import '../core/constants/text_styles.dart';
+import '../core/routes/app_router.dart';
 import '../models/artisan_model.dart';
 
 class ArtisanCard extends StatelessWidget {
@@ -23,7 +25,12 @@ class ArtisanCard extends StatelessWidget {
         color: AppColors.surfaceCard,
         borderRadius: BorderRadius.circular(12),
         child: InkWell(
-          onTap: onTap,
+          onTap: () {
+            context.push(
+              '${AppRouter.artisanProfile}?id=${artisan.id}',
+              extra: artisan,
+            );
+          },
           borderRadius: BorderRadius.circular(12),
           child: Container(
             padding: const EdgeInsets.all(16),

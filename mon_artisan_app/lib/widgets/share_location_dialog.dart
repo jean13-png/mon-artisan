@@ -5,7 +5,6 @@ import '../core/constants/colors.dart';
 import '../core/constants/text_styles.dart';
 import '../core/services/geolocation_service.dart';
 import '../core/services/firebase_service.dart';
-import '../core/services/notification_service.dart';
 
 class ShareLocationDialog {
   static Future<void> show({
@@ -47,7 +46,7 @@ class ShareLocationDialog {
                 color: AppColors.success.withOpacity(0.1),
                 borderRadius: BorderRadius.circular(8),
                 border: Border.all(
-                  color: AppColors.success.withOpacity(0.3),
+                  color: AppColors.success.withValues(alpha: 0.3),
                 ),
               ),
               child: Row(
@@ -198,13 +197,11 @@ class ShareLocationDialog {
         print('[WARNING] Erreur envoi notification: $e');
       }
 
-      // Fermer le loader - UTILISER Navigator.of(context) avec rootNavigator
+      if (!context.mounted) return;
       Navigator.of(context, rootNavigator: true).pop();
 
-      // Attendre un peu pour que le loader se ferme
       await Future.delayed(const Duration(milliseconds: 100));
 
-      // Afficher confirmation
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -231,13 +228,12 @@ class ShareLocationDialog {
     } catch (e) {
       print('[ERROR] Erreur partage localisation: $e');
 
-      // Fermer le loader - UTILISER Navigator.of(context) avec rootNavigator
-      Navigator.of(context, rootNavigator: true).pop();
+      if (context.mounted) {
+        Navigator.of(context, rootNavigator: true).pop();
+      }
 
-      // Attendre un peu pour que le loader se ferme
       await Future.delayed(const Duration(milliseconds: 100));
 
-      // Afficher erreur
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(

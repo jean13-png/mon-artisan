@@ -119,6 +119,8 @@ class _UsersManagementScreenState extends State<UsersManagementScreen> with Sing
         'updatedAt': Timestamp.now(),
       });
 
+      if (!mounted) return;
+
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(isBanned ? 'Utilisateur débanni' : 'Utilisateur banni'),
@@ -128,6 +130,7 @@ class _UsersManagementScreenState extends State<UsersManagementScreen> with Sing
 
       _loadUsers();
     } catch (e) {
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Erreur: $e'),
@@ -178,6 +181,8 @@ class _UsersManagementScreenState extends State<UsersManagementScreen> with Sing
         }
       }
 
+      if (!mounted) return;
+
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Utilisateur supprimé'),
@@ -187,6 +192,7 @@ class _UsersManagementScreenState extends State<UsersManagementScreen> with Sing
 
       _loadUsers();
     } catch (e) {
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Erreur: $e'),
@@ -388,7 +394,7 @@ class _UsersManagementScreenState extends State<UsersManagementScreen> with Sing
         ),
         trailing: PopupMenuButton(
           icon: const Icon(Icons.more_vert),
-          itemBuilder: (context) => [
+          itemBuilder: (_) => [
             PopupMenuItem(
               child: Row(
                 children: [
@@ -399,10 +405,11 @@ class _UsersManagementScreenState extends State<UsersManagementScreen> with Sing
               ),
               onTap: () {
                 Future.delayed(Duration.zero, () {
+                  if (!mounted) return;
                   Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (context) => UserDetailScreen(
+                      builder: (ctx) => UserDetailScreen(
                         userId: client.id,
                         userType: 'client',
                       ),
@@ -489,7 +496,7 @@ class _UsersManagementScreenState extends State<UsersManagementScreen> with Sing
         ),
         trailing: PopupMenuButton(
           icon: const Icon(Icons.more_vert),
-          itemBuilder: (context) => [
+          itemBuilder: (_) => [
             PopupMenuItem(
               child: const Row(
                 children: [
@@ -500,10 +507,11 @@ class _UsersManagementScreenState extends State<UsersManagementScreen> with Sing
               ),
               onTap: () {
                 Future.delayed(Duration.zero, () {
+                  if (!mounted) return;
                   Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (context) => UserDetailScreen(
+                      builder: (ctx) => UserDetailScreen(
                         userId: artisan.userId,
                         userType: 'artisan',
                       ),

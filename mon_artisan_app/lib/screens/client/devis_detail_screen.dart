@@ -47,12 +47,13 @@ class _DevisDetailScreenState extends State<DevisDetailScreen> {
     );
 
     if (confirmed != true) return;
+    if (!mounted) return;
 
     setState(() => _isLoading = true);
 
     try {
       final commandeProvider = Provider.of<CommandeProvider>(context, listen: false);
-      
+
       // ✅ PROTECTION: Accepter le devis avec idempotence
       final success = await commandeProvider.accepterDevis(widget.commande.id);
 
@@ -123,6 +124,7 @@ class _DevisDetailScreenState extends State<DevisDetailScreen> {
     );
 
     if (confirmed != true) return;
+    if (!mounted) return;
 
     setState(() => _isLoading = true);
 

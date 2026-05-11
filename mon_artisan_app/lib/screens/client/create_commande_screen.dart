@@ -110,6 +110,7 @@ class _CreateCommandeScreenState extends State<CreateCommandeScreen> {
   Future<void> _pickImages() async {
     final ImagePicker picker = ImagePicker();
     final List<XFile> images = await picker.pickMultiImage();
+    if (!mounted) return;
     if (images.isNotEmpty && images.length <= 3) {
       setState(() => _selectedImages = images);
     } else if (images.length > 3) {
@@ -261,13 +262,12 @@ class _CreateCommandeScreenState extends State<CreateCommandeScreen> {
               ElevatedButton(
                 onPressed: () {
                   Navigator.pop(context);
-                  // Afficher automatiquement le modal de partage de localisation
                   ShareLocationDialog.show(
                     context: context,
                     commandeId: commandeId,
                     artisanId: widget.artisan.userId,
                   ).then((_) {
-                    // Retourner à l'accueil après le partage (ou refus)
+                    if (!context.mounted) return;
                     context.go(AppRouter.homeClient);
                   });
                 },

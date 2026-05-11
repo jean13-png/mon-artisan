@@ -146,26 +146,35 @@ class _RegisterScreenState extends State<RegisterScreen> {
   @override
   Widget build(BuildContext context) {
     final authProvider = Provider.of<AuthProvider>(context);
+    final user = authProvider.userModel;
     final isArtisan = widget.role == 'artisan';
 
-    return Scaffold(
-      appBar: AppBar(
-        elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: AppColors.white),
-          onPressed: () {
-            if (Navigator.canPop(context)) {
-              Navigator.pop(context);
-            } else {
-              context.go(AppRouter.roleSelection);
-            }
-          },
+    return PopScope(
+      canPop: true,
+      onPopInvokedWithResult: (didPop, result) {
+        if (didPop) {
+          // Retourner à la sélection de rôle
+          context.go(AppRouter.roleSelection);
+        }
+      },
+      child: Scaffold(
+        appBar: AppBar(
+          elevation: 0,
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back, color: AppColors.white),
+            onPressed: () {
+              if (Navigator.canPop(context)) {
+                Navigator.pop(context);
+              } else {
+                context.go(AppRouter.roleSelection);
+              }
+            },
+          ),
+          title: Text(
+            isArtisan ? 'Inscription Artisan' : 'Inscription Client',
+            style: AppTextStyles.h3.copyWith(color: AppColors.white),
+          ),
         ),
-        title: Text(
-          isArtisan ? 'Inscription Artisan' : 'Inscription Client',
-          style: AppTextStyles.h3.copyWith(color: AppColors.white),
-        ),
-      ),
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(24),
@@ -342,6 +351,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
           ),
         ),
       ),
+    ),
     );
   }
 

@@ -2,10 +2,9 @@ import 'package:geolocator/geolocator.dart';
 import 'package:geocoding/geocoding.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:geoflutterfire_plus/geoflutterfire_plus.dart';
-import 'dart:math';
+import 'dart:math' as math;
 
 class GeolocationService {
-  static const double earthRadius = 6371; // Rayon de la Terre en km
 
   /// Demander la permission de localisation
   static Future<bool> requestLocationPermission() async {
@@ -76,24 +75,12 @@ class GeolocationService {
   }
 
   /// Calculer la distance entre deux points (formule Haversine)
-  static double calculateDistance(
-    double lat1,
-    double lon1,
-    double lat2,
-    double lon2,
-  ) {
-    final dLat = _degreesToRadians(lat2 - lat1);
-    final dLon = _degreesToRadians(lon2 - lon1);
-
-    final a = sin(dLat / 2) * sin(dLat / 2) +
-        cos(_degreesToRadians(lat1)) *
-            cos(_degreesToRadians(lat2)) *
-            sin(dLon / 2) *
-            sin(dLon / 2);
-
-    final c = 2 * asin(sqrt(a));
-
-    return earthRadius * c;
+  static double calculateDistance(double startLat, double startLng, double endLat, double endLng) {
+    const double p = 0.017453292519943295; // math.pi / 180
+    final double a = 0.5 - math.cos((endLat - startLat) * p) / 2 +
+        math.cos(startLat * p) * math.cos(endLat * p) *
+            (1 - math.cos((endLng - startLng) * p)) / 2;
+    return 12742 * math.asin(math.sqrt(a)); // 2 * R; R = 6371 km
   }
 
   /// Calculer la distance entre deux GeoPoints
@@ -106,10 +93,7 @@ class GeolocationService {
     );
   }
 
-  /// Convertir les degrés en radians
-  static double _degreesToRadians(double degrees) {
-    return degrees * (pi / 180);
-  }
+
 
   /// Obtenir l'adresse à partir des coordonnées
   static Future<String> getAddressFromCoordinates(

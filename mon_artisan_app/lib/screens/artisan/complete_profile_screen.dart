@@ -13,7 +13,6 @@ import '../../widgets/custom_button.dart';
 import '../../widgets/custom_textfield.dart';
 import '../../widgets/ville_quartier_selector.dart';
 import '../../widgets/position_client_widget.dart';
-import '../../core/services/adresse_service.dart';
 
 class CompleteProfileScreen extends StatefulWidget {
   const CompleteProfileScreen({super.key});
@@ -29,7 +28,7 @@ class _CompleteProfileScreenState extends State<CompleteProfileScreen> {
   
   String? _diplomeUrl;
   String? _cipPhotoUrl; // Nouvelle variable pour la photo de la carte CIP
-  List<String> _atelierPhotosUrls = [];
+  final List<String> _atelierPhotosUrls = [];
   bool _isLoading = false;
   bool _isUploadingDiplome = false;
   bool _isUploadingCipPhoto = false;
@@ -61,42 +60,45 @@ class _CompleteProfileScreenState extends State<CompleteProfileScreen> {
         imageQuality: 80,
       );
 
-      if (image != null) {
-        final authProvider = Provider.of<AuthProvider>(context, listen: false);
-        final artisanProvider = Provider.of<ArtisanProvider>(context, listen: false);
-        
-        print('[UPLOAD] Upload diplôme depuis: ${image.path}');
-        print('[INFO] User ID: ${authProvider.userModel!.id}');
-        
-        final storagePath = 'artisans/${authProvider.userModel!.id}/diplome/${DateTime.now().millisecondsSinceEpoch}.jpg';
-        print('[INFO] Chemin Storage: $storagePath');
-        
-        final url = await artisanProvider.uploadImage(
-          image.path,
-          storagePath,
-        );
-        
-        print('[SUCCESS] Diplôme uploadé: $url');
-        
-        setState(() {
-          _diplomeUrl = url;
-        });
-        
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Row(
-                children: [
-                  Icon(Icons.check_circle, color: AppColors.white),
-                  SizedBox(width: 8),
-                  Text('Diplôme téléchargé avec succès'),
-                ],
-              ),
-              backgroundColor: AppColors.success,
-              duration: Duration(seconds: 2),
+      if (image == null) return;
+      if (!mounted) return;
+
+      final authProvider = Provider.of<AuthProvider>(context, listen: false);
+      final artisanProvider = Provider.of<ArtisanProvider>(context, listen: false);
+
+      print('[UPLOAD] Upload diplôme depuis: ${image.path}');
+      print('[INFO] User ID: ${authProvider.userModel!.id}');
+
+      final storagePath =
+          'artisans/${authProvider.userModel!.id}/diplome/${DateTime.now().millisecondsSinceEpoch}.jpg';
+      print('[INFO] Chemin Storage: $storagePath');
+
+      final url = await artisanProvider.uploadImage(
+        image.path,
+        storagePath,
+      );
+
+      if (!mounted) return;
+      print('[SUCCESS] Diplôme uploadé: $url');
+
+      setState(() {
+        _diplomeUrl = url;
+      });
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Row(
+              children: [
+                Icon(Icons.check_circle, color: AppColors.white),
+                SizedBox(width: 8),
+                Text('Diplôme téléchargé avec succès'),
+              ],
             ),
-          );
-        }
+            backgroundColor: AppColors.success,
+            duration: Duration(seconds: 2),
+          ),
+        );
       }
     } catch (e) {
       print('[ERROR] Erreur upload diplôme: $e');
@@ -120,42 +122,45 @@ class _CompleteProfileScreenState extends State<CompleteProfileScreen> {
         imageQuality: 80,
       );
 
-      if (image != null) {
-        final authProvider = Provider.of<AuthProvider>(context, listen: false);
-        final artisanProvider = Provider.of<ArtisanProvider>(context, listen: false);
-        
-        print('[UPLOAD] Upload carte CIP depuis: ${image.path}');
-        print('[INFO] User ID: ${authProvider.userModel!.id}');
-        
-        final storagePath = 'artisans/${authProvider.userModel!.id}/cip/${DateTime.now().millisecondsSinceEpoch}.jpg';
-        print('[INFO] Chemin Storage: $storagePath');
-        
-        final url = await artisanProvider.uploadImage(
-          image.path,
-          storagePath,
-        );
-        
-        print('[SUCCESS] Carte CIP uploadée: $url');
-        
-        setState(() {
-          _cipPhotoUrl = url;
-        });
-        
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Row(
-                children: [
-                  Icon(Icons.check_circle, color: AppColors.white),
-                  SizedBox(width: 8),
-                  Text('Carte CIP téléchargée avec succès'),
-                ],
-              ),
-              backgroundColor: AppColors.success,
-              duration: Duration(seconds: 2),
+      if (image == null) return;
+      if (!mounted) return;
+
+      final authProvider = Provider.of<AuthProvider>(context, listen: false);
+      final artisanProvider = Provider.of<ArtisanProvider>(context, listen: false);
+
+      print('[UPLOAD] Upload carte CIP depuis: ${image.path}');
+      print('[INFO] User ID: ${authProvider.userModel!.id}');
+
+      final storagePath =
+          'artisans/${authProvider.userModel!.id}/cip/${DateTime.now().millisecondsSinceEpoch}.jpg';
+      print('[INFO] Chemin Storage: $storagePath');
+
+      final url = await artisanProvider.uploadImage(
+        image.path,
+        storagePath,
+      );
+
+      if (!mounted) return;
+      print('[SUCCESS] Carte CIP uploadée: $url');
+
+      setState(() {
+        _cipPhotoUrl = url;
+      });
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Row(
+              children: [
+                Icon(Icons.check_circle, color: AppColors.white),
+                SizedBox(width: 8),
+                Text('Carte CIP téléchargée avec succès'),
+              ],
             ),
-          );
-        }
+            backgroundColor: AppColors.success,
+            duration: Duration(seconds: 2),
+          ),
+        );
       }
     } catch (e) {
       print('[ERROR] Erreur upload carte CIP: $e');
@@ -183,47 +188,50 @@ class _CompleteProfileScreenState extends State<CompleteProfileScreen> {
         imageQuality: 80,
       );
 
-      if (images.isNotEmpty) {
-        final authProvider = Provider.of<AuthProvider>(context, listen: false);
-        final artisanProvider = Provider.of<ArtisanProvider>(context, listen: false);
-        
-        print('[UPLOAD] Upload de ${images.length} photo(s)');
-        print('[INFO] User ID: ${authProvider.userModel!.id}');
-        
-        int uploaded = 0;
-        for (var image in images.take(5 - _atelierPhotosUrls.length)) {
-          final storagePath = 'artisans/${authProvider.userModel!.id}/atelier/${DateTime.now().millisecondsSinceEpoch}_$uploaded.jpg';
-          print('[INFO] Upload photo ${uploaded + 1}: $storagePath');
-          
-          final url = await artisanProvider.uploadImage(
-            image.path,
-            storagePath,
-          );
-          
-          print('[SUCCESS] Photo ${uploaded + 1} uploadée: $url');
-          
-          setState(() {
-            _atelierPhotosUrls.add(url);
-          });
-          
-          uploaded++;
-        }
-        
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Row(
-                children: [
-                  const Icon(Icons.check_circle, color: AppColors.white),
-                  const SizedBox(width: 8),
-                  Text('$uploaded photo(s) téléchargée(s)'),
-                ],
-              ),
-              backgroundColor: AppColors.success,
-              duration: const Duration(seconds: 2),
+      if (images.isEmpty) return;
+      if (!mounted) return;
+
+      final authProvider = Provider.of<AuthProvider>(context, listen: false);
+      final artisanProvider = Provider.of<ArtisanProvider>(context, listen: false);
+
+      print('[UPLOAD] Upload de ${images.length} photo(s)');
+      print('[INFO] User ID: ${authProvider.userModel!.id}');
+
+      int uploaded = 0;
+      for (final image in images.take(5 - _atelierPhotosUrls.length)) {
+        final storagePath =
+            'artisans/${authProvider.userModel!.id}/atelier/${DateTime.now().millisecondsSinceEpoch}_$uploaded.jpg';
+        print('[INFO] Upload photo ${uploaded + 1}: $storagePath');
+
+        final url = await artisanProvider.uploadImage(
+          image.path,
+          storagePath,
+        );
+
+        if (!mounted) break;
+        print('[SUCCESS] Photo ${uploaded + 1} uploadée: $url');
+
+        setState(() {
+          _atelierPhotosUrls.add(url);
+        });
+
+        uploaded++;
+      }
+
+      if (mounted && uploaded > 0) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Row(
+              children: [
+                const Icon(Icons.check_circle, color: AppColors.white),
+                const SizedBox(width: 8),
+                Text('$uploaded photo(s) téléchargée(s)'),
+              ],
             ),
-          );
-        }
+            backgroundColor: AppColors.success,
+            duration: const Duration(seconds: 2),
+          ),
+        );
       }
     } catch (e) {
       print('[ERROR] Erreur upload photos: $e');

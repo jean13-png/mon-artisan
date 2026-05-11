@@ -1,9 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:go_router/go_router.dart';
 import '../../core/constants/colors.dart';
 import '../../core/constants/text_styles.dart';
-import '../../core/routes/app_router.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/commande_provider.dart';
 import '../../models/commande_model.dart';
@@ -357,8 +355,9 @@ class _CommandesHistoryScreenState extends State<CommandesHistoryScreen> {
                           ),
                         ),
                       );
-                      if (result == true && context.mounted) {
-                        final authProvider = Provider.of<AuthProvider>(context, listen: false);
+                      if (result == true && mounted) {
+                        final authProvider =
+                            Provider.of<AuthProvider>(context, listen: false);
                         if (authProvider.userModel != null) {
                           Provider.of<CommandeProvider>(context, listen: false)
                               .loadClientCommandes(authProvider.userModel!.id);

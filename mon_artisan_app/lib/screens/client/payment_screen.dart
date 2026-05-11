@@ -62,11 +62,6 @@ class _PaymentScreenState extends State<PaymentScreen> {
         commandeId: widget.commandeId, // ✅ Référence unique
       );
 
-      // ✅ Vérifier que transactionData n'est pas null
-      if (transactionData == null) {
-        throw Exception('Réponse FedaPay vide (null)');
-      }
-
       print('[SUCCESS] Transaction créée: ${transactionData['v1']?['id'] ?? 'ID manquant'}');
       
       // ✅ Vérifier que les données existent
@@ -167,6 +162,8 @@ class _PaymentScreenState extends State<PaymentScreen> {
       
       final status = await FedaPayService.checkTransactionStatus(_transactionId!);
       print('[INFO] Statut: $status');
+
+      if (!mounted) return;
 
       if (status == 'approved' || status == 'completed') {
         // ✅ PROTECTION 3: Marquer le paiement dans Firestore (avec idempotence)
@@ -308,7 +305,6 @@ class _PaymentScreenState extends State<PaymentScreen> {
   @override
   Widget build(BuildContext context) {
     final montant = double.tryParse(widget.montant) ?? 0;
-    final commission = montant * 0.10;
 
     return Scaffold(
       backgroundColor: AppColors.greyLight,

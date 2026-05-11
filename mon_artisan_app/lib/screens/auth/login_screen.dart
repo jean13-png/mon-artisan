@@ -66,20 +66,28 @@ class _LoginScreenState extends State<LoginScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: AppColors.white),
-          onPressed: () {
-            if (Navigator.canPop(context)) {
-              Navigator.pop(context);
-            } else {
-              context.go(AppRouter.roleSelection);
-            }
-          },
+    return PopScope(
+      canPop: true,
+      onPopInvokedWithResult: (didPop, result) {
+        if (didPop) {
+          // Retourner à la sélection de rôle au lieu de fermer l'app
+          context.go(AppRouter.roleSelection);
+        }
+      },
+      child: Scaffold(
+        appBar: AppBar(
+          elevation: 0,
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back, color: AppColors.white),
+            onPressed: () {
+              if (Navigator.canPop(context)) {
+                Navigator.pop(context);
+              } else {
+                context.go(AppRouter.roleSelection);
+              }
+            },
+          ),
         ),
-      ),
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(24.0),
@@ -184,6 +192,7 @@ class _LoginScreenState extends State<LoginScreen> {
           ),
         ),
       ),
+    ),
     );
   }
 }

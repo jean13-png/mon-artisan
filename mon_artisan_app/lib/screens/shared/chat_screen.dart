@@ -1,10 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:provider/provider.dart';
-import 'package:go_router/go_router.dart';
 import '../../core/constants/colors.dart';
 import '../../core/constants/text_styles.dart';
-import '../../core/routes/app_router.dart';
 import '../../core/services/chat_service.dart';
 import '../../providers/auth_provider.dart';
 

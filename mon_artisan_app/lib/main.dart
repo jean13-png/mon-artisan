@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'firebase_options.dart';
 import 'core/services/app_initialization.dart';
 import 'app.dart';
 

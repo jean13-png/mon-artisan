@@ -1,9 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../core/constants/colors.dart';
 import '../../core/constants/text_styles.dart';
 import '../../core/routes/app_router.dart';
@@ -137,11 +135,8 @@ class _HomeArtisanScreenState extends State<HomeArtisanScreen> {
     final artisanProvider = Provider.of<ArtisanProvider>(context, listen: false);
     
     await artisanProvider.loadArtisanProfile(authProvider.userModel!.id);
-    
-    // Ne plus bloquer l'accès si le profil n'est pas complet
-    // Juste afficher un message d'avertissement
-    
-    // Charger les commandes
+    if (!mounted) return;
+
     if (artisanProvider.currentArtisan != null) {
       Provider.of<CommandeProvider>(context, listen: false)
           .loadArtisanCommandes(authProvider.userModel!.id);
@@ -683,9 +678,9 @@ class _HomeArtisanScreenState extends State<HomeArtisanScreen> {
                         ),
                       )
                     else
-                      ...nouvellesCommandes.take(3).map(
-                        (commande) => _buildCommandeCard(context, commande),
-                      ).toList(),
+                      ...nouvellesCommandes
+                          .take(3)
+                          .map((commande) => _buildCommandeCard(context, commande)),
                   ],
                 ),
               ),

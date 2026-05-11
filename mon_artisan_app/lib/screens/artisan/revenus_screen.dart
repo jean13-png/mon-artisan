@@ -204,7 +204,7 @@ class _RevenusScreenState extends State<RevenusScreen> {
                   else
                     ...commandesTerminees.map((commande) {
                       return _buildTransactionCard(commande);
-                    }).toList(),
+                    }),
                 ],
               ),
             ),

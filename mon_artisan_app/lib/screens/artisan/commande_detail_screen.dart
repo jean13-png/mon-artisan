@@ -2,11 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
-import 'package:go_router/go_router.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../core/constants/colors.dart';
 import '../../core/constants/text_styles.dart';
-import '../../core/routes/app_router.dart';
 import '../../core/services/firebase_service.dart';
 import '../../models/commande_model.dart';
 import '../../providers/commande_provider.dart';
@@ -97,49 +94,6 @@ class _CommandeDetailScreenState extends State<CommandeDetailScreen> {
         duration: Duration(seconds: 2),
       ),
     );
-  }
-
-  Future<void> _accepterCommande() async {
-    final commandeProvider =
-        Provider.of<CommandeProvider>(context, listen: false);
-
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: Text('Accepter la commande', style: AppTextStyles.h3),
-        content: Text(
-          'Confirmez-vous que vous pouvez réaliser cette prestation ?',
-          style: AppTextStyles.bodyMedium,
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: Text('Annuler', style: AppTextStyles.bodyMedium),
-          ),
-          ElevatedButton(
-            onPressed: () => Navigator.pop(context, true),
-            style:
-                ElevatedButton.styleFrom(backgroundColor: AppColors.success),
-            child: Text('Accepter', style: AppTextStyles.button),
-          ),
-        ],
-      ),
-    );
-
-    if (confirmed == true && mounted) {
-      final success =
-          await commandeProvider.accepterCommande(widget.commande.id);
-      if (success && mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Commande acceptée avec succès'),
-            backgroundColor: AppColors.success,
-          ),
-        );
-        Navigator.pop(context);
-      }
-    }
   }
 
   Future<void> _refuserCommande() async {
