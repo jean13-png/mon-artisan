@@ -25,11 +25,26 @@ class _ChatScreenState extends State<ChatScreen> {
   final _scrollController = ScrollController();
   String? _chatId;
   bool _isLoading = true;
+  int _limit = 20;
+  bool _hasMore = true;
+  bool _isNearTop = false;
 
   @override
   void initState() {
     super.initState();
+    _scrollController.addListener(_onScroll);
     _initializeChat();
+  }
+
+  void _onScroll() {
+    // Si on défile vers le haut (reverse: true, donc vers maxScrollExtent)
+    if (_scrollController.position.pixels >= _scrollController.position.maxScrollExtent - 200) {
+      if (_hasMore && !_isLoading) {
+        setState(() {
+          _limit += 20;
+        });
+      }
+    }
   }
 
   Future<void> _initializeChat() async {
@@ -170,7 +185,7 @@ class _ChatScreenState extends State<ChatScreen> {
   void _scrollToBottom() {
     if (_scrollController.hasClients) {
       _scrollController.animateTo(
-        _scrollController.position.maxScrollExtent,
+        0, // Car reverse: true
         duration: const Duration(milliseconds: 300),
         curve: Curves.easeOut,
       );
@@ -296,7 +311,8 @@ class _ChatScreenState extends State<ChatScreen> {
                   .collection('chats')
                   .doc(_chatId)
                   .collection('messages')
-                  .orderBy('timestamp', descending: false)
+                  .orderBy('timestamp', descending: true)
+                  .limit(_limit)
                   .snapshots(),
               builder: (context, snapshot) {
                 if (snapshot.connectionState == ConnectionState.waiting) {
@@ -333,13 +349,11 @@ class _ChatScreenState extends State<ChatScreen> {
                 }
 
                 final messages = snapshot.data!.docs;
-
-                WidgetsBinding.instance.addPostFrameCallback((_) {
-                  _scrollToBottom();
-                });
+                _hasMore = messages.length == _limit;
 
                 return ListView.builder(
                   controller: _scrollController,
+                  reverse: true,
                   padding: const EdgeInsets.all(16),
                   itemCount: messages.length,
                   itemBuilder: (context, index) {
