@@ -169,10 +169,18 @@ class ChatService {
       
       print('[SUCCESS] getUserChats - ${conversations.length} conversation(s) retournée(s)');
       
-      return conversations;
+      return {
+        'conversations': conversations,
+        'lastDocument': chatsSnapshot.docs.isNotEmpty ? chatsSnapshot.docs.last : null,
+        'hasMore': chatsSnapshot.docs.length == limit,
+      };
     } catch (e) {
       print('[ERROR] getUserChats - Erreur: $e');
-      return [];
+      return {
+        'conversations': [],
+        'lastDocument': null,
+        'hasMore': false,
+      };
     }
   }
 

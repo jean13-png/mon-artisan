@@ -18,11 +18,28 @@ class ConversationsListScreen extends StatefulWidget {
 class _ConversationsListScreenState extends State<ConversationsListScreen> {
   List<Map<String, dynamic>> _conversations = [];
   bool _isLoading = true;
+  bool _isLoadingMore = false;
+  bool _hasMore = true;
+  DocumentSnapshot? _lastDocument;
+  final ScrollController _scrollController = ScrollController();
 
   @override
   void initState() {
     super.initState();
+    _scrollController.addListener(_onScroll);
     _loadConversations();
+  }
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  void _onScroll() {
+    if (_scrollController.position.pixels >= _scrollController.position.maxScrollExtent - 200) {
+      _loadMoreConversations();
+    }
   }
 
   Future<void> _loadConversations() async {
@@ -40,7 +57,8 @@ class _ConversationsListScreenState extends State<ConversationsListScreen> {
     setState(() => _isLoading = true);
 
     try {
-      final conversations = await ChatService.getUserChats(currentUserId);
+      final result = await ChatService.getUserChats(userId: currentUserId);
+      final conversations = result['conversations'] as List<Map<String, dynamic>>;
       
       print('[SUCCESS] ${conversations.length} conversation(s) trouvée(s)');
       print('[INFO] ========================================');
@@ -48,6 +66,8 @@ class _ConversationsListScreenState extends State<ConversationsListScreen> {
       if (mounted) {
         setState(() {
           _conversations = conversations;
+          _lastDocument = result['lastDocument'] as DocumentSnapshot?;
+          _hasMore = result['hasMore'] as bool;
           _isLoading = false;
         });
       }
@@ -55,6 +75,39 @@ class _ConversationsListScreenState extends State<ConversationsListScreen> {
       print('[ERROR] Erreur chargement conversations: $e');
       if (mounted) {
         setState(() => _isLoading = false);
+      }
+    }
+  }
+
+  Future<void> _loadMoreConversations() async {
+    if (_isLoadingMore || !_hasMore) return;
+
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    final currentUserId = authProvider.userModel?.id;
+    if (currentUserId == null) return;
+
+    setState(() => _isLoadingMore = true);
+
+    try {
+      final result = await ChatService.getUserChats(
+        userId: currentUserId,
+        startAfter: _lastDocument,
+      );
+      
+      final newConversations = result['conversations'] as List<Map<String, dynamic>>;
+
+      if (mounted) {
+        setState(() {
+          _conversations.addAll(newConversations);
+          _lastDocument = result['lastDocument'] as DocumentSnapshot?;
+          _hasMore = result['hasMore'] as bool;
+          _isLoadingMore = false;
+        });
+      }
+    } catch (e) {
+      print('[ERROR] Erreur chargement plus de conversations: $e');
+      if (mounted) {
+        setState(() => _isLoadingMore = false);
       }
     }
   }
@@ -126,11 +179,19 @@ class _ConversationsListScreenState extends State<ConversationsListScreen> {
               : RefreshIndicator(
                   onRefresh: _loadConversations,
                   child: ListView.builder(
+                    controller: _scrollController,
                     padding: const EdgeInsets.all(16),
-                    itemCount: _conversations.length,
+                    itemCount: _conversations.length + (_hasMore ? 1 : 0),
                     itemBuilder: (context, index) {
-                      final conversation = _conversations[index];
-                      return _buildConversationCard(conversation);
+                      if (index < _conversations.length) {
+                        final conversation = _conversations[index];
+                        return _buildConversationCard(conversation);
+                      } else {
+                        return const Padding(
+                          padding: EdgeInsets.symmetric(vertical: 32),
+                          child: Center(child: CircularProgressIndicator()),
+                        );
+                      }
                     },
                   ),
                 ),
