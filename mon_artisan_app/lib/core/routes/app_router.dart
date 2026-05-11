@@ -213,7 +213,10 @@ class AppRouter {
       ),
       GoRoute(
         path: commandesHistory,
-        builder: (context, state) => const CommandesHistoryScreen(),
+        builder: (context, state) {
+          final isArtisan = state.uri.queryParameters['role'] == 'artisan';
+          return CommandesHistoryScreen(isArtisan: isArtisan);
+        },
       ),
       GoRoute(
         path: notifications,

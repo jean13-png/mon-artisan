@@ -10,7 +10,8 @@ import 'rate_artisan_screen.dart';
 import 'devis_detail_screen.dart';
 
 class CommandesHistoryScreen extends StatefulWidget {
-  const CommandesHistoryScreen({super.key});
+  final bool isArtisan;
+  const CommandesHistoryScreen({super.key, this.isArtisan = false});
 
   @override
   State<CommandesHistoryScreen> createState() => _CommandesHistoryScreenState();
@@ -27,8 +28,13 @@ class _CommandesHistoryScreenState extends State<CommandesHistoryScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final authProvider = Provider.of<AuthProvider>(context, listen: false);
       if (authProvider.userModel != null) {
-        Provider.of<CommandeProvider>(context, listen: false)
-            .loadClientCommandes(authProvider.userModel!.id);
+        if (widget.isArtisan) {
+          Provider.of<CommandeProvider>(context, listen: false)
+              .loadArtisanCommandes(authProvider.userModel!.id);
+        } else {
+          Provider.of<CommandeProvider>(context, listen: false)
+              .loadClientCommandes(authProvider.userModel!.id);
+        }
       }
     });
   }
@@ -45,7 +51,11 @@ class _CommandesHistoryScreenState extends State<CommandesHistoryScreen> {
       final commandeProvider = Provider.of<CommandeProvider>(context, listen: false);
       
       if (authProvider.userModel != null && !commandeProvider.isLoading && commandeProvider.hasMore) {
-        commandeProvider.loadMoreClientCommandes(authProvider.userModel!.id);
+        if (widget.isArtisan) {
+          commandeProvider.loadMoreArtisanCommandes(authProvider.userModel!.id);
+        } else {
+          commandeProvider.loadMoreClientCommandes(authProvider.userModel!.id);
+        }
       }
     }
   }
@@ -149,7 +159,11 @@ class _CommandesHistoryScreenState extends State<CommandesHistoryScreen> {
                         onRefresh: () async {
                           final authProvider = Provider.of<AuthProvider>(context, listen: false);
                           if (authProvider.userModel != null) {
-                            await commandeProvider.loadClientCommandes(authProvider.userModel!.id);
+                            if (widget.isArtisan) {
+                              await commandeProvider.loadArtisanCommandes(authProvider.userModel!.id);
+                            } else {
+                              await commandeProvider.loadClientCommandes(authProvider.userModel!.id);
+                            }
                           }
                         },
                         child: ListView.builder(

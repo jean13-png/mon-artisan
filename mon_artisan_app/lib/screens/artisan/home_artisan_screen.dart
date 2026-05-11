@@ -630,7 +630,7 @@ class _HomeArtisanScreenState extends State<HomeArtisanScreen> {
                         ),
                         TextButton(
                           onPressed: () {
-                            context.push(AppRouter.commandesHistory);
+                            context.push('${AppRouter.commandesHistory}?role=artisan');
                           },
                           child: Text(
                             'Voir tout',
