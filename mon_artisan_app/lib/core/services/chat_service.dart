@@ -90,7 +90,8 @@ class ChatService {
   }
 
   /// Récupère les chats d'un utilisateur (paginé)
-  static Future<List<Map<String, dynamic>>> getUserChats({
+  /// Récupère les chats d'un utilisateur (paginé)
+  static Future<Map<String, dynamic>> getUserChats({
     required String userId,
     int limit = 20,
     DocumentSnapshot? startAfter,
@@ -108,7 +109,7 @@ class ChatService {
         query = query.startAfterDocument(startAfter);
       }
 
-      final chatsSnapshot = await query.get();
+      final QuerySnapshot<Map<String, dynamic>> chatsSnapshot = await query.get() as QuerySnapshot<Map<String, dynamic>>;
 
       print('[INFO] getUserChats - ${chatsSnapshot.docs.length} chat(s) trouvé(s) dans Firestore');
 
@@ -117,7 +118,7 @@ class ChatService {
       for (var chatDoc in chatsSnapshot.docs) {
         print('[INFO] getUserChats - Traitement du chat: ${chatDoc.id}');
         
-        final chatData = chatDoc.data();
+        final chatData = chatDoc.data() as Map<String, dynamic>;
         final participants = List<String>.from(chatData['participants'] ?? []);
         final participantNames = Map<String, dynamic>.from(chatData['participantNames'] ?? {});
 
@@ -161,8 +162,6 @@ class ChatService {
           'timestamp': lastMessageAt?.toDate() ?? DateTime.now(),
           'unreadCount': unreadSnapshot.docs.length,
         });
-      }
-
       }
       
       // Plus besoin de trier côté client car le orderBy est dans la requête

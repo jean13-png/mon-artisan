@@ -3,9 +3,9 @@ import 'package:http/http.dart' as http;
 import '../constants/app_constants.dart';
 
 class FedaPayService {
-  static const String apiKey = AppConstants.fedapayApiKey;
-  static const String baseUrl = AppConstants.fedapayBaseUrl;
-  static const double commissionRate = AppConstants.commissionRate;
+  static final String apiKey = AppConstants.fedapayApiKey;
+  static final String baseUrl = AppConstants.fedapayBaseUrl;
+  static final double commissionRate = AppConstants.commissionRate;
 
   // Créer une transaction
   static Future<Map<String, dynamic>> createTransaction({

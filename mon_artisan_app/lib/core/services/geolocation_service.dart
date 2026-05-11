@@ -189,13 +189,18 @@ class GeolocationService {
     String field = 'position',
   }) async {
     final center = GeoFirePoint(GeoPoint(latitude, longitude));
-    final geo = GeoFlutterFire(firestore: FirebaseFirestore.instance);
-
-    final querySnapshot = await geo.collection(collectionRef: baseQuery)
-        .near(center: center, radius: radiusKm, field: field)
-        .get();
     
-    return querySnapshot.docs;
+    // geoflutterfire_plus utilise GeoCollectionReference
+    final geoCollection = GeoCollectionReference(baseQuery);
+
+    final querySnapshot = await geoCollection.fetchWithin(
+      center: center,
+      radiusInKm: radiusKm,
+      field: field,
+      geohashField: 'geohash', // ou le nom du champ geohash dans votre doc
+    );
+    
+    return querySnapshot.map((doc) => doc).toList();
   }
 
   /// Vérifier si la localisation est activée

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
 import '../../core/constants/colors.dart';
@@ -57,8 +58,8 @@ class _ConversationsListScreenState extends State<ConversationsListScreen> {
     setState(() => _isLoading = true);
 
     try {
-      final result = await ChatService.getUserChats(userId: currentUserId);
-      final conversations = result['conversations'] as List<Map<String, dynamic>>;
+      final Map<String, dynamic> result = await ChatService.getUserChats(userId: currentUserId);
+      final List<Map<String, dynamic>> conversations = List<Map<String, dynamic>>.from(result['conversations'] ?? []);
       
       print('[SUCCESS] ${conversations.length} conversation(s) trouvée(s)');
       print('[INFO] ========================================');
@@ -67,7 +68,7 @@ class _ConversationsListScreenState extends State<ConversationsListScreen> {
         setState(() {
           _conversations = conversations;
           _lastDocument = result['lastDocument'] as DocumentSnapshot?;
-          _hasMore = result['hasMore'] as bool;
+          _hasMore = result['hasMore'] as bool? ?? false;
           _isLoading = false;
         });
       }
@@ -89,18 +90,18 @@ class _ConversationsListScreenState extends State<ConversationsListScreen> {
     setState(() => _isLoadingMore = true);
 
     try {
-      final result = await ChatService.getUserChats(
+      final Map<String, dynamic> result = await ChatService.getUserChats(
         userId: currentUserId,
         startAfter: _lastDocument,
       );
       
-      final newConversations = result['conversations'] as List<Map<String, dynamic>>;
+      final List<Map<String, dynamic>> newConversations = List<Map<String, dynamic>>.from(result['conversations'] ?? []);
 
       if (mounted) {
         setState(() {
           _conversations.addAll(newConversations);
           _lastDocument = result['lastDocument'] as DocumentSnapshot?;
-          _hasMore = result['hasMore'] as bool;
+          _hasMore = result['hasMore'] as bool? ?? false;
           _isLoadingMore = false;
         });
       }

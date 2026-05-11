@@ -9,6 +9,7 @@ import '../models/commande_model.dart';
 import '../core/services/firebase_service.dart';
 import '../core/services/cloudinary_service.dart';
 import '../core/services/geolocation_service.dart';
+import '../core/services/firestore_service.dart';
 
 class ArtisanProvider extends ChangeNotifier {
   ArtisanModel? _currentArtisan;
@@ -157,13 +158,16 @@ class ArtisanProvider extends ChangeNotifier {
       if (latitude != null && longitude != null) {
         // Recherche géospatiale avec geoflutterfire_plus
         final center = gff.GeoFirePoint(GeoPoint(latitude, longitude));
-        final geo = gff.GeoFlutterFire(firestore: FirebaseFirestore.instance);
+        final geoCollection = gff.GeoCollectionReference(baseQuery);
 
-        final querySnapshot = await geo.collection(collectionRef: baseQuery)
-            .near(center: center, radius: radiusKm, field: 'position')
-            .get();
+        final docs = await geoCollection.fetchWithin(
+          center: center,
+          radiusInKm: radiusKm,
+          field: 'position',
+          geohashField: 'geohash',
+        );
 
-        for (var doc in querySnapshot.docs) {
+        for (var doc in docs) {
           try {
             final artisan = ArtisanModel.fromFirestore(doc);
             fetchedArtisans.add(artisan);
