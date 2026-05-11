@@ -89,17 +89,26 @@ class ChatService {
     }
   }
 
-  /// Récupère tous les chats d'un utilisateur
-  static Future<List<Map<String, dynamic>>> getUserChats(String userId) async {
+  /// Récupère les chats d'un utilisateur (paginé)
+  static Future<List<Map<String, dynamic>>> getUserChats({
+    required String userId,
+    int limit = 20,
+    DocumentSnapshot? startAfter,
+  }) async {
     try {
-      print('[INFO] getUserChats - Recherche des chats pour userId: $userId');
+      print('[INFO] getUserChats - Recherche des chats pour userId: $userId (limit: $limit)');
       
-      // Récupérer tous les chats où l'utilisateur est participant
-      // Sans orderBy pour éviter les problèmes d'index
-      final chatsSnapshot = await _firestore
+      Query query = _firestore
           .collection('chats')
           .where('participants', arrayContains: userId)
-          .get();
+          .orderBy('lastMessageAt', descending: true)
+          .limit(limit);
+
+      if (startAfter != null) {
+        query = query.startAfterDocument(startAfter);
+      }
+
+      final chatsSnapshot = await query.get();
 
       print('[INFO] getUserChats - ${chatsSnapshot.docs.length} chat(s) trouvé(s) dans Firestore');
 
@@ -154,18 +163,15 @@ class ChatService {
         });
       }
 
-      // Trier par date (côté client)
-      conversations.sort((a, b) {
-        final aTime = a['timestamp'] as DateTime;
-        final bTime = b['timestamp'] as DateTime;
-        return bTime.compareTo(aTime);
-      });
-
+      }
+      
+      // Plus besoin de trier côté client car le orderBy est dans la requête
+      
       print('[SUCCESS] getUserChats - ${conversations.length} conversation(s) retournée(s)');
+      
       return conversations;
     } catch (e) {
       print('[ERROR] getUserChats - Erreur: $e');
-      print('[ERROR] getUserChats - Stack trace: ${StackTrace.current}');
       return [];
     }
   }

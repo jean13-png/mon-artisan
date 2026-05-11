@@ -13,12 +13,18 @@ class CommandeProvider extends ChangeNotifier {
   bool _isLoading = false;
   String? _errorMessage;
   
+  // Pagination
+  DocumentSnapshot? _lastDocument;
+  bool _hasMore = true;
+  final int _limit = 20;
+
   // Système d'idempotence - Verrouillage des opérations
   final Set<String> _operationsEnCours = {};
 
   List<CommandeModel> get commandes => _commandes;
   bool get isLoading => _isLoading;
   String? get errorMessage => _errorMessage;
+  bool get hasMore => _hasMore;
   
   // Vérifier si une opération est déjà en cours
   bool _isOperationInProgress(String operationKey) {
@@ -121,62 +127,103 @@ class CommandeProvider extends ChangeNotifier {
   
 
 
-  // Récupérer les commandes d'un client
-  Future<void> loadClientCommandes(String clientId) async {
-    _isLoading = true;
+  // Réinitialiser la pagination
+  void resetPagination() {
+    _commandes = [];
+    _lastDocument = null;
+    _hasMore = true;
+    _errorMessage = null;
     notifyListeners();
-
-    try {
-      // Requête simplifiée sans orderBy pour éviter l'erreur d'index
-      final querySnapshot = await FirebaseService.firestore
-          .collection('commandes')
-          .where('clientId', isEqualTo: clientId)
-          .get();
-
-      _commandes = querySnapshot.docs
-          .map((doc) => CommandeModel.fromFirestore(doc))
-          .toList();
-      
-      // Trier en mémoire par date de création (plus récent en premier)
-      _commandes.sort((a, b) => b.createdAt.compareTo(a.createdAt));
-
-      _isLoading = false;
-      notifyListeners();
-    } catch (e) {
-      print('[ERROR] Erreur chargement commandes client: $e');
-      _isLoading = false;
-      _errorMessage = 'Erreur lors du chargement des commandes';
-      _commandes = []; // Initialiser avec liste vide en cas d'erreur
-      notifyListeners();
-    }
   }
 
-  // Récupérer les commandes d'un artisan
+  // Récupérer les commandes d'un client (paginé)
+  Future<void> loadClientCommandes(String clientId) async {
+    resetPagination();
+    await _fetchCommandes(
+      FirebaseService.firestore
+          .collection('commandes')
+          .where('clientId', isEqualTo: clientId)
+          .orderBy('createdAt', descending: true),
+    );
+  }
+
+  // Charger plus de commandes pour le client
+  Future<void> loadMoreClientCommandes(String clientId) async {
+    if (_isLoading || !_hasMore) return;
+    await _fetchCommandes(
+      FirebaseService.firestore
+          .collection('commandes')
+          .where('clientId', isEqualTo: clientId)
+          .orderBy('createdAt', descending: true),
+      isLoadMore: true,
+    );
+  }
+
+  // Récupérer les commandes d'un artisan (paginé)
   Future<void> loadArtisanCommandes(String artisanId) async {
+    resetPagination();
+    await _fetchCommandes(
+      FirebaseService.firestore
+          .collection('commandes')
+          .where('artisanId', isEqualTo: artisanId)
+          .orderBy('createdAt', descending: true),
+    );
+  }
+
+  // Charger plus de commandes pour l'artisan
+  Future<void> loadMoreArtisanCommandes(String artisanId) async {
+    if (_isLoading || !_hasMore) return;
+    await _fetchCommandes(
+      FirebaseService.firestore
+          .collection('commandes')
+          .where('artisanId', isEqualTo: artisanId)
+          .orderBy('createdAt', descending: true),
+      isLoadMore: true,
+    );
+  }
+
+  // Méthode générique de récupération paginée
+  Future<void> _fetchCommandes(Query query, {bool isLoadMore = false}) async {
     _isLoading = true;
+    _errorMessage = null;
     notifyListeners();
 
     try {
-      // Requête simplifiée sans orderBy pour éviter l'erreur d'index
-      final querySnapshot = await FirebaseService.firestore
-          .collection('commandes')
-          .where('artisanId', isEqualTo: artisanId)
-          .get();
-
-      _commandes = querySnapshot.docs
-          .map((doc) => CommandeModel.fromFirestore(doc))
-          .toList();
+      Query paginatedQuery = query.limit(_limit);
       
-      // Trier en mémoire par date de création (plus récent en premier)
-      _commandes.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+      if (isLoadMore && _lastDocument != null) {
+        paginatedQuery = paginatedQuery.startAfterDocument(_lastDocument!);
+      }
+
+      final querySnapshot = await paginatedQuery.get();
+
+      if (querySnapshot.docs.length < _limit) {
+        _hasMore = false;
+      }
+
+      if (querySnapshot.docs.isNotEmpty) {
+        _lastDocument = querySnapshot.docs.last;
+        
+        final newCommandes = querySnapshot.docs
+            .map((doc) => CommandeModel.fromFirestore(doc))
+            .toList();
+
+        if (isLoadMore) {
+          _commandes.addAll(newCommandes);
+        } else {
+          _commandes = newCommandes;
+        }
+      } else if (!isLoadMore) {
+        _commandes = [];
+        _hasMore = false;
+      }
 
       _isLoading = false;
       notifyListeners();
     } catch (e) {
-      print('[ERROR] Erreur chargement commandes artisan: $e');
+      print('[ERROR] Erreur _fetchCommandes: $e');
       _isLoading = false;
-      _errorMessage = 'Erreur lors du chargement des commandes';
-      _commandes = []; // Initialiser avec liste vide en cas d'erreur
+      _errorMessage = 'Erreur lors du chargement des commandes. Vérifiez vos index Firestore.';
       notifyListeners();
     }
   }
