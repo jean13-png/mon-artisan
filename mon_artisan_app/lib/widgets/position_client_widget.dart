@@ -4,6 +4,7 @@ import '../core/constants/colors.dart';
 import '../core/constants/text_styles.dart';
 import '../core/services/adresse_service.dart';
 import '../core/services/firebase_service.dart';
+import '../screens/shared/location_picker_screen.dart';
 
 /// Carte affichée avant une commande pour proposer au client
 /// de mettre à jour sa position.
@@ -96,6 +97,57 @@ class _PositionClientWidgetState extends State<PositionClientWidget> {
         child: _buildContenu(),
       ),
     );
+  }
+
+  Future<void> _ouvrirCarte() async {
+    if (_adresse == null) return;
+    final result = await Navigator.push<MapPosition>(
+      context,
+      MaterialPageRoute(
+        builder: (_) => LocationPickerScreen(
+          titre: 'Ajuster votre position',
+          labelBoutonConfirm: 'Valider cette position',
+          initialLatitude: _adresse!.position.latitude,
+          initialLongitude: _adresse!.position.longitude,
+        ),
+      ),
+    );
+    if (result == null || !mounted) return;
+
+    // Construire une AdresseDetectee depuis le résultat de la carte
+    final nouvelleAdresse = AdresseDetectee(
+      position: GeoPoint(result.latitude, result.longitude),
+      adresseComplete: result.adresseComplete,
+      quartier: result.quartier,
+      ville: result.ville,
+      rue: result.rue,
+      pays: 'Bénin',
+    );
+
+    // Mettre à jour Firestore
+    try {
+      await FirebaseService.firestore
+          .collection('users')
+          .doc(widget.userId)
+          .update({
+        'position': nouvelleAdresse.position,
+        'quartier': nouvelleAdresse.quartier.isNotEmpty
+            ? nouvelleAdresse.quartier
+            : null,
+        'ville': nouvelleAdresse.ville.isNotEmpty ? nouvelleAdresse.ville : null,
+        'updatedAt': Timestamp.now(),
+      });
+    } catch (e) {
+      print('[WARNING] Impossible de sauvegarder la position ajustée: $e');
+    }
+
+    if (mounted) {
+      setState(() {
+        _adresse = nouvelleAdresse;
+        _etat = _Etat.succes;
+      });
+      widget.onPositionMiseAJour?.call(nouvelleAdresse);
+    }
   }
 
   Widget _buildContenu() {
@@ -227,7 +279,6 @@ class _PositionClientWidgetState extends State<PositionClientWidget> {
                 ),
               ),
             ),
-            // Bouton pour re-détecter
             TextButton(
               onPressed: _detecterPosition,
               child: Text(
@@ -278,6 +329,23 @@ class _PositionClientWidgetState extends State<PositionClientWidget> {
                 ),
               ),
             ],
+          ),
+        ),
+        const SizedBox(height: 10),
+        // Bouton "Voir sur la carte"
+        SizedBox(
+          width: double.infinity,
+          child: OutlinedButton.icon(
+            onPressed: _ouvrirCarte,
+            icon: const Icon(Icons.map_outlined, size: 18),
+            label: const Text('Voir et ajuster sur la carte'),
+            style: OutlinedButton.styleFrom(
+              foregroundColor: AppColors.primaryBlue,
+              side: const BorderSide(color: AppColors.primaryBlue),
+              padding: const EdgeInsets.symmetric(vertical: 10),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8)),
+            ),
           ),
         ),
       ],

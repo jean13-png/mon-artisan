@@ -5,6 +5,8 @@ import '../core/constants/colors.dart';
 import '../core/constants/text_styles.dart';
 import '../core/services/geolocation_service.dart';
 import '../core/services/firebase_service.dart';
+import '../screens/shared/location_picker_screen.dart';
+import '../widgets/map_picker_widget.dart';
 
 class ShareLocationDialog {
   static Future<void> show({
@@ -81,11 +83,26 @@ class ShareLocationDialog {
           ElevatedButton.icon(
             onPressed: () async {
               Navigator.pop(context);
-              await _partagerLocalisation(
-                context: context,
-                commandeId: commandeId,
-                artisanId: artisanId,
+              
+              // Ouvrir le sélecteur de position sur carte
+              final result = await Navigator.push<MapPosition>(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => const LocationPickerScreen(
+                    titre: 'Confirmer votre position',
+                    labelBoutonConfirm: 'Partager cette position',
+                  ),
+                ),
               );
+
+              if (result != null && context.mounted) {
+                await _sauvegarderEtNotifier(
+                  context: context,
+                  commandeId: commandeId,
+                  artisanId: artisanId,
+                  pos: result,
+                );
+              }
             },
             icon: const Icon(Icons.my_location, size: 20),
             label: const Text('Partager ma position'),
@@ -103,91 +120,50 @@ class ShareLocationDialog {
     );
   }
 
-  static Future<void> _partagerLocalisation({
+  static Future<void> _sauvegarderEtNotifier({
     required BuildContext context,
     required String commandeId,
     required String artisanId,
+    required MapPosition pos,
   }) async {
-    // Afficher un loader
+    // Afficher un loader discret
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (loaderContext) => PopScope(
-        canPop: false,
-        child: Center(
-          child: Card(
-            margin: const EdgeInsets.all(32),
-            child: Padding(
-              padding: const EdgeInsets.all(24),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const CircularProgressIndicator(
-                    valueColor: AlwaysStoppedAnimation<Color>(AppColors.primaryBlue),
-                  ),
-                  const SizedBox(height: 16),
-                  Text(
-                    'Récupération de votre position...',
-                    style: AppTextStyles.bodyMedium,
-                  ),
-                ],
-              ),
-            ),
-          ),
+      builder: (loaderContext) => const Center(
+        child: CircularProgressIndicator(
+          valueColor: AlwaysStoppedAnimation<Color>(AppColors.primaryBlue),
         ),
       ),
     );
 
     try {
-      // 1. Obtenir la position GPS
-      print('[INFO] Récupération de la position GPS...');
-      final position = await GeolocationService.getCurrentPosition();
-      print('[SUCCESS] Position obtenue: ${position.latitude}, ${position.longitude}');
-
-      // 2. Obtenir l'adresse lisible via geocoding
-      String adresseComplete = 'Position GPS partagée';
-      try {
-        print('[INFO] Récupération de l\'adresse...');
-        final placemarks = await placemarkFromCoordinates(
-          position.latitude,
-          position.longitude,
-        ).timeout(const Duration(seconds: 3));
-
-        if (placemarks.isNotEmpty) {
-          final placemark = placemarks.first;
-          adresseComplete = [
-            placemark.street,
-            placemark.subLocality,
-            placemark.locality,
-          ].where((e) => e != null && e.isNotEmpty).join(', ');
-          print('[SUCCESS] Adresse: $adresseComplete');
-        }
-      } catch (e) {
-        print('[WARNING] Erreur récupération adresse: $e');
-        // Continuer avec l'adresse par défaut
-      }
-
-      // 3. Sauvegarder dans la commande
+      // 1. Sauvegarder dans la commande
       print('[INFO] Sauvegarde de la position dans Firestore...');
       await FirebaseService.commandesCollection.doc(commandeId).update({
-        'clientPosition': GeoPoint(position.latitude, position.longitude),
-        'clientAdresseExacte': adresseComplete,
+        'clientPosition': GeoPoint(pos.latitude, pos.longitude),
+        'clientAdresseExacte': pos.adresseComplete,
+        'clientQuartier': pos.quartier,
+        'clientRue': pos.rue,
+        'clientVille': pos.ville,
         'clientPositionPartagee': true,
         'datePartagePosition': Timestamp.now(),
         'updatedAt': Timestamp.now(),
       });
       print('[SUCCESS] Position sauvegardée');
 
-      // 4. Envoyer notification à l'artisan
+      // 2. Envoyer notification à l'artisan
       try {
         await FirebaseService.firestore.collection('notifications').add({
           'userId': artisanId,
           'type': 'position_partagee',
           'titre': 'Position partagée',
-          'message': 'Le client a partagé sa position avec vous',
+          'message': 'Le client a partagé sa position : ${pos.adresseComplete}',
           'data': {
             'commandeId': commandeId,
-            'adresse': adresseComplete,
+            'adresse': pos.adresseComplete,
+            'latitude': pos.latitude,
+            'longitude': pos.longitude,
           },
           'isRead': false,
           'createdAt': Timestamp.now(),
@@ -198,62 +174,23 @@ class ShareLocationDialog {
       }
 
       if (!context.mounted) return;
-      Navigator.of(context, rootNavigator: true).pop();
+      Navigator.of(context, rootNavigator: true).pop(); // Fermer le loader
 
-      await Future.delayed(const Duration(milliseconds: 100));
-
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Row(
-              children: [
-                const Icon(Icons.check_circle, color: AppColors.white),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Text(
-                    'Position partagée avec l\'artisan',
-                    style: AppTextStyles.bodyMedium.copyWith(
-                      color: AppColors.white,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            backgroundColor: AppColors.success,
-            duration: const Duration(seconds: 2),
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
-      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text('Position partagée avec l\'artisan'),
+          backgroundColor: AppColors.success,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
     } catch (e) {
       print('[ERROR] Erreur partage localisation: $e');
-
       if (context.mounted) {
         Navigator.of(context, rootNavigator: true).pop();
-      }
-
-      await Future.delayed(const Duration(milliseconds: 100));
-
-      if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Row(
-              children: [
-                const Icon(Icons.error_outline, color: AppColors.white),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Text(
-                    'Erreur: ${e.toString()}',
-                    style: AppTextStyles.bodyMedium.copyWith(
-                      color: AppColors.white,
-                    ),
-                  ),
-                ),
-              ],
-            ),
+            content: Text('Erreur: $e'),
             backgroundColor: AppColors.error,
-            duration: const Duration(seconds: 3),
-            behavior: SnackBarBehavior.floating,
           ),
         );
       }

@@ -20,8 +20,11 @@ dependencies:
   firebase_storage: ^12.3.8
   firebase_messaging: ^15.1.8
   
+  # Cartographie OpenStreetMap (gratuit, aucune clé API)
+  flutter_map: ^7.0.2
+  latlong2: ^0.9.1
+
   # Géolocalisation
-  google_maps_flutter: ^2.10.0
   geolocator: ^13.0.2
   geocoding: ^3.0.0
   geoflutterfire_plus: ^0.0.3

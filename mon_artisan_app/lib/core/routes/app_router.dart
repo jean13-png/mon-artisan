@@ -28,6 +28,7 @@ import '../../screens/shared/notifications_screen.dart';
 import '../../screens/shared/edit_profile_screen.dart';
 import '../../screens/shared/settings_screen.dart';
 import '../../screens/shared/chat_screen.dart';
+import '../../screens/shared/location_picker_screen.dart';
 import '../../models/artisan_model.dart';
 import '../../models/commande_model.dart';
 
@@ -50,6 +51,8 @@ class AppRouter {
   static const String payment = '/payment';
   static const String commandesHistory = '/commandes-history';
   static const String rateArtisan = '/rate-artisan';
+  static const String locationPicker = '/location-picker';
+
 
   // ── Routes protégées : artisan ─────────────────────────────────────────────
   static const String homeArtisan = '/home-artisan';
@@ -78,7 +81,7 @@ class AppRouter {
   };
   static const _clientRoutes = {
     homeClient, categoryMetiers, searchArtisan, artisanProfile, selectCommandeType,
-    createCommande, payment, commandesHistory, rateArtisan,
+    createCommande, payment, commandesHistory, rateArtisan, locationPicker,
   };
   static const _artisanRoutes = {
     homeArtisan, commandeDetail, revenus, completeProfile,
@@ -260,6 +263,10 @@ class AppRouter {
             artisanName: extra['artisanName'] as String,
           );
         },
+      ),
+      GoRoute(
+        path: locationPicker,
+        builder: (context, state) => const LocationPickerScreen(),
       ),
     ],
   );
