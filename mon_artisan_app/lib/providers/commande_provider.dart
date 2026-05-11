@@ -93,7 +93,7 @@ class CommandeProvider extends ChangeNotifier {
           .add(newCommande.toFirestore());
 
       // Marquer l'artisan comme indisponible IMMÉDIATEMENT
-      await _marquerArtisanIndisponible(artisanId, docRef.id);
+      await FirestoreService.setArtisanBusy(artisanId, docRef.id);
 
       // Créer une notification pour l'artisan
       await FirestoreService.createNotification({
@@ -119,54 +119,7 @@ class CommandeProvider extends ChangeNotifier {
     }
   }
   
-  // Marquer l'artisan comme indisponible
-  Future<void> _marquerArtisanIndisponible(String artisanId, String commandeId) async {
-    try {
-      // Trouver le document artisan
-      final artisanQuery = await FirebaseService.artisansCollection
-          .where('userId', isEqualTo: artisanId)
-          .limit(1)
-          .get();
-      
-      if (artisanQuery.docs.isNotEmpty) {
-        await artisanQuery.docs.first.reference.update({
-          'disponibilite': false,
-          'commandeEnCours': commandeId,
-          'raisonIndisponibilite': 'commande_en_cours',
-          'dateDebutIndisponibilite': Timestamp.now(),
-        });
-        
-        print('[INFO] Artisan $artisanId marqué comme indisponible (commande: $commandeId)');
-      }
-    } catch (e) {
-      print('[ERROR] Erreur marquage artisan indisponible: $e');
-    }
-  }
-  
-  // Libérer l'artisan (le rendre disponible)
-  Future<void> _libererArtisan(String artisanId, String commandeId) async {
-    try {
-      // Trouver le document artisan
-      final artisanQuery = await FirebaseService.artisansCollection
-          .where('userId', isEqualTo: artisanId)
-          .where('commandeEnCours', isEqualTo: commandeId)
-          .limit(1)
-          .get();
-      
-      if (artisanQuery.docs.isNotEmpty) {
-        await artisanQuery.docs.first.reference.update({
-          'disponibilite': true,
-          'commandeEnCours': null,
-          'raisonIndisponibilite': null,
-          'dateFinIndisponibilite': Timestamp.now(),
-        });
-        
-        print('[INFO] Artisan $artisanId libéré et disponible');
-      }
-    } catch (e) {
-      print('[ERROR] Erreur libération artisan: $e');
-    }
-  }
+
 
   // Récupérer les commandes d'un client
   Future<void> loadClientCommandes(String clientId) async {
@@ -334,7 +287,7 @@ class CommandeProvider extends ChangeNotifier {
       });
 
       // ✅ Libérer l'artisan quand il refuse une commande
-      await _libererArtisan(commande.artisanId, commandeId);
+      await FirestoreService.setArtisanAvailable(commande.artisanId);
 
       // Notifier le client
       await FirestoreService.createNotification({
@@ -458,7 +411,7 @@ class CommandeProvider extends ChangeNotifier {
       await _crediterArtisan(commande.artisanId, commande.montantArtisan);
       
       // Libérer l'artisan IMMÉDIATEMENT
-      await _libererArtisan(commande.artisanId, commandeId);
+      await FirestoreService.setArtisanAvailable(commande.artisanId);
 
       // Créer une notification pour l'artisan
       await FirestoreService.createNotification({
@@ -543,7 +496,7 @@ class CommandeProvider extends ChangeNotifier {
       });
 
       // M10 — Libérer l'artisan lors d'un remboursement
-      await _libererArtisan(commande.artisanId, commandeId);
+      await FirestoreService.setArtisanAvailable(commande.artisanId);
 
       // Créer une notification pour le client
       await FirestoreService.createNotification({

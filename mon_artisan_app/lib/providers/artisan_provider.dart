@@ -211,9 +211,7 @@ class ArtisanProvider extends ChangeNotifier {
     if (_currentArtisan == null) return;
 
     try {
-      await FirebaseService.artisansCollection
-          .doc(_currentArtisan!.id)
-          .update({'disponibilite': disponible});
+      await FirestoreService.updateArtisan(_currentArtisan!.id, {'disponibilite': disponible});
 
       _currentArtisan = ArtisanModel(
         id: _currentArtisan!.id,
@@ -289,22 +287,9 @@ class ArtisanProvider extends ChangeNotifier {
           'updatedAt': Timestamp.now(),
         });
 
-        // ✅ Libérer l'artisan
+        // ✅ Libérer l'artisan via le service centralisé
         if (artisanUserId.isNotEmpty) {
-          final artisanQuery = await FirebaseService.artisansCollection
-              .where('userId', isEqualTo: artisanUserId)
-              .where('commandeEnCours', isEqualTo: commandeId)
-              .limit(1)
-              .get();
-
-          if (artisanQuery.docs.isNotEmpty) {
-            await artisanQuery.docs.first.reference.update({
-              'disponibilite': true,
-              'commandeEnCours': null,
-              'raisonIndisponibilite': null,
-              'dateFinIndisponibilite': Timestamp.now(),
-            });
-          }
+          await FirestoreService.setArtisanAvailable(artisanUserId);
         }
       }
 

@@ -139,6 +139,36 @@ class FirestoreService {
     }
   }
 
+  /// Marquer l'artisan comme occupé par une commande
+  static Future<void> setArtisanBusy(String artisanId, String commandeId) async {
+    try {
+      await artisans.doc(artisanId).update({
+        'disponibilite': false,
+        'commandeEnCours': commandeId,
+        'raisonIndisponibilite': 'commande_en_cours',
+        'dateDebutIndisponibilite': Timestamp.now(),
+        'updatedAt': Timestamp.now(),
+      });
+    } catch (e) {
+      throw Exception('Erreur lors du marquage de l\'artisan comme occupé: $e');
+    }
+  }
+
+  /// Libérer l'artisan (le rendre disponible)
+  static Future<void> setArtisanAvailable(String artisanId) async {
+    try {
+      await artisans.doc(artisanId).update({
+        'disponibilite': true,
+        'commandeEnCours': null,
+        'raisonIndisponibilite': null,
+        'dateFinIndisponibilite': Timestamp.now(),
+        'updatedAt': Timestamp.now(),
+      });
+    } catch (e) {
+      throw Exception('Erreur lors de la libération de l\'artisan: $e');
+    }
+  }
+
   // ==================== COMMANDES ====================
 
   /// Créer une commande
