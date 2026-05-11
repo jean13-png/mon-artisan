@@ -18,10 +18,12 @@ class CommandesHistoryScreen extends StatefulWidget {
 
 class _CommandesHistoryScreenState extends State<CommandesHistoryScreen> {
   String _selectedFilter = 'Toutes';
+  final ScrollController _scrollController = ScrollController();
 
   @override
   void initState() {
     super.initState();
+    _scrollController.addListener(_onScroll);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final authProvider = Provider.of<AuthProvider>(context, listen: false);
       if (authProvider.userModel != null) {
@@ -29,6 +31,23 @@ class _CommandesHistoryScreenState extends State<CommandesHistoryScreen> {
             .loadClientCommandes(authProvider.userModel!.id);
       }
     });
+  }
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  void _onScroll() {
+    if (_scrollController.position.pixels >= _scrollController.position.maxScrollExtent - 200) {
+      final authProvider = Provider.of<AuthProvider>(context, listen: false);
+      final commandeProvider = Provider.of<CommandeProvider>(context, listen: false);
+      
+      if (authProvider.userModel != null && !commandeProvider.isLoading && commandeProvider.hasMore) {
+        commandeProvider.loadMoreClientCommandes(authProvider.userModel!.id);
+      }
+    }
   }
 
   @override
@@ -134,11 +153,19 @@ class _CommandesHistoryScreenState extends State<CommandesHistoryScreen> {
                           }
                         },
                         child: ListView.builder(
+                          controller: _scrollController,
                           padding: const EdgeInsets.all(16),
-                          itemCount: filteredCommandes.length,
+                          itemCount: filteredCommandes.length + (commandeProvider.hasMore ? 1 : 0),
                           itemBuilder: (context, index) {
-                            final commande = filteredCommandes[index];
-                            return _buildCommandeCard(commande);
+                            if (index < filteredCommandes.length) {
+                              final commande = filteredCommandes[index];
+                              return _buildCommandeCard(commande);
+                            } else {
+                              return const Padding(
+                                padding: EdgeInsets.symmetric(vertical: 32),
+                                child: Center(child: CircularProgressIndicator()),
+                              );
+                            }
                           },
                         ),
                       ),
