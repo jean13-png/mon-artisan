@@ -9,6 +9,7 @@ import '../../models/commande_model.dart';
 import '../../providers/commande_provider.dart';
 import '../../widgets/custom_button.dart';
 import '../shared/chat_screen.dart';
+import '../../widgets/read_only_map_widget.dart';
 import 'envoyer_devis_screen.dart';
 
 class CommandeDetailScreen extends StatefulWidget {
@@ -282,63 +283,10 @@ class _CommandeDetailScreenState extends State<CommandeDetailScreen> {
                       ],
                     ),
                     const SizedBox(height: 16),
-                    Container(
-                      height: 160,
-                      decoration: BoxDecoration(
-                        color: AppColors.greyLight,
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: AppColors.greyMedium),
-                      ),
-                      child: Stack(
-                        children: [
-                          Center(
-                            child: Column(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                const Icon(Icons.map,
-                                    size: 48, color: AppColors.greyMedium),
-                                const SizedBox(height: 8),
-                                Text(
-                                  'Lat: ${commande.clientPosition!.latitude.toStringAsFixed(5)}',
-                                  style: AppTextStyles.bodySmall
-                                      .copyWith(color: AppColors.greyDark),
-                                ),
-                                Text(
-                                  'Lng: ${commande.clientPosition!.longitude.toStringAsFixed(5)}',
-                                  style: AppTextStyles.bodySmall
-                                      .copyWith(color: AppColors.greyDark),
-                                ),
-                              ],
-                            ),
-                          ),
-                          Positioned(
-                            top: 8,
-                            right: 8,
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 10, vertical: 4),
-                              decoration: BoxDecoration(
-                                color: AppColors.success,
-                                borderRadius: BorderRadius.circular(20),
-                              ),
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  const Icon(Icons.check_circle,
-                                      color: AppColors.white, size: 14),
-                                  const SizedBox(width: 4),
-                                  Text(
-                                    'Position partagée',
-                                    style: AppTextStyles.bodySmall.copyWith(
-                                        color: AppColors.white,
-                                        fontWeight: FontWeight.w600),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
+                    ReadOnlyMapWidget(
+                      latitude: commande.clientPosition!.latitude,
+                      longitude: commande.clientPosition!.longitude,
+                      label: 'Position partagée',
                     ),
                     const SizedBox(height: 16),
                     if (commande.clientAdresseExacte != null) ...[
