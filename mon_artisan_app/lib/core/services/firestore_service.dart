@@ -408,26 +408,43 @@ class FirestoreService {
   }
 
   /// Récupérer les notifications d'un utilisateur
-  static Future<List<Map<String, dynamic>>> getNotifications(String userId) async {
+  static Future<Map<String, dynamic>> getNotifications({
+    required String userId,
+    int limit = 20,
+    DocumentSnapshot? startAfter,
+  }) async {
     try {
-      final querySnapshot = await notifications
+      Query query = notifications
           .where('userId', isEqualTo: userId)
           .orderBy('createdAt', descending: true)
-          .limit(50)
-          .get();
+          .limit(limit);
 
-      return querySnapshot.docs
+      if (startAfter != null) {
+        query = query.startAfterDocument(startAfter);
+      }
+
+      final querySnapshot = await query.get();
+
+      final results = querySnapshot.docs
           .map((doc) {
             final data = doc.data() as Map<String, dynamic>;
-            data['id'] = doc.id; // Ajouter l'ID du document
+            data['id'] = doc.id;
             return data;
           })
           .toList();
+
+      return {
+        'notifications': results,
+        'lastDocument': querySnapshot.docs.isNotEmpty ? querySnapshot.docs.last : null,
+        'hasMore': querySnapshot.docs.length == limit,
+      };
     } catch (e) {
-      // Si l'index n'existe pas encore, retourner une liste vide
-      // au lieu de crasher l'application
-      print('Erreur notifications (index manquant?): $e');
-      return [];
+      print('Erreur notifications: $e');
+      return {
+        'notifications': [],
+        'lastDocument': null,
+        'hasMore': false,
+      };
     }
   }
 

@@ -19,11 +19,28 @@ class NotificationsScreen extends StatefulWidget {
 class _NotificationsScreenState extends State<NotificationsScreen> {
   List<Map<String, dynamic>> _notifications = [];
   bool _isLoading = true;
+  bool _isLoadingMore = false;
+  bool _hasMore = true;
+  DocumentSnapshot? _lastDocument;
+  final ScrollController _scrollController = ScrollController();
 
   @override
   void initState() {
     super.initState();
+    _scrollController.addListener(_onScroll);
     _loadNotifications();
+  }
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  void _onScroll() {
+    if (_scrollController.position.pixels >= _scrollController.position.maxScrollExtent - 200) {
+      _loadMoreNotifications();
+    }
   }
 
   Future<void> _loadNotifications() async {
@@ -32,11 +49,13 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     try {
       final authProvider = Provider.of<AuthProvider>(context, listen: false);
       if (authProvider.userModel != null) {
-        final notifications = await FirestoreService.getNotifications(
-          authProvider.userModel!.id,
+        final result = await FirestoreService.getNotifications(
+          userId: authProvider.userModel!.id,
         );
         setState(() {
-          _notifications = notifications;
+          _notifications = result['notifications'] as List<Map<String, dynamic>>;
+          _lastDocument = result['lastDocument'] as DocumentSnapshot?;
+          _hasMore = result['hasMore'] as bool;
           _isLoading = false;
         });
       }
@@ -49,6 +68,37 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
             backgroundColor: AppColors.error,
           ),
         );
+      }
+    }
+  }
+
+  Future<void> _loadMoreNotifications() async {
+    if (_isLoadingMore || !_hasMore) return;
+
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    if (authProvider.userModel == null) return;
+
+    setState(() => _isLoadingMore = true);
+
+    try {
+      final result = await FirestoreService.getNotifications(
+        userId: authProvider.userModel!.id,
+        startAfter: _lastDocument,
+      );
+      
+      final newNotifications = result['notifications'] as List<Map<String, dynamic>>;
+
+      if (mounted) {
+        setState(() {
+          _notifications.addAll(newNotifications);
+          _lastDocument = result['lastDocument'] as DocumentSnapshot?;
+          _hasMore = result['hasMore'] as bool;
+          _isLoadingMore = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isLoadingMore = false);
       }
     }
   }
@@ -149,11 +199,19 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
               : RefreshIndicator(
                   onRefresh: _loadNotifications,
                   child: ListView.builder(
+                    controller: _scrollController,
                     padding: const EdgeInsets.all(16),
-                    itemCount: _notifications.length,
+                    itemCount: _notifications.length + (_hasMore ? 1 : 0),
                     itemBuilder: (context, index) {
-                      final notification = _notifications[index];
-                      return _buildNotificationCard(notification);
+                      if (index < _notifications.length) {
+                        final notification = _notifications[index];
+                        return _buildNotificationCard(notification);
+                      } else {
+                        return const Padding(
+                          padding: EdgeInsets.symmetric(vertical: 32),
+                          child: Center(child: CircularProgressIndicator()),
+                        );
+                      }
                     },
                   ),
                 ),
