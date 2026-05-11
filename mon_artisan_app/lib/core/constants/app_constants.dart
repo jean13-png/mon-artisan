@@ -1,22 +1,21 @@
+import 'package:flutter_dotenv/flutter_dotenv.dart';
+
 class AppConstants {
   // App Info
   static const String appName = 'Mon Artisan';
   static const String appVersion = '1.0.0';
   
-  // FedaPay - MODE TEST
-  // ⚠️ IMPORTANT: Utiliser les clés SANDBOX pour les tests
-  static const String fedapayPublicKey = 'pk_sandbox_YOUR_TEST_KEY'; // À remplacer
-  static const String fedapaySecretKey = 'sk_sandbox_YOUR_TEST_KEY'; // À remplacer
-  static const String fedapayApiKey = fedapaySecretKey;
-  static const String fedapayBaseUrl = 'https://sandbox-api.fedapay.com/v1';
+  // FedaPay
+  static String get fedapayPublicKey => dotenv.env['FEDAPAY_PUBLIC_KEY'] ?? '';
+  static String get fedapaySecretKey => dotenv.env['FEDAPAY_SECRET_KEY'] ?? '';
+  static String get fedapayApiKey => fedapaySecretKey;
+  static String get fedapayBaseUrl => dotenv.env['FEDAPAY_BASE_URL'] ?? 'https://sandbox-api.fedapay.com/v1';
   static const double commissionRate = 0.10; // 10%
   
-  // ⚠️ MODE SIMULATION: Activer pour tester sans vraie API FedaPay
-  static const bool simulateFedaPay = true; // ✅ Mettre à false quand les clés sont bonnes
-  
-  // Mode test (désactiver le paiement obligatoire)
-  static const bool isTestMode = true; // Mettre à false en production
-  static const bool requirePaymentForArtisan = false; // Paiement obligatoire artisan (false en test)
+  // Modes
+  static bool get simulateFedaPay => dotenv.env['SIMULATE_FEDAPAY'] == 'true';
+  static bool get isTestMode => dotenv.env['APP_TEST_MODE'] == 'true';
+  static bool get requirePaymentForArtisan => dotenv.env['REQUIRE_PAYMENT_ARTISAN'] == 'true';
   
   // Pagination
   static const int itemsPerPage = 20;
