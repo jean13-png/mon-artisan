@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
-import 'package:latlong2/latlong.dart';
+import 'package:latlong2/latlong.dart' as ll;
 import '../core/constants/colors.dart';
 import '../core/constants/text_styles.dart';
 
@@ -21,7 +21,7 @@ class ReadOnlyMapWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final position = LatLng(latitude, longitude);
+    final position = ll.LatLng(latitude, longitude);
 
     return Container(
       height: height,

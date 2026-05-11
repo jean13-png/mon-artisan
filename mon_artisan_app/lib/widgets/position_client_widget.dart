@@ -5,6 +5,7 @@ import '../core/constants/text_styles.dart';
 import '../core/services/adresse_service.dart';
 import '../core/services/firebase_service.dart';
 import '../screens/shared/location_picker_screen.dart';
+import '../widgets/map_picker_widget.dart';
 
 /// Carte affichée avant une commande pour proposer au client
 /// de mettre à jour sa position.

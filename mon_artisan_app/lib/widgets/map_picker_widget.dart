@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
-import 'package:latlong2/latlong.dart';
+import 'package:latlong2/latlong.dart' as ll;
 import 'package:geolocator/geolocator.dart';
 import 'package:geocoding/geocoding.dart';
 import '../core/constants/colors.dart';
@@ -62,7 +62,7 @@ class MapPickerWidget extends StatefulWidget {
 class _MapPickerWidgetState extends State<MapPickerWidget> {
   final MapController _mapController = MapController();
 
-  LatLng? _markerPosition;
+  ll.LatLng? _markerPosition;
   String _adresseAffichee = 'Détection de votre position...';
   String _quartier = '';
   String _rue = '';
@@ -72,13 +72,13 @@ class _MapPickerWidgetState extends State<MapPickerWidget> {
   String? _erreur;
 
   // Position par défaut : Cotonou, Bénin
-  static const LatLng _defaultPosition = LatLng(6.3703, 2.3912);
+  static const ll.LatLng _defaultPosition = ll.LatLng(6.3703, 2.3912);
 
   @override
   void initState() {
     super.initState();
     if (widget.initialLatitude != null && widget.initialLongitude != null) {
-      _markerPosition = LatLng(widget.initialLatitude!, widget.initialLongitude!);
+      _markerPosition = ll.LatLng(widget.initialLatitude!, widget.initialLongitude!);
       _isLoadingPosition = false;
       _chargerAdresse(_markerPosition!);
     } else {
@@ -96,7 +96,7 @@ class _MapPickerWidgetState extends State<MapPickerWidget> {
       final pos = await GeolocationService.getCurrentPosition();
       if (!mounted) return;
 
-      final latLng = LatLng(pos.latitude, pos.longitude);
+      final latLng = ll.LatLng(pos.latitude, pos.longitude);
       setState(() {
         _markerPosition = latLng;
         _isLoadingPosition = false;
@@ -116,7 +116,7 @@ class _MapPickerWidgetState extends State<MapPickerWidget> {
     }
   }
 
-  Future<void> _chargerAdresse(LatLng pos) async {
+  Future<void> _chargerAdresse(ll.LatLng pos) async {
     if (_isLoadingAddress) return;
     setState(() => _isLoadingAddress = true);
 
@@ -164,7 +164,7 @@ class _MapPickerWidgetState extends State<MapPickerWidget> {
     ));
   }
 
-  void _onMapTap(TapPosition tapPosition, LatLng latLng) {
+  void _onMapTap(TapPosition tapPosition, ll.LatLng latLng) {
     setState(() => _markerPosition = latLng);
     _chargerAdresse(latLng);
   }
