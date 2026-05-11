@@ -122,16 +122,7 @@ class CommandeProvider extends ChangeNotifier {
   // Marquer l'artisan comme indisponible
   Future<void> _marquerArtisanIndisponible(String artisanId, String commandeId) async {
     try {
-      // C8 — Utilisation directe de l'UID comme ID de document artisan
-      await FirebaseService.artisansCollection.doc(artisanId).update({
-        'disponibilite': false,
-        'commandeEnCours': commandeId,
-        'raisonIndisponibilite': 'commande_en_cours',
-        'dateDebutIndisponibilite': Timestamp.now(),
-      });
-      print('[INFO] Artisan $artisanId marqué comme indisponible (commande: $commandeId)');
-    } catch (e) {
-      // Fallback ancienne méthode
+      // Trouver le document artisan
       final artisanQuery = await FirebaseService.artisansCollection
           .where('userId', isEqualTo: artisanId)
           .limit(1)
@@ -144,7 +135,11 @@ class CommandeProvider extends ChangeNotifier {
           'raisonIndisponibilite': 'commande_en_cours',
           'dateDebutIndisponibilite': Timestamp.now(),
         });
+        
+        print('[INFO] Artisan $artisanId marqué comme indisponible (commande: $commandeId)');
       }
+    } catch (e) {
+      print('[ERROR] Erreur marquage artisan indisponible: $e');
     }
   }
   

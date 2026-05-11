@@ -1,5 +1,3 @@
-import 'package:flutter_dotenv/flutter_dotenv.dart';
-
 class AppConstants {
   // App Info
   static const String appName = 'Mon Artisan';
@@ -7,9 +5,9 @@ class AppConstants {
   
   // FedaPay - MODE TEST
   // ⚠️ IMPORTANT: Utiliser les clés SANDBOX pour les tests
-  static String get fedapayPublicKey => dotenv.env['FEDAPAY_PUBLIC_KEY'] ?? 'pk_sandbox_YOUR_TEST_KEY';
-  static String get fedapaySecretKey => dotenv.env['FEDAPAY_SECRET_KEY'] ?? 'sk_sandbox_YOUR_TEST_KEY';
-  static String get fedapayApiKey => fedapaySecretKey;
+  static const String fedapayPublicKey = 'pk_sandbox_YOUR_TEST_KEY'; // À remplacer
+  static const String fedapaySecretKey = 'sk_sandbox_YOUR_TEST_KEY'; // À remplacer
+  static const String fedapayApiKey = fedapaySecretKey;
   static const String fedapayBaseUrl = 'https://sandbox-api.fedapay.com/v1';
   static const double commissionRate = 0.10; // 10%
   

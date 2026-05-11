@@ -1,10 +1,9 @@
 import 'dart:io';
 import 'package:cloudinary_public/cloudinary_public.dart';
-import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 class CloudinaryService {
-  static String get _cloudName => dotenv.env['CLOUDINARY_CLOUD_NAME'] ?? '';
-  static String get _uploadPreset => dotenv.env['CLOUDINARY_UPLOAD_PRESET'] ?? '';
+  static const String _cloudName = 'do1ylvil1';
+  static const String _uploadPreset = 'mon_artisan'; // Nous allons créer ce preset
   
   static final CloudinaryPublic _cloudinary = CloudinaryPublic(
     _cloudName,

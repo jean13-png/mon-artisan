@@ -86,18 +86,16 @@ class _HomeClientScreenState extends State<HomeClientScreen> {
   }
 
   void _searchByCategorie(String categorie) {
-    final ville = _selectedVille ?? '';
     context.push(
       '${AppRouter.categoryMetiers}?categorie=${Uri.encodeComponent(categorie)}'
-      '&ville=${Uri.encodeComponent(ville)}',
+      '&ville=${Uri.encodeComponent(_selectedVille ?? '')}',
     );
   }
 
   void _searchArtisans(String query) {
-    final ville = _selectedVille ?? '';
     context.push(
       '${AppRouter.searchArtisan}?query=${Uri.encodeComponent(query)}'
-      '&ville=${Uri.encodeComponent(ville)}',
+      '&ville=${Uri.encodeComponent(_selectedVille ?? '')}',
     );
   }
 
@@ -173,48 +171,48 @@ class _HomeClientScreenState extends State<HomeClientScreen> {
                 PopupMenuItem(
                     value: 'profile',
                     child: Row(children: [
-                      Icon(Icons.person_outline, color: AppColors.primaryBlue, size: 22),
+                      Icon(Icons.person_outline, color: AppColors.primaryBlue),
                       const SizedBox(width: 8),
                       Text('Modifier mon profil',
                           style:
-                              TextStyle(color: AppColors.onSurface, fontWeight: FontWeight.w600, fontSize: 15)),
+                              TextStyle(color: AppColors.onSurface, fontWeight: FontWeight.w500)),
                     ])),
                 PopupMenuItem(
                     value: 'history',
                     child: Row(children: [
-                      Icon(Icons.history, color: AppColors.primaryBlue, size: 22),
+                      Icon(Icons.history, color: AppColors.primaryBlue),
                       const SizedBox(width: 8),
                       Text('Mes commandes',
                           style:
-                              TextStyle(color: AppColors.onSurface, fontWeight: FontWeight.w600, fontSize: 15)),
+                              TextStyle(color: AppColors.onSurface, fontWeight: FontWeight.w500)),
                     ])),
                 if (user.isArtisan)
                   PopupMenuItem(
                       value: 'switch_artisan',
                       child: Row(children: [
-                        Icon(Icons.swap_horiz, color: AppColors.primaryBlue, size: 22),
+                        Icon(Icons.swap_horiz, color: AppColors.primaryBlue),
                         const SizedBox(width: 8),
                         Text('Passer en mode Artisan',
                             style: TextStyle(
-                                color: AppColors.onSurface, fontWeight: FontWeight.w600, fontSize: 15)),
+                                color: AppColors.onSurface, fontWeight: FontWeight.w500)),
                       ])),
                 PopupMenuItem(
                     value: 'settings',
                     child: Row(children: [
-                      Icon(Icons.settings, color: AppColors.primaryBlue, size: 22),
+                      Icon(Icons.settings, color: AppColors.primaryBlue),
                       const SizedBox(width: 8),
                       Text('Paramètres',
                           style:
-                              TextStyle(color: AppColors.onSurface, fontWeight: FontWeight.w600, fontSize: 15)),
+                              TextStyle(color: AppColors.onSurface, fontWeight: FontWeight.w500)),
                     ])),
                 PopupMenuItem(
                     value: 'logout',
                     child: Row(children: [
-                      Icon(Icons.logout, color: AppColors.accentRed, size: 22),
+                      Icon(Icons.logout, color: AppColors.accentRed),
                       const SizedBox(width: 8),
                       Text('Déconnexion',
                           style:
-                              TextStyle(color: AppColors.onSurface, fontWeight: FontWeight.w600, fontSize: 15)),
+                              TextStyle(color: AppColors.onSurface, fontWeight: FontWeight.w500)),
                     ])),
               ],
             ),
@@ -268,10 +266,10 @@ class _HomeClientScreenState extends State<HomeClientScreen> {
                           hintStyle: AppTextStyles.bodyMedium
                               .copyWith(color: AppColors.greyDark),
                           prefixIcon:
-                              Icon(Icons.search, color: AppColors.primaryBlue, size: 24),
+                              Icon(Icons.search, color: AppColors.greyDark.withValues(alpha: 0.95)),
                           suffixIcon: IconButton(
                             icon: const Icon(Icons.tune,
-                                color: AppColors.primaryBlue, size: 24),
+                                color: AppColors.primaryBlue),
                             onPressed: _showAdvancedSearch,
                             tooltip: 'Recherche avancée',
                           ),

@@ -156,7 +156,6 @@ class AuthProvider extends ChangeNotifier {
         await _createBasicArtisanProfile(userId, newUser, metier: metier);
       }
 
-      _userModel = newUser;
       _isLoading = false;
       notifyListeners();
       return true;

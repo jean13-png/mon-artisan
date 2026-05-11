@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:geocoding/geocoding.dart';
 import 'package:geolocator/geolocator.dart';
-import 'package:geoflutterfire_plus/geoflutterfire_plus.dart';
+import 'package:geoflutterfire_plus/geoflutterfire_plus.dart' as gff;
 import 'dart:io';
 import '../models/artisan_model.dart';
 import '../models/commande_model.dart';
