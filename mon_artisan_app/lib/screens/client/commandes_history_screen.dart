@@ -8,6 +8,7 @@ import '../../models/commande_model.dart';
 import '../../widgets/loading_widget.dart';
 import 'rate_artisan_screen.dart';
 import 'devis_detail_screen.dart';
+import '../artisan/commande_detail_screen.dart';
 
 class CommandesHistoryScreen extends StatefulWidget {
   final bool isArtisan;
@@ -220,8 +221,14 @@ class _CommandesHistoryScreenState extends State<CommandesHistoryScreen> {
   Widget _buildCommandeCard(dynamic commande) {
     return GestureDetector(
       onTap: () {
-        // Naviguer vers le détail selon le statut
-        if (commande.statut == 'devis_envoye') {
+        if (widget.isArtisan) {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => CommandeDetailScreen(commande: commande as CommandeModel),
+            ),
+          );
+        } else {
           Navigator.push(
             context,
             MaterialPageRoute(

@@ -9,6 +9,15 @@
       ]
     },
     {
+      "collectionGroup": "notifications",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "userId", "order": "ASCENDING" },
+        { "fieldPath": "isRead", "order": "ASCENDING" },
+        { "fieldPath": "createdAt", "order": "DESCENDING" }
+      ]
+    },
+    {
       "collectionGroup": "commandes",
       "queryScope": "COLLECTION",
       "fields": [
@@ -21,6 +30,41 @@
       "queryScope": "COLLECTION",
       "fields": [
         { "fieldPath": "clientId", "order": "ASCENDING" },
+        { "fieldPath": "createdAt", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "commandes",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "artisanId", "order": "ASCENDING" },
+        { "fieldPath": "statut", "order": "ASCENDING" },
+        { "fieldPath": "createdAt", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "commandes",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "clientId", "order": "ASCENDING" },
+        { "fieldPath": "statut", "order": "ASCENDING" },
+        { "fieldPath": "createdAt", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "chats",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "participants", "arrayConfig": "CONTAINS" },
+        { "fieldPath": "lastMessageAt", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "avis",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "artisanId", "order": "ASCENDING" },
+        { "fieldPath": "isVisible", "order": "ASCENDING" },
         { "fieldPath": "createdAt", "order": "DESCENDING" }
       ]
     },
@@ -39,6 +83,41 @@
       "fields": [
         { "fieldPath": "ville", "order": "ASCENDING" },
         { "fieldPath": "noteGlobale", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "artisans",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "disponibilite", "order": "ASCENDING" },
+        { "fieldPath": "noteGlobale", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "artisans",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "disponibilite", "order": "ASCENDING" },
+        { "fieldPath": "metier", "order": "ASCENDING" },
+        { "fieldPath": "noteGlobale", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "artisans",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "disponibilite", "order": "ASCENDING" },
+        { "fieldPath": "ville", "order": "ASCENDING" },
+        { "fieldPath": "noteGlobale", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "artisans",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "isProfileComplete", "order": "ASCENDING" },
+        { "fieldPath": "isVerified", "order": "ASCENDING" },
+        { "fieldPath": "verificationStatus", "order": "ASCENDING" }
       ]
     },
     {

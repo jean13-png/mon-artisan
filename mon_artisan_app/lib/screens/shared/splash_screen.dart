@@ -212,31 +212,30 @@ class _SplashScreenState extends State<SplashScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.primaryBlue,
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
+      backgroundColor: AppColors.white,
+      body: SafeArea(
+        child: Stack(
           children: [
-            Image.asset(
-              'assets/images/logo_mon_artisan.png',
-              width: 150,
-              height: 150,
+            Center(
+              child: Image.asset(
+                'assets/images/logo_mon_artisan.png',
+                width: 200,
+                height: 200,
+              ),
             ),
-            const SizedBox(height: 24),
-            Text(
-              'Mon Artisan',
-              style: AppTextStyles.h1.copyWith(color: AppColors.white),
+            Align(
+              alignment: Alignment.bottomCenter,
+              child: Padding(
+                padding: const EdgeInsets.only(bottom: 24.0),
+                child: Text(
+                  'V1.0',
+                  style: AppTextStyles.bodyMedium.copyWith(
+                    color: AppColors.greyDark,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
             ),
-            const SizedBox(height: 8),
-            Text(
-              'Trouvez votre artisan en un clic',
-              style: AppTextStyles.bodyMedium.copyWith(color: AppColors.white),
-            ),
-            const SizedBox(height: 48),
-            const CircularProgressIndicator(
-              valueColor: AlwaysStoppedAnimation<Color>(AppColors.white),
-            ),
-            const SizedBox(height: 48),
           ],
         ),
       ),

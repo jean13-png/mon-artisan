@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:go_router/go_router.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../core/constants/colors.dart';
 import '../../core/constants/text_styles.dart';
 import '../../core/routes/app_router.dart';
@@ -202,31 +203,24 @@ class _UsersManagementScreenState extends State<UsersManagementScreen> with Sing
     }
   }
 
-  void _contactUser(String email, String nom) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text('Contacter $nom'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text('Email: $email'),
-            const SizedBox(height: 16),
-            const Text('Fonctionnalité à implémenter :'),
-            const Text('- Envoi d\'email'),
-            const Text('- Notification push'),
-            const Text('- Message dans l\'app'),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Fermer'),
-          ),
-        ],
-      ),
+  void _contactUser(String email, String nom) async {
+    final Uri emailLaunchUri = Uri(
+      scheme: 'mailto',
+      path: email,
+      query: 'subject=Concernant votre compte Mon Artisan',
     );
+    
+    if (await canLaunchUrl(emailLaunchUri)) {
+      await launchUrl(emailLaunchUri);
+    } else {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Impossible d\'ouvrir l\'application d\'email'),
+          backgroundColor: AppColors.error,
+        ),
+      );
+    }
   }
 
   @override

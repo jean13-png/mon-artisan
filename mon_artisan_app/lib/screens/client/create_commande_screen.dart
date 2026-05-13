@@ -33,7 +33,6 @@ class CreateCommandeScreen extends StatefulWidget {
 
 class _CreateCommandeScreenState extends State<CreateCommandeScreen> {
   final _formKey = GlobalKey<FormState>();
-  final _titreController = TextEditingController();
   final _descriptionController = TextEditingController();
   final _adresseController = TextEditingController();
   
@@ -59,7 +58,6 @@ class _CreateCommandeScreenState extends State<CreateCommandeScreen> {
 
   @override
   void dispose() {
-    _titreController.dispose();
     _descriptionController.dispose();
     _adresseController.dispose();
     super.dispose();
@@ -126,26 +124,6 @@ class _CreateCommandeScreenState extends State<CreateCommandeScreen> {
   Future<void> _createCommande() async {
     if (!_formKey.currentState!.validate()) return;
 
-    if (_selectedDate == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Veuillez sélectionner une date d\'intervention'),
-          backgroundColor: AppColors.error,
-        ),
-      );
-      return;
-    }
-
-    if (_selectedTime == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Veuillez sélectionner une heure d\'intervention'),
-          backgroundColor: AppColors.error,
-        ),
-      );
-      return;
-    }
-
     setState(() => _isLoading = true);
 
     try {
@@ -161,10 +139,9 @@ class _CreateCommandeScreenState extends State<CreateCommandeScreen> {
         typeCommande: widget.typeCommande,
         titre: _isDiagnosticMode
             ? 'Diagnostic ${widget.artisan.metier}'
-            : _titreController.text.trim(),
+            : widget.artisan.metier,
         description: _descriptionController.text.trim(),
         adresse: _adresseController.text.trim(),
-        // Utiliser la position GPS détectée si disponible, sinon celle du profil
         position: _adresseDetectee?.position ?? user.position,
         ville: _adresseDetectee?.ville.isNotEmpty == true
             ? _adresseDetectee!.ville
@@ -172,9 +149,10 @@ class _CreateCommandeScreenState extends State<CreateCommandeScreen> {
         quartier: _adresseDetectee?.quartier.isNotEmpty == true
             ? _adresseDetectee!.quartier
             : user.quartier,
-        dateIntervention: _selectedDate!,
-        heureIntervention:
-            '${_selectedTime!.hour}:${_selectedTime!.minute.toString().padLeft(2, '0')}',
+        dateIntervention: _selectedDate ?? DateTime.now().add(const Duration(days: 1)),
+        heureIntervention: _selectedTime != null
+            ? '${_selectedTime!.hour}:${_selectedTime!.minute.toString().padLeft(2, '0')}'
+            : 'À définir',
         montant: 0,
         fraisDeplacement: _isDiagnosticMode ? 1000.0 : null,
         photos: [],
@@ -268,7 +246,7 @@ class _CreateCommandeScreenState extends State<CreateCommandeScreen> {
                     artisanId: widget.artisan.userId,
                   ).then((_) {
                     if (!context.mounted) return;
-                    context.go(AppRouter.homeClient);
+                    context.go(AppRouter.commandesHistory);
                   });
                 },
                 style: ElevatedButton.styleFrom(
@@ -433,25 +411,7 @@ class _CreateCommandeScreenState extends State<CreateCommandeScreen> {
                     
                     const SizedBox(height: 24),
 
-                    // Titre (seulement pour panne connue)
-                    if (!_isDiagnosticMode) ...[
-                      CustomTextField(
-                        label: 'Titre de la commande',
-                        hint: 'Ex: Réparation robinet qui fuit',
-                        controller: _titreController,
-                        prefixIcon: const Icon(Icons.title),
-                        validator: (value) {
-                          if (value == null || value.isEmpty) {
-                            return 'Le titre est requis';
-                          }
-                          if (value.length < 5) {
-                            return 'Le titre doit contenir au moins 5 caractères';
-                          }
-                          return null;
-                        },
-                      ),
-                      const SizedBox(height: 16),
-                    ],
+                    // Titre (seulement pour panne connue) — SUPPRIMÉ
 
                     // Description
                     CustomTextField(
@@ -509,7 +469,15 @@ class _CreateCommandeScreenState extends State<CreateCommandeScreen> {
                     }),
                     const SizedBox(height: 16),
 
-                    // Date et heure
+                    // Date et heure (optionnels)
+                    Text(
+                      'Date et heure souhaitées (optionnel)',
+                      style: AppTextStyles.bodyMedium.copyWith(
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.greyDark,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
                     Row(
                       children: [
                         Expanded(
@@ -518,14 +486,20 @@ class _CreateCommandeScreenState extends State<CreateCommandeScreen> {
                             child: Container(
                               padding: const EdgeInsets.all(16),
                               decoration: BoxDecoration(
-                                border: Border.all(color: AppColors.greyMedium),
+                                border: Border.all(
+                                  color: _selectedDate != null
+                                      ? AppColors.primaryBlue
+                                      : AppColors.greyMedium,
+                                ),
                                 borderRadius: BorderRadius.circular(8),
                               ),
                               child: Row(
                                 children: [
-                                  const Icon(
+                                  Icon(
                                     Icons.calendar_today,
-                                    color: AppColors.primaryBlue,
+                                    color: _selectedDate != null
+                                        ? AppColors.primaryBlue
+                                        : AppColors.greyMedium,
                                     size: 20,
                                   ),
                                   const SizedBox(width: 12),
@@ -543,16 +517,24 @@ class _CreateCommandeScreenState extends State<CreateCommandeScreen> {
                                         Text(
                                           _selectedDate != null
                                               ? '${_selectedDate!.day}/${_selectedDate!.month}/${_selectedDate!.year}'
-                                              : 'Sélectionner',
+                                              : 'Non définie',
                                           style: AppTextStyles.bodyMedium.copyWith(
                                             fontWeight: _selectedDate != null
                                                 ? FontWeight.w600
                                                 : FontWeight.normal,
+                                            color: _selectedDate != null
+                                                ? null
+                                                : AppColors.greyMedium,
                                           ),
                                         ),
                                       ],
                                     ),
                                   ),
+                                  if (_selectedDate != null)
+                                    GestureDetector(
+                                      onTap: () => setState(() => _selectedDate = null),
+                                      child: const Icon(Icons.close, size: 16, color: AppColors.greyMedium),
+                                    ),
                                 ],
                               ),
                             ),
@@ -565,14 +547,20 @@ class _CreateCommandeScreenState extends State<CreateCommandeScreen> {
                             child: Container(
                               padding: const EdgeInsets.all(16),
                               decoration: BoxDecoration(
-                                border: Border.all(color: AppColors.greyMedium),
+                                border: Border.all(
+                                  color: _selectedTime != null
+                                      ? AppColors.primaryBlue
+                                      : AppColors.greyMedium,
+                                ),
                                 borderRadius: BorderRadius.circular(8),
                               ),
                               child: Row(
                                 children: [
-                                  const Icon(
+                                  Icon(
                                     Icons.access_time,
-                                    color: AppColors.primaryBlue,
+                                    color: _selectedTime != null
+                                        ? AppColors.primaryBlue
+                                        : AppColors.greyMedium,
                                     size: 20,
                                   ),
                                   const SizedBox(width: 12),
@@ -590,16 +578,24 @@ class _CreateCommandeScreenState extends State<CreateCommandeScreen> {
                                         Text(
                                           _selectedTime != null
                                               ? '${_selectedTime!.hour}:${_selectedTime!.minute.toString().padLeft(2, '0')}'
-                                              : 'Sélectionner',
+                                              : 'Non définie',
                                           style: AppTextStyles.bodyMedium.copyWith(
                                             fontWeight: _selectedTime != null
                                                 ? FontWeight.w600
                                                 : FontWeight.normal,
+                                            color: _selectedTime != null
+                                                ? null
+                                                : AppColors.greyMedium,
                                           ),
                                         ),
                                       ],
                                     ),
                                   ),
+                                  if (_selectedTime != null)
+                                    GestureDetector(
+                                      onTap: () => setState(() => _selectedTime = null),
+                                      child: const Icon(Icons.close, size: 16, color: AppColors.greyMedium),
+                                    ),
                                 ],
                               ),
                             ),

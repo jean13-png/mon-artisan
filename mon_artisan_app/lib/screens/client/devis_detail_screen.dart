@@ -183,7 +183,7 @@ class _DevisDetailScreenState extends State<DevisDetailScreen> {
           onPressed: () => Navigator.pop(context),
         ),
         title: Text(
-          'Devis reçu',
+          _getStatutText(widget.commande.statut),
           style: AppTextStyles.h3.copyWith(color: AppColors.white),
         ),
       ),
@@ -194,16 +194,16 @@ class _DevisDetailScreenState extends State<DevisDetailScreen> {
             Container(
               width: double.infinity,
               padding: const EdgeInsets.all(16),
-              color: AppColors.success.withOpacity(0.1),
+              color: _getStatutColor(widget.commande.statut).withOpacity(0.1),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(Icons.check_circle, color: AppColors.success, size: 24),
+                  Icon(_getStatutIcon(widget.commande.statut), color: _getStatutColor(widget.commande.statut), size: 24),
                   const SizedBox(width: 8),
                   Text(
-                    'Devis reçu',
+                    _getStatutText(widget.commande.statut),
                     style: AppTextStyles.bodyLarge.copyWith(
-                      color: AppColors.success,
+                      color: _getStatutColor(widget.commande.statut),
                       fontWeight: FontWeight.w600,
                     ),
                   ),
@@ -243,7 +243,8 @@ class _DevisDetailScreenState extends State<DevisDetailScreen> {
             const SizedBox(height: 16),
 
             // Montant du devis
-            Container(
+            if (widget.commande.montantDevis != null)
+              Container(
               width: double.infinity,
               padding: const EdgeInsets.all(24),
               color: AppColors.white,
@@ -310,7 +311,8 @@ class _DevisDetailScreenState extends State<DevisDetailScreen> {
             ],
 
             // Information
-            Container(
+            if (widget.commande.statut == 'devis_envoye')
+              Container(
               margin: const EdgeInsets.symmetric(horizontal: 16),
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
@@ -340,7 +342,7 @@ class _DevisDetailScreenState extends State<DevisDetailScreen> {
       ),
 
       // Boutons d'action
-      bottomNavigationBar: Container(
+      bottomNavigationBar: widget.commande.statut == 'devis_envoye' ? Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
           color: AppColors.white,
@@ -378,7 +380,7 @@ class _DevisDetailScreenState extends State<DevisDetailScreen> {
             ],
           ),
         ),
-      ),
+      ) : null,
     );
   }
 
@@ -410,5 +412,86 @@ class _DevisDetailScreenState extends State<DevisDetailScreen> {
         ),
       ],
     );
+  }
+
+  Color _getStatutColor(String statut) {
+    switch (statut) {
+      case 'en_attente':
+      case 'diagnostic_demande':
+        return AppColors.warning;
+      case 'devis_envoye':
+        return AppColors.primaryBlue;
+      case 'devis_accepte':
+        return AppColors.success;
+      case 'devis_refuse':
+        return AppColors.error;
+      case 'acceptee':
+      case 'en_cours':
+        return AppColors.primaryBlue;
+      case 'terminee':
+      case 'validee':
+        return AppColors.success;
+      case 'annulee':
+      case 'refusee':
+        return AppColors.error;
+      default:
+        return AppColors.greyDark;
+    }
+  }
+
+  IconData _getStatutIcon(String statut) {
+    switch (statut) {
+      case 'en_attente':
+      case 'diagnostic_demande':
+        return Icons.schedule;
+      case 'devis_envoye':
+        return Icons.description;
+      case 'devis_accepte':
+        return Icons.check_circle;
+      case 'devis_refuse':
+        return Icons.cancel;
+      case 'acceptee':
+        return Icons.check_circle;
+      case 'en_cours':
+        return Icons.build;
+      case 'terminee':
+        return Icons.done_all;
+      case 'validee':
+        return Icons.verified;
+      case 'annulee':
+      case 'refusee':
+        return Icons.cancel;
+      default:
+        return Icons.info;
+    }
+  }
+
+  String _getStatutText(String statut) {
+    switch (statut) {
+      case 'en_attente':
+        return 'En attente d\'une réponse';
+      case 'diagnostic_demande':
+        return 'Diagnostic demandé';
+      case 'devis_envoye':
+        return 'Devis reçu';
+      case 'devis_accepte':
+        return 'Devis accepté';
+      case 'devis_refuse':
+        return 'Devis refusé';
+      case 'acceptee':
+        return 'Commande acceptée';
+      case 'en_cours':
+        return 'En cours';
+      case 'terminee':
+        return 'Terminée (à valider)';
+      case 'validee':
+        return 'Validée';
+      case 'annulee':
+        return 'Annulée';
+      case 'refusee':
+        return 'Refusée';
+      default:
+        return statut;
+    }
   }
 }

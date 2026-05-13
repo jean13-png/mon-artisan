@@ -5,6 +5,7 @@ import '../../core/constants/colors.dart';
 import '../../core/constants/text_styles.dart';
 import '../../core/routes/app_router.dart';
 import '../../providers/auth_provider.dart';
+import '../../core/services/firebase_service.dart';
 
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key});
@@ -53,12 +54,49 @@ class SettingsScreen extends StatelessWidget {
             title: 'Changer le mot de passe',
             subtitle: 'Modifier votre mot de passe',
             onTap: () {
-              // TODO: Implémenter changement de mot de passe
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Fonctionnalité bientôt disponible'),
-                ),
-              );
+              if (user != null) {
+                showDialog(
+                  context: context,
+                  builder: (context) => AlertDialog(
+                    title: const Text('Réinitialiser le mot de passe'),
+                    content: const Text(
+                        'Un email vous sera envoyé pour réinitialiser votre mot de passe. Voulez-vous continuer ?'),
+                    actions: [
+                      TextButton(
+                        onPressed: () => Navigator.pop(context),
+                        child: const Text('Annuler'),
+                      ),
+                      ElevatedButton(
+                        onPressed: () async {
+                          Navigator.pop(context);
+                          try {
+                            await FirebaseService.resetPassword(user.email);
+                            if (!context.mounted) return;
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('Email de réinitialisation envoyé'),
+                                backgroundColor: AppColors.success,
+                              ),
+                            );
+                          } catch (e) {
+                            if (!context.mounted) return;
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text('Erreur: $e'),
+                                backgroundColor: AppColors.error,
+                              ),
+                            );
+                          }
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.primaryBlue,
+                        ),
+                        child: const Text('Envoyer'),
+                      ),
+                    ],
+                  ),
+                );
+              }
             },
           ),
           
@@ -82,11 +120,7 @@ class SettingsScreen extends StatelessWidget {
             title: 'Politique de confidentialité',
             subtitle: 'Voir notre politique',
             onTap: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Fonctionnalité bientôt disponible'),
-                ),
-              );
+              context.push(AppRouter.privacyPolicy);
             },
           ),
           _buildSettingsTile(
@@ -94,11 +128,7 @@ class SettingsScreen extends StatelessWidget {
             title: 'Conditions d\'utilisation',
             subtitle: 'Lire les conditions',
             onTap: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Fonctionnalité bientôt disponible'),
-                ),
-              );
+              context.push(AppRouter.termsOfUse);
             },
           ),
           

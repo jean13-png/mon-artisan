@@ -18,23 +18,20 @@ class _ArtisansValidationScreenState extends State<ArtisansValidationScreen> {
   String _filter = 'pending'; // pending, approved, rejected
 
   Stream<QuerySnapshot> _getArtisansStream() {
-    print('[FILTER] Filter: $_filter');
-    
     if (_filter == 'pending') {
-      // Pour "en attente", chercher les artisans NON vérifiés
-      // (peu importe isProfileComplete)
+      // Seulement les profils complets en attente de validation
       return FirebaseService.firestore
           .collection('artisans')
+          .where('isProfileComplete', isEqualTo: true)
           .where('isVerified', isEqualTo: false)
+          .where('verificationStatus', isEqualTo: 'pending')
           .snapshots();
     } else if (_filter == 'approved') {
-      // Pour "approuvés", chercher les artisans vérifiés
       return FirebaseService.firestore
           .collection('artisans')
           .where('isVerified', isEqualTo: true)
           .snapshots();
     } else {
-      // Pour "rejetés", chercher avec verificationStatus='rejected'
       return FirebaseService.firestore
           .collection('artisans')
           .where('verificationStatus', isEqualTo: 'rejected')
@@ -254,6 +251,49 @@ class _ArtisansValidationScreenState extends State<ArtisansValidationScreen> {
             artisan.isProfileComplete ? 'Profil complet' : 'Profil incomplet',
           ),
 
+          // Documents soumis
+          const SizedBox(height: 12),
+          Text('Documents soumis', style: AppTextStyles.bodyMedium.copyWith(fontWeight: FontWeight.w600)),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              _buildDocBadge('Diplôme', artisan.diplome),
+              const SizedBox(width: 8),
+              _buildDocBadge('Carte CIP', artisan.cipPhoto),
+              const SizedBox(width: 8),
+              _buildDocBadge('Photos (${artisan.atelierPhotos.length})',
+                  artisan.atelierPhotos.isNotEmpty ? artisan.atelierPhotos.first : null),
+            ],
+          ),
+
+          // Galerie photos atelier
+          if (artisan.atelierPhotos.isNotEmpty) ...[
+            const SizedBox(height: 12),
+            SizedBox(
+              height: 80,
+              child: ListView.separated(
+                scrollDirection: Axis.horizontal,
+                itemCount: artisan.atelierPhotos.length,
+                separatorBuilder: (_, __) => const SizedBox(width: 8),
+                itemBuilder: (context, i) => GestureDetector(
+                  onTap: () => _showImageDialog(artisan.atelierPhotos[i]),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(8),
+                    child: Image.network(
+                      artisan.atelierPhotos[i],
+                      width: 80,
+                      height: 80,
+                      fit: BoxFit.cover,
+                      errorBuilder: (_, __, ___) =>
+                          Container(width: 80, height: 80, color: AppColors.greyLight,
+                              child: const Icon(Icons.broken_image)),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ],
+
           if (artisan.verificationStatus == 'pending') ...[
             const SizedBox(height: 16),
             Row(
@@ -355,6 +395,73 @@ class _ArtisansValidationScreenState extends State<ArtisansValidationScreen> {
     );
   }
 
+  Widget _buildDocBadge(String label, String? url) {
+    final hasDoc = url != null && url.isNotEmpty;
+    return GestureDetector(
+      onTap: hasDoc ? () => _showImageDialog(url) : null,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+        decoration: BoxDecoration(
+          color: hasDoc ? AppColors.success.withOpacity(0.1) : AppColors.error.withOpacity(0.1),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: hasDoc ? AppColors.success : AppColors.error,
+          ),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              hasDoc ? Icons.check_circle : Icons.cancel,
+              size: 14,
+              color: hasDoc ? AppColors.success : AppColors.error,
+            ),
+            const SizedBox(width: 4),
+            Text(
+              label,
+              style: AppTextStyles.bodySmall.copyWith(
+                color: hasDoc ? AppColors.success : AppColors.error,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showImageDialog(String imageUrl) {
+    showDialog(
+      context: context,
+      builder: (context) => Dialog(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            AppBar(
+              backgroundColor: AppColors.primaryBlue,
+              elevation: 0,
+              leading: IconButton(
+                icon: const Icon(Icons.close, color: AppColors.white),
+                onPressed: () => Navigator.pop(context),
+              ),
+              title: Text('Document', style: AppTextStyles.bodyLarge.copyWith(color: AppColors.white)),
+            ),
+            InteractiveViewer(
+              child: Image.network(
+                imageUrl,
+                fit: BoxFit.contain,
+                errorBuilder: (_, __, ___) => const Padding(
+                  padding: EdgeInsets.all(32),
+                  child: Icon(Icons.broken_image, size: 64),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   Future<void> _approveArtisan(String artisanId) async {
     try {
       // Récupérer les infos de l'artisan
@@ -366,7 +473,12 @@ class _ArtisansValidationScreenState extends State<ArtisansValidationScreen> {
       if (!artisanDoc.exists) return;
       
       final artisanData = artisanDoc.data()!;
-      final userId = artisanData['userId'];
+      final userId = artisanData['userId'] as String?;
+
+      if (userId == null || userId.isEmpty) {
+        print('[ERROR] userId introuvable pour artisan $artisanId');
+        return;
+      }
       
       // Mettre à jour le statut
       await FirebaseService.firestore
@@ -384,7 +496,7 @@ class _ArtisansValidationScreenState extends State<ArtisansValidationScreen> {
           .collection('notifications')
           .add({
         'userId': userId,
-        'title': 'Profil approuvé',
+        'titre': 'Profil approuvé ! 🎉',
         'message': 'Félicitations ! Votre profil artisan a été approuvé. Vous pouvez maintenant recevoir des commandes.',
         'type': 'validation',
         'isRead': false,
@@ -477,7 +589,12 @@ class _ArtisansValidationScreenState extends State<ArtisansValidationScreen> {
       if (!artisanDoc.exists) return;
       
       final artisanData = artisanDoc.data()!;
-      final userId = artisanData['userId'];
+      final userId = artisanData['userId'] as String?;
+
+      if (userId == null || userId.isEmpty) {
+        print('[ERROR] userId introuvable pour artisan $artisanId');
+        return;
+      }
       
       // Mettre à jour le statut
       await FirebaseService.firestore
@@ -493,14 +610,14 @@ class _ArtisansValidationScreenState extends State<ArtisansValidationScreen> {
 
       // Créer une notification pour l'artisan
       final message = raison != null && raison!.isNotEmpty
-          ? 'Votre profil a été rejeté. Raison: $raison'
+          ? 'Votre profil a été rejeté. Raison : $raison. Corrigez et soumettez à nouveau.'
           : 'Votre profil a été rejeté. Veuillez corriger les informations et soumettre à nouveau.';
       
       await FirebaseService.firestore
           .collection('notifications')
           .add({
         'userId': userId,
-        'title': 'Profil rejeté',
+        'titre': 'Profil rejeté',
         'message': message,
         'type': 'validation',
         'isRead': false,

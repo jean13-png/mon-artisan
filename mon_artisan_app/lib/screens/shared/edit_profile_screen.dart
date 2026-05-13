@@ -8,6 +8,7 @@ import '../../core/constants/text_styles.dart';
 import '../../core/routes/app_router.dart';
 import '../../providers/auth_provider.dart';
 import '../../core/services/firebase_service.dart';
+import '../../core/services/cloudinary_service.dart';
 import '../../widgets/custom_button.dart';
 import '../../widgets/loading_widget.dart';
 import '../../widgets/ville_quartier_selector.dart';
@@ -90,7 +91,10 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
 
       String? photoUrl;
       if (_imageFile != null) {
-        photoUrl = await FirebaseService.uploadProfilePhoto(userId, _imageFile!);
+        photoUrl = await CloudinaryService.uploadImage(
+          _imageFile!.path,
+          'users/$userId/profile',
+        );
       }
 
       final updates = {

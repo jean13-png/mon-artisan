@@ -32,6 +32,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
   String? _selectedVille;
   String? _selectedQuartier;
   String? _selectedMetier;
+  String? _selectedCategorie;
 
   bool _obscurePassword = true;
   bool _obscureConfirmPassword = true;
@@ -79,6 +80,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
       quartier: _selectedQuartier!,
       position: position,
       metier: widget.role == 'artisan' ? _selectedMetier : null,
+      metierCategorie: widget.role == 'artisan' ? _selectedCategorie : null,
     );
 
     if (!mounted) return;
@@ -146,7 +148,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
   @override
   Widget build(BuildContext context) {
     final authProvider = Provider.of<AuthProvider>(context);
-    final user = authProvider.userModel;
     final isArtisan = widget.role == 'artisan';
 
     return PopScope(
@@ -251,26 +252,39 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 if (isArtisan) ...[
                   _buildLabel('Métier *'),
                   const SizedBox(height: 8),
-                  DropdownButtonFormField<String>(
-                    value: _selectedMetier,
-                    isExpanded: true,
-                    decoration: _dropdownDecoration(
-                      hint: 'Sélectionnez votre métier',
-                      icon: Icons.work_outline,
-                    ),
-                    items: getAllMetiers()
-                        .map((m) => DropdownMenuItem(
-                              value: m['nom'],
-                              child: Text(
-                                '${m['nom']} — ${m['categorie']}',
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            ))
-                        .toList(),
-                    validator: (v) =>
-                        v == null ? 'Veuillez sélectionner un métier' : null,
-                    onChanged: (v) => setState(() => _selectedMetier = v),
+                  _MetierAutocomplete(
+                    onSelected: (metier, categorie) {
+                      setState(() {
+                        _selectedMetier = metier;
+                        _selectedCategorie = categorie;
+                      });
+                    },
+                    selectedMetier: _selectedMetier,
                   ),
+                  if (_selectedCategorie != null) ...[
+                    const SizedBox(height: 8),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      decoration: BoxDecoration(
+                        color: AppColors.primaryBlue.withOpacity(0.08),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: AppColors.primaryBlue.withOpacity(0.3)),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(Icons.category_outlined, size: 16, color: AppColors.primaryBlue),
+                          const SizedBox(width: 8),
+                          Text(
+                            'Catégorie : $_selectedCategorie',
+                            style: AppTextStyles.bodySmall.copyWith(
+                              color: AppColors.primaryBlue,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
                   const SizedBox(height: 16),
                 ],
 
@@ -365,7 +379,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
     );
   }
 
-  InputDecoration _dropdownDecoration({
+  // ignore: unused_element
+  InputDecoration _inputDecoration({
     required String hint,
     required IconData icon,
   }) {
@@ -392,6 +407,192 @@ class _RegisterScreenState extends State<RegisterScreen> {
         borderRadius: BorderRadius.circular(8),
         borderSide: const BorderSide(color: AppColors.error),
       ),
+    );
+  }
+}
+
+// ── Widget Autocomplete métier ─────────────────────────────────────────────
+class _MetierAutocomplete extends StatefulWidget {
+  final void Function(String metier, String categorie) onSelected;
+  final String? selectedMetier;
+
+  const _MetierAutocomplete({
+    required this.onSelected,
+    this.selectedMetier,
+  });
+
+  @override
+  State<_MetierAutocomplete> createState() => _MetierAutocompleteState();
+}
+
+class _MetierAutocompleteState extends State<_MetierAutocomplete> {
+  final _controller = TextEditingController();
+  final _focusNode = FocusNode();
+  bool _hasError = false;
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.selectedMetier != null) {
+      _controller.text = widget.selectedMetier!;
+    }
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    _focusNode.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        RawAutocomplete<Map<String, String>>(
+          textEditingController: _controller,
+          focusNode: _focusNode,
+          optionsBuilder: (textEditingValue) {
+            final query = textEditingValue.text;
+            if (query.isEmpty) return getAllMetiers().take(10);
+            return searchMetiers(query).take(10);
+          },
+          displayStringForOption: (option) => option['nom']!,
+          onSelected: (option) {
+            setState(() => _hasError = false);
+            _controller.text = option['nom']!;
+            widget.onSelected(option['nom']!, option['categorie']!);
+          },
+          fieldViewBuilder: (context, controller, focusNode, onSubmitted) {
+            return TextFormField(
+              controller: controller,
+              focusNode: focusNode,
+              decoration: InputDecoration(
+                hintText: 'Ex: Maçon, Électricien, Plombier...',
+                hintStyle: AppTextStyles.bodyMedium.copyWith(color: AppColors.greyMedium),
+                prefixIcon: const Icon(Icons.work_outline, color: AppColors.greyDark),
+                suffixIcon: controller.text.isNotEmpty
+                    ? IconButton(
+                        icon: const Icon(Icons.clear, size: 18),
+                        onPressed: () {
+                          controller.clear();
+                          setState(() => _hasError = false);
+                        },
+                      )
+                    : null,
+                filled: true,
+                fillColor: AppColors.surfaceCard,
+                contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                  borderSide: BorderSide(
+                    color: _hasError ? AppColors.error : AppColors.greyMedium,
+                  ),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                  borderSide: BorderSide(
+                    color: _hasError ? AppColors.error : AppColors.greyMedium,
+                  ),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                  borderSide: const BorderSide(color: AppColors.primaryBlue, width: 2),
+                ),
+                errorBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                  borderSide: const BorderSide(color: AppColors.error),
+                ),
+              ),
+              validator: (value) {
+                if (value == null || value.trim().isEmpty) {
+                  setState(() => _hasError = true);
+                  return 'Veuillez saisir votre métier';
+                }
+                // Vérifier que le métier saisi correspond à un métier connu
+                final match = getAllMetiers().any(
+                  (m) => m['nom']!.toLowerCase() == value.trim().toLowerCase(),
+                );
+                if (!match) {
+                  setState(() => _hasError = true);
+                  return 'Sélectionnez un métier dans la liste';
+                }
+                setState(() => _hasError = false);
+                return null;
+              },
+              onChanged: (value) {
+                // Chercher une correspondance exacte pour auto-sélectionner
+                final exact = getAllMetiers().where(
+                  (m) => m['nom']!.toLowerCase() == value.trim().toLowerCase(),
+                );
+                if (exact.isNotEmpty) {
+                  widget.onSelected(exact.first['nom']!, exact.first['categorie']!);
+                }
+              },
+            );
+          },
+          optionsViewBuilder: (context, onSelected, options) {
+            return Align(
+              alignment: Alignment.topLeft,
+              child: Material(
+                elevation: 4,
+                borderRadius: BorderRadius.circular(8),
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxHeight: 280),
+                  child: ListView.separated(
+                    padding: EdgeInsets.zero,
+                    shrinkWrap: true,
+                    itemCount: options.length,
+                    separatorBuilder: (_, __) => const Divider(height: 1),
+                    itemBuilder: (context, index) {
+                      final option = options.elementAt(index);
+                      return InkWell(
+                        onTap: () => onSelected(option),
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 12,
+                          ),
+                          child: Row(
+                            children: [
+                              Icon(
+                                categoryIcon(option['categorie']!),
+                                size: 18,
+                                color: AppColors.primaryBlue,
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      option['nom']!,
+                                      style: AppTextStyles.bodyMedium.copyWith(
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                    Text(
+                                      option['categorie']!,
+                                      style: AppTextStyles.bodySmall.copyWith(
+                                        color: AppColors.greyMedium,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                ),
+              ),
+            );
+          },
+        ),
+      ],
     );
   }
 }

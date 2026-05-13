@@ -5,7 +5,7 @@ import '../models/artisan_model.dart';
 
 class ArtisanCard extends StatelessWidget {
   final ArtisanModel artisan;
-  final double? distance; // Distance en km
+  final double? distance;
   final VoidCallback onTap;
 
   const ArtisanCard({
@@ -17,6 +17,8 @@ class ArtisanCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final bool disponible = artisan.estRealementDisponible;
+
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
       child: Material(
@@ -29,9 +31,12 @@ class ArtisanCard extends StatelessWidget {
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(12),
+              border: disponible
+                  ? null
+                  : Border.all(color: AppColors.greyMedium.withValues(alpha: 0.4)),
               boxShadow: [
                 BoxShadow(
-                  color: AppColors.black.withValues(alpha: 0.08),
+                  color: AppColors.black.withValues(alpha: disponible ? 0.08 : 0.04),
                   blurRadius: 8,
                   offset: const Offset(0, 2),
                 ),
@@ -44,22 +49,23 @@ class ArtisanCard extends StatelessWidget {
                   width: 60,
                   height: 60,
                   decoration: BoxDecoration(
-                    color: AppColors.primaryBlue.withValues(alpha: 0.1),
+                    color: AppColors.primaryBlue.withValues(alpha: disponible ? 0.1 : 0.05),
                     shape: BoxShape.circle,
                   ),
                   child: Icon(
                     Icons.person,
-                    color: AppColors.primaryBlue,
+                    color: disponible ? AppColors.primaryBlue : AppColors.greyMedium,
                     size: 30,
                   ),
                 ),
                 const SizedBox(width: 16),
-                
+
                 // Informations
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
+                      // Nom + indicateur disponibilité + vérifié
                       Row(
                         children: [
                           Expanded(
@@ -71,71 +77,69 @@ class ArtisanCard extends StatelessWidget {
                                       : 'Artisan',
                               style: AppTextStyles.bodyLarge.copyWith(
                                 fontWeight: FontWeight.w600,
+                                color: disponible ? null : AppColors.greyDark,
                               ),
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                             ),
                           ),
-                          if (artisan.isVerified)
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 6,
-                                vertical: 2,
+                          const SizedBox(width: 6),
+                          // Point coloré de disponibilité
+                          Container(
+                            width: 8,
+                            height: 8,
+                            decoration: BoxDecoration(
+                              color: disponible ? AppColors.success : AppColors.greyMedium,
+                              shape: BoxShape.circle,
+                            ),
+                          ),
+                          if (artisan.isVerified) ...[
+                            const SizedBox(width: 4),
+                            Icon(Icons.verified, size: 15, color: AppColors.success),
+                          ],
+                        ],
+                      ),
+                      const SizedBox(height: 2),
+                      // Métier + "Indisponible" si besoin
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              artisan.metier,
+                              style: AppTextStyles.bodyMedium.copyWith(
+                                color: disponible ? AppColors.primaryBlue : AppColors.greyMedium,
                               ),
-                              decoration: BoxDecoration(
-                                color: AppColors.success.withValues(alpha: 0.1),
-                                borderRadius: BorderRadius.circular(4),
-                              ),
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Icon(
-                                    Icons.verified,
-                                    size: 12,
-                                    color: AppColors.success,
-                                  ),
-                                  const SizedBox(width: 2),
-                                  Text(
-                                    'Vérifié',
-                                    style: AppTextStyles.bodySmall.copyWith(
-                                      color: AppColors.success,
-                                      fontSize: 10,
-                                    ),
-                                  ),
-                                ],
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                          if (!disponible)
+                            Text(
+                              'Indisponible',
+                              style: AppTextStyles.bodySmall.copyWith(
+                                color: AppColors.greyMedium,
+                                fontSize: 10,
                               ),
                             ),
                         ],
                       ),
                       const SizedBox(height: 4),
-                      Text(
-                        artisan.metier,
-                        style: AppTextStyles.bodyMedium.copyWith(
-                          color: AppColors.primaryBlue,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
+                      // Localisation + distance
                       Row(
                         children: [
-                          Icon(
-                            Icons.location_on,
-                            size: 14,
-                            color: AppColors.greyDark,
-                          ),
+                          Icon(Icons.location_on, size: 14, color: AppColors.greyDark),
                           const SizedBox(width: 4),
-                          Text(
-                            '${artisan.ville} - ${artisan.quartier}',
-                            style: AppTextStyles.bodySmall.copyWith(
-                              color: AppColors.greyDark,
+                          Expanded(
+                            child: Text(
+                              '${artisan.ville} - ${artisan.quartier}',
+                              style: AppTextStyles.bodySmall.copyWith(color: AppColors.greyDark),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
                             ),
                           ),
-                          if (distance != null) ...[
-                            const SizedBox(width: 8),
+                          if (distance != null)
                             Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 6,
-                                vertical: 2,
-                              ),
+                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                               decoration: BoxDecoration(
                                 color: AppColors.primaryBlue.withValues(alpha: 0.1),
                                 borderRadius: BorderRadius.circular(4),
@@ -149,29 +153,23 @@ class ArtisanCard extends StatelessWidget {
                                 ),
                               ),
                             ),
-                          ],
                         ],
                       ),
                       const SizedBox(height: 4),
+                      // Note + tarif
                       Row(
                         children: [
-                          Icon(
-                            Icons.star,
-                            size: 14,
-                            color: AppColors.warning,
-                          ),
+                          Icon(Icons.star, size: 14, color: AppColors.warning),
                           const SizedBox(width: 4),
                           Text(
                             '${artisan.noteGlobale.toStringAsFixed(1)} (${artisan.nombreAvis} avis)',
-                            style: AppTextStyles.bodySmall.copyWith(
-                              color: AppColors.greyDark,
-                            ),
+                            style: AppTextStyles.bodySmall.copyWith(color: AppColors.greyDark),
                           ),
                           const Spacer(),
                           Text(
                             '${(artisan.tarifs['horaire'] ?? artisan.tarifs['tarifHoraire'] ?? 0).toStringAsFixed(0)} FCFA/h',
                             style: AppTextStyles.bodyMedium.copyWith(
-                              color: AppColors.primaryBlue,
+                              color: disponible ? AppColors.primaryBlue : AppColors.greyMedium,
                               fontWeight: FontWeight.w600,
                             ),
                           ),
@@ -180,7 +178,7 @@ class ArtisanCard extends StatelessWidget {
                     ],
                   ),
                 ),
-                
+
                 const SizedBox(width: 8),
                 Icon(
                   Icons.arrow_forward_ios,

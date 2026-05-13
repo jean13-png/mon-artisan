@@ -3,6 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/user_model.dart';
 import '../core/services/firebase_service.dart';
+import '../core/constants/metiers_data.dart';
 
 class AuthProvider extends ChangeNotifier {
   User? _firebaseUser;
@@ -84,77 +85,67 @@ class AuthProvider extends ChangeNotifier {
     required String ville,
     required String quartier,
     required GeoPoint position,
-    String? metier, // ✅ Ajout du paramètre métier
+    String? metier,
+    String? metierCategorie,
   }) async {
     _isLoading = true;
     _errorMessage = null;
     notifyListeners();
 
     try {
-      // Vérifier si l'utilisateur existe déjà avec cet email
-      final existingUserQuery = await FirebaseService.usersCollection
-          .where('email', isEqualTo: email)
-          .limit(1)
-          .get();
+      // Créer le compte Firebase Auth
+      // Firebase Auth gère nativement les doublons d'email (email-already-in-use)
+      final userCredential = await FirebaseService.signUpWithEmail(email, password);
+      final userId = userCredential.user!.uid;
 
-      if (existingUserQuery.docs.isNotEmpty) {
-        // L'utilisateur existe déjà
-        final existingUserDoc = existingUserQuery.docs.first;
-        final existingUser = UserModel.fromFirestore(existingUserDoc);
-        
-        // Vérifier si l'utilisateur a déjà ce rôle
+      // Vérifier si un document user existe déjà (cas multi-rôle)
+      // Cette lecture est autorisée car l'utilisateur est maintenant authentifié
+      final existingDoc = await FirebaseService.usersCollection.doc(userId).get();
+
+      if (existingDoc.exists) {
+        // Utilisateur existant — ajouter le nouveau rôle
+        final existingUser = UserModel.fromFirestore(existingDoc);
+
         if (existingUser.hasRole(role)) {
           _isLoading = false;
           _errorMessage = 'Vous êtes déjà inscrit avec ce rôle';
           notifyListeners();
           return false;
         }
-        
-        // Ajouter le nouveau rôle à l'utilisateur existant
+
         final updatedUser = existingUser.copyWithAddedRole(role);
         await FirebaseService.usersCollection
-            .doc(existingUser.id)
+            .doc(userId)
             .update(updatedUser.toFirestore());
-        
-        // Si le nouveau rôle est artisan, créer le profil artisan
+
         if (role == 'artisan') {
-          await _createBasicArtisanProfile(existingUser.id, updatedUser, metier: metier);
+          await _createBasicArtisanProfile(userId, updatedUser, metier: metier, metierCategorie: metierCategorie);
         }
-        
-        // Si l'utilisateur n'est pas encore connecté, le connecter
-        if (_firebaseUser == null) {
-          await FirebaseService.signInWithEmail(email, password);
+      } else {
+        // Nouvel utilisateur — créer le document
+        final newUser = UserModel(
+          id: userId,
+          roles: [role],
+          nom: nom,
+          prenom: prenom,
+          telephone: telephone,
+          email: email,
+          ville: ville,
+          quartier: quartier,
+          position: position,
+          createdAt: DateTime.now(),
+          updatedAt: DateTime.now(),
+        );
+
+        await FirebaseService.usersCollection.doc(userId).set(newUser.toFirestore());
+
+        if (role == 'artisan') {
+          await _createBasicArtisanProfile(userId, newUser, metier: metier, metierCategorie: metierCategorie);
         }
-        
-        _isLoading = false;
-        notifyListeners();
-        return true;
       }
 
-      // Nouvel utilisateur - créer le compte Firebase Auth
-      final userCredential = await FirebaseService.signUpWithEmail(email, password);
-      final userId = userCredential.user!.uid;
-
-      final newUser = UserModel(
-        id: userId,
-        roles: [role], // Premier rôle
-        nom: nom,
-        prenom: prenom,
-        telephone: telephone,
-        email: email,
-        ville: ville,
-        quartier: quartier,
-        position: position,
-        createdAt: DateTime.now(),
-        updatedAt: DateTime.now(),
-      );
-
-      await FirebaseService.usersCollection.doc(userId).set(newUser.toFirestore());
-
-      // Si c'est un artisan, créer un profil artisan de base
-      if (role == 'artisan') {
-        await _createBasicArtisanProfile(userId, newUser, metier: metier);
-      }
+      // Charger immédiatement le userModel sans attendre le listener async
+      await _loadUserData(userId);
 
       _isLoading = false;
       notifyListeners();
@@ -249,72 +240,23 @@ class AuthProvider extends ChangeNotifier {
 
   // C8 — Créer un profil artisan de base lors de l'inscription
   // Utilise .set() avec l'UID comme ID de document (pas .add() qui génère un ID aléatoire)
-  Future<void> _createBasicArtisanProfile(String userId, UserModel user, {String? metier}) async {
+  Future<void> _createBasicArtisanProfile(String userId, UserModel user, {String? metier, String? metierCategorie}) async {
     try {
-      // Mo6 — Catégories alignées avec metiers_data.dart (10 catégories complètes)
       String finalMetier = metier ?? 'Artisan';
-      String metierCategorie = 'Autre';
+      String finalCategorie = metierCategorie ?? 'Autres Services Artisanaux';
 
-      if (metier != null && metier.isNotEmpty) {
-        const Map<String, List<String>> metiersByCategorie = {
-          'BTP & Construction': [
-            'Électricien', 'Plombier', 'Maçon', 'Peintre', 'Menuisier',
-            'Carreleur', 'Charpentier', 'Soudeur', 'Plafonneur',
-            'Serrurier / Métallier', 'Couvreur / Zingueur', 'Vitrier / Miroitier',
-            'Poseur de Parquet', 'Poseur Faux-Plafond',
-          ],
-          'Énergie & Climatisation': [
-            'Panneaux Solaires', 'Climatisation', 'Chauffagiste',
-            'Installateur Gaz', 'Électricité Industrielle',
-          ],
-          'Aménagement & Finitions': [
-            'Paysagiste', 'Étanchéité', 'Isolation Thermique',
-            'Plâtrier / Stucateur', 'Peintre Industriel',
-          ],
-          'Gros Œuvre': [
-            'Démolition', 'Terrassement', 'Béton Armé / Ferrailleur',
-            'Coffreur / Bancheur', 'Échafaudeur',
-          ],
-          'Études & Conception': [
-            'Architecte / Dessinateur', 'Bureau d\'étude BTP',
-            'Géotechnicien', 'Topographe', 'Expert en Bâtiment',
-          ],
-          'Équipements & Installations': [
-            'Ascensoriste', 'Domotique / Smart Home', 'Alarme / Sécurité',
-            'Technicien Fibre Optique',
-          ],
-          'Eau & Assainissement': [
-            'Foreur / Puits', 'Assainissement', 'Construction Piscine',
-          ],
-          'Services & Maintenance': [
-            'Rénovation Générale', 'Nettoyage Chantier',
-            'Location Engins BTP', 'Monteur Préfabriqué',
-          ],
-          'Services à la personne': [
-            'Coiffeuse', 'Maquilleuse', 'Esthéticienne', 'Tresse africaine',
-            'Femme de ménage', 'Nounou', 'Garde malade',
-          ],
-          'Événementiel': [
-            'Traiteur', 'Pâtissier', 'Décorateur', 'Photographe',
-            'Vidéaste', 'DJ', 'Wedding planner',
-          ],
-          'Réparation': [
-            'Mécanicien', 'Carrossier', 'Réparateur téléphone',
-          ],
-        };
-
-        for (final entry in metiersByCategorie.entries) {
-          if (entry.value.contains(metier)) {
-            metierCategorie = entry.key;
-            break;
-          }
+      // Si la catégorie n'est pas fournie, la déduire depuis metiers_data.dart
+      if (metierCategorie == null && metier != null && metier.isNotEmpty) {
+        final matches = searchMetiers(metier);
+        if (matches.isNotEmpty) {
+          finalCategorie = matches.first['categorie']!;
         }
       }
 
       final artisanData = {
         'userId': userId,
         'metier': finalMetier,
-        'metierCategorie': metierCategorie,
+        'metierCategorie': finalCategorie,
         'description': '',
         'experience': 0,
         'tarifs': {'horaire': 5000},

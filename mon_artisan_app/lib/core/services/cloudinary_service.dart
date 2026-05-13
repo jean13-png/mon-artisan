@@ -27,13 +27,16 @@ class CloudinaryService {
         throw Exception('Fichier introuvable: $filePath');
       }
 
-      // Upload vers Cloudinary
+      // Upload vers Cloudinary avec timeout
       final response = await _cloudinary.uploadFile(
         CloudinaryFile.fromFile(
           filePath,
           folder: folder,
           resourceType: CloudinaryResourceType.Image,
         ),
+      ).timeout(
+        const Duration(seconds: 90),
+        onTimeout: () => throw Exception('Délai dépassé. Vérifiez votre connexion.'),
       );
 
       final url = response.secureUrl;

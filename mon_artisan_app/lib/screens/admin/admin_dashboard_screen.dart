@@ -282,10 +282,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                       Icons.report_problem,
                       AppColors.warning,
                       () {
-                        // TODO: Navigation vers signalements
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('Fonctionnalité en cours de développement')),
-                        );
+                        context.go(AppRouter.adminReports);
                       },
                     ),
 
@@ -296,10 +293,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                       Icons.payment,
                       AppColors.accentRed,
                       () {
-                        // TODO: Navigation vers transactions
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('Fonctionnalité en cours de développement')),
-                        );
+                        context.go(AppRouter.adminTransactions);
                       },
                     ),
 

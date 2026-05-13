@@ -927,7 +927,9 @@ class _CompleteProfileScreenState extends State<CompleteProfileScreen> {
                 // Bouton de soumission
                 CustomButton(
                   text: 'Soumettre mon profil',
-                  onPressed: _submitProfile,
+                  onPressed: (_isLoading || _isUploadingDiplome || _isUploadingCipPhoto || _isUploadingPhotos)
+                      ? null
+                      : _submitProfile,
                   isLoading: _isLoading,
                   backgroundColor: AppColors.accentRed,
                 ),

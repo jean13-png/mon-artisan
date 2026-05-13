@@ -26,6 +26,7 @@ class ArtisanModel {
   final bool isProfileComplete; // Si le profil est complet avec diplôme, CIP, photos
   final String? diplome; // URL du diplôme
   final String? cip; // Numéro CIP (Carte d'Identité Professionnelle)
+  final String? cipPhoto; // URL de la photo de la carte CIP
   final List<String> atelierPhotos; // Photos de l'atelier/matériel
   final String? atelierAdresse; // Adresse de l'atelier
   
@@ -71,6 +72,7 @@ class ArtisanModel {
     this.isProfileComplete = false,
     this.diplome,
     this.cip,
+    this.cipPhoto,
     this.atelierPhotos = const [],
     this.atelierAdresse,
     this.commandeEnCours,
@@ -119,6 +121,7 @@ class ArtisanModel {
       isProfileComplete: data['isProfileComplete'] ?? false,
       diplome: data['diplome'],
       cip: data['cip'],
+      cipPhoto: data['cipPhoto'],
       atelierPhotos: List<String>.from(data['atelierPhotos'] ?? []),
       atelierAdresse: data['atelierAdresse'],
       commandeEnCours: data['commandeEnCours'],
@@ -167,6 +170,7 @@ class ArtisanModel {
       'isProfileComplete': isProfileComplete,
       'diplome': diplome,
       'cip': cip,
+      'cipPhoto': cipPhoto,
       'atelierPhotos': atelierPhotos,
       'atelierAdresse': atelierAdresse,
       'commandeEnCours': commandeEnCours,

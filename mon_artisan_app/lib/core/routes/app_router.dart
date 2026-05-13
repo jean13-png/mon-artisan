@@ -19,6 +19,8 @@ import '../../screens/admin/admin_dashboard_screen.dart';
 import '../../screens/admin/artisans_validation_screen.dart';
 import '../../screens/admin/agents_management_screen.dart';
 import '../../screens/admin/users_management_screen.dart';
+import '../../screens/admin/admin_reports_screen.dart';
+import '../../screens/admin/admin_transactions_screen.dart';
 import '../../screens/artisan/commande_detail_screen.dart';
 import '../../screens/artisan/revenus_screen.dart';
 import '../../screens/artisan/complete_profile_screen.dart';
@@ -29,6 +31,8 @@ import '../../screens/shared/edit_profile_screen.dart';
 import '../../screens/shared/settings_screen.dart';
 import '../../screens/shared/chat_screen.dart';
 import '../../screens/shared/location_picker_screen.dart';
+import '../../screens/shared/privacy_policy_screen.dart';
+import '../../screens/shared/terms_of_use_screen.dart';
 import '../../models/artisan_model.dart';
 import '../../models/commande_model.dart';
 
@@ -65,19 +69,23 @@ class AppRouter {
   static const String adminValidateArtisans = '/admin/validate-artisans';
   static const String adminManageAgents = '/admin/manage-agents';
   static const String adminManageUsers = '/admin/manage-users';
+  static const String adminReports = '/admin/reports';
+  static const String adminTransactions = '/admin/transactions';
 
   // ── Routes protégées : communes ────────────────────────────────────────────
   static const String notifications = '/notifications';
   static const String editProfile = '/edit-profile';
   static const String settings = '/settings';
   static const String chat = '/chat';
+  static const String privacyPolicy = '/privacy-policy';
+  static const String termsOfUse = '/terms-of-use';
 
   // ── Ensembles de routes par niveau d'accès ────────────────────────────────
   static const _publicRoutes = {
-    splash, roleSelection, login, register, contratEngagement, artisanPayment,
+    splash, roleSelection, login, register, contratEngagement, artisanPayment, privacyPolicy, termsOfUse,
   };
   static const _adminRoutes = {
-    adminDashboard, adminValidateArtisans, adminManageAgents, adminManageUsers,
+    adminDashboard, adminValidateArtisans, adminManageAgents, adminManageUsers, adminReports, adminTransactions,
   };
   static const _clientRoutes = {
     homeClient, categoryMetiers, searchArtisan, artisanProfile, selectCommandeType,
@@ -148,6 +156,14 @@ class AppRouter {
       GoRoute(
         path: adminManageUsers,
         builder: (context, state) => const UsersManagementScreen(),
+      ),
+      GoRoute(
+        path: adminReports,
+        builder: (context, state) => const AdminReportsScreen(),
+      ),
+      GoRoute(
+        path: adminTransactions,
+        builder: (context, state) => const AdminTransactionsScreen(),
       ),
       GoRoute(
         path: categoryMetiers,
@@ -267,6 +283,14 @@ class AppRouter {
       GoRoute(
         path: locationPicker,
         builder: (context, state) => const LocationPickerScreen(),
+      ),
+      GoRoute(
+        path: privacyPolicy,
+        builder: (context, state) => const PrivacyPolicyScreen(),
+      ),
+      GoRoute(
+        path: termsOfUse,
+        builder: (context, state) => const TermsOfUseScreen(),
       ),
     ],
   );

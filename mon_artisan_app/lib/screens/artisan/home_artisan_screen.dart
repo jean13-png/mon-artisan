@@ -228,54 +228,55 @@ class _HomeArtisanScreenState extends State<HomeArtisanScreen> {
               }
             },
             itemBuilder: (context) => [
-              const PopupMenuItem(
+              PopupMenuItem(
                 value: 'profile',
                 child: Row(
                   children: [
-                    Icon(Icons.person_outline),
-                    SizedBox(width: 8),
-                    Text('Mon profil'),
+                    Icon(Icons.person_outline, color: AppColors.accentRed),
+                    SizedBox(width: 12),
+                    Text('Mon profil', style: AppTextStyles.bodyMedium),
                   ],
                 ),
               ),
-              const PopupMenuItem(
+              PopupMenuItem(
                 value: 'revenus',
                 child: Row(
                   children: [
-                    Icon(Icons.account_balance_wallet),
-                    SizedBox(width: 8),
-                    Text('Mes revenus'),
+                    Icon(Icons.account_balance_wallet, color: AppColors.success),
+                    SizedBox(width: 12),
+                    Text('Mes revenus', style: AppTextStyles.bodyMedium),
                   ],
                 ),
               ),
               if (user.isClient)
-                const PopupMenuItem(
+                PopupMenuItem(
                   value: 'switch_client',
                   child: Row(
                     children: [
-                      Icon(Icons.swap_horiz),
-                      SizedBox(width: 8),
-                      Text('Passer en mode Client'),
+                      Icon(Icons.swap_horiz, color: AppColors.primaryBlue),
+                      SizedBox(width: 12),
+                      Text('Passer en mode Client', style: AppTextStyles.bodyMedium),
                     ],
                   ),
                 ),
-              const PopupMenuItem(
+              PopupMenuItem(
                 value: 'settings',
                 child: Row(
                   children: [
-                    Icon(Icons.settings),
-                    SizedBox(width: 8),
-                    Text('Paramètres'),
+                    Icon(Icons.settings, color: AppColors.greyDark),
+                    SizedBox(width: 12),
+                    Text('Paramètres', style: AppTextStyles.bodyMedium),
                   ],
                 ),
               ),
-              const PopupMenuItem(
+              PopupMenuItem(
                 value: 'logout',
                 child: Row(
                   children: [
-                    Icon(Icons.logout),
-                    SizedBox(width: 8),
-                    Text('Déconnexion'),
+                    Icon(Icons.logout, color: AppColors.error),
+                    SizedBox(width: 12),
+                    Text('Déconnexion',
+                        style: AppTextStyles.bodyMedium.copyWith(color: AppColors.error)),
                   ],
                 ),
               ),

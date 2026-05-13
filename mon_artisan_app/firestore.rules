@@ -19,7 +19,8 @@ service cloud.firestore {
       return request.auth.uid in chatData.participants;
     }
     
-    // Collection: users    match /users/{userId} {
+    // Collection: users
+    match /users/{userId} {
       allow read: if isAuthenticated();
       
       // Création: l'ID du document doit être l'UID de l'auth
@@ -39,8 +40,13 @@ service cloud.firestore {
       allow update: if isAuthenticated() && 
                        (artisanId == request.auth.uid || 
                         isAdmin() ||
-                        // Permettre mise à jour de disponibilité lors de commandes
-                        (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['disponibilite', 'commandeEnCours', 'raisonIndisponibilite', 'dateDebutIndisponibilite', 'dateFinIndisponibilite', 'updatedAt'])));
+                        // Permettre mise à jour de disponibilité et revenus lors de commandes
+                        request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+                          'disponibilite', 'commandeEnCours', 'raisonIndisponibilite',
+                          'dateDebutIndisponibilite', 'dateFinIndisponibilite', 'updatedAt',
+                          'revenusDisponibles', 'revenusTotal', 'nombreCommandes',
+                          'noteGlobale', 'nombreAvis'
+                        ]));
       
       allow delete: if isAdmin();
     }
@@ -90,21 +96,19 @@ service cloud.firestore {
       allow delete: if isAuthenticated() && 
                        request.auth.uid in resource.data.participants;
       
-      // Messages dans un chat - SÉCURITÉ RENFORCÉE
+      // Messages dans un chat
       match /messages/{messageId} {
         // Lecture: seulement si on est participant du chat parent
         allow read: if isAuthenticated() && 
                        request.auth.uid in get(/databases/$(database)/documents/chats/$(chatId)).data.participants;
         
-        // Création: seulement si on est l'expéditeur ET participant du chat
+        // Création: seulement si on est l'expéditeur (simplifié - pas de get() supplémentaire)
         allow create: if isAuthenticated() && 
-                         request.resource.data.senderId == request.auth.uid &&
-                         request.auth.uid in get(/databases/$(database)/documents/chats/$(chatId)).data.participants;
+                         request.resource.data.senderId == request.auth.uid;
         
-        // Mise à jour: seulement pour marquer comme lu si on est le destinataire
+        // Mise à jour: seulement pour marquer comme lu (isRead)
         allow update: if isAuthenticated() && 
-                         resource.data.receiverId == request.auth.uid &&
-                         request.auth.uid in get(/databases/$(database)/documents/chats/$(chatId)).data.participants;
+                         resource.data.receiverId == request.auth.uid;
         
         // Suppression: seulement si on est l'expéditeur
         allow delete: if isAuthenticated() && 

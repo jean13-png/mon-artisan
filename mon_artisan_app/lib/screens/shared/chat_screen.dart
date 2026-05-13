@@ -25,6 +25,7 @@ class _ChatScreenState extends State<ChatScreen> {
   final _scrollController = ScrollController();
   String? _chatId;
   bool _isLoading = true;
+  String? _initError;
   int _limit = 20;
   bool _hasMore = true;
   bool _isNearTop = false;
@@ -72,7 +73,10 @@ class _ChatScreenState extends State<ChatScreen> {
       );
     } catch (e) {
       print('[ERROR] Erreur initialisation chat: $e');
-      setState(() => _isLoading = false);
+      setState(() {
+        _isLoading = false;
+        _initError = e.toString();
+      });
     }
   }
 
@@ -119,7 +123,22 @@ class _ChatScreenState extends State<ChatScreen> {
 
   Future<void> _sendMessage() async {
     final text = _messageController.text.trim();
-    if (text.isEmpty || _chatId == null) return;
+    if (text.isEmpty) return;
+
+    if (_chatId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text('Impossible d\'envoyer : conversation non initialisée.'),
+          backgroundColor: AppColors.error,
+          action: SnackBarAction(
+            label: 'Réessayer',
+            textColor: AppColors.white,
+            onPressed: _initializeChat,
+          ),
+        ),
+      );
+      return;
+    }
 
     // Vérifier si le message contient du contenu interdit
     if (_containsForbiddenContent(text)) {
@@ -216,6 +235,69 @@ class _ChatScreenState extends State<ChatScreen> {
           ),
         ),
         body: const Center(child: CircularProgressIndicator()),
+      );
+    }
+
+    if (_initError != null) {
+      return Scaffold(
+        backgroundColor: AppColors.greyLight,
+        appBar: AppBar(
+          backgroundColor: AppColors.primaryBlue,
+          elevation: 0,
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back, color: AppColors.white),
+            onPressed: () => Navigator.pop(context),
+          ),
+          title: Text(
+            widget.otherUserName,
+            style: AppTextStyles.bodyLarge.copyWith(
+              color: AppColors.white,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ),
+        body: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.error_outline, size: 64, color: AppColors.error),
+                const SizedBox(height: 16),
+                Text(
+                  'Impossible d\'ouvrir la conversation',
+                  style: AppTextStyles.bodyLarge.copyWith(
+                    color: AppColors.greyDark,
+                    fontWeight: FontWeight.w600,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  _initError!,
+                  style: AppTextStyles.bodySmall.copyWith(color: AppColors.greyMedium),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 24),
+                ElevatedButton.icon(
+                  onPressed: () {
+                    setState(() {
+                      _isLoading = true;
+                      _initError = null;
+                    });
+                    _initializeChat();
+                  },
+                  icon: const Icon(Icons.refresh),
+                  label: const Text('Réessayer'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.primaryBlue,
+                    foregroundColor: AppColors.white,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
       );
     }
 

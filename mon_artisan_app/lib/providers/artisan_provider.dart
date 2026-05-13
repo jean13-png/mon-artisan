@@ -132,52 +132,94 @@ class ArtisanProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
-      // Récupération de la CollectionReference brute (sans converter)
-      // GeoCollectionReference n'accepte pas de Query typée
       final CollectionReference<Map<String, dynamic>> rawCollection =
           FirebaseService.artisansCollection as CollectionReference<Map<String, dynamic>>;
 
       List<ArtisanModel> fetchedArtisans = [];
 
+      // Normaliser le terme de recherche (minuscules, sans accents)
+      final metierNorm = metier != null ? _normalizeString(metier.trim()) : null;
+      final villeNorm = ville != null ? _normalizeString(ville.trim()) : null;
+      final quartierNorm = quartier != null ? _normalizeString(quartier.trim()) : null;
+
       if (latitude != null && longitude != null) {
-        // Recherche géospatiale via geoflutterfire_plus (CollectionReference obligatoire)
+        // Recherche géospatiale via geoflutterfire_plus
         final center = gff.GeoFirePoint(GeoPoint(latitude, longitude));
         final geoCollection = gff.GeoCollectionReference<Map<String, dynamic>>(rawCollection);
 
-        final docs = await geoCollection.fetchWithin(
-          center: center,
-          radiusInKm: radiusKm,
-          field: 'position',
-          geopointFrom: (data) {
-            final pos = data['position'];
-            if (pos is GeoPoint) return pos;
-            if (pos is Map) {
-              return GeoPoint(
-                (pos['latitude'] as num).toDouble(),
-                (pos['longitude'] as num).toDouble(),
-              );
-            }
-            return const GeoPoint(0, 0);
-          },
-        );
+        List<DocumentSnapshot<Map<String, dynamic>>> docs = [];
+        try {
+          docs = await geoCollection.fetchWithin(
+            center: center,
+            radiusInKm: radiusKm,
+            field: 'position',
+            geopointFrom: (data) {
+              final pos = data['position'];
+              if (pos is GeoPoint) return pos;
+              if (pos is Map) {
+                return GeoPoint(
+                  (pos['latitude'] as num).toDouble(),
+                  (pos['longitude'] as num).toDouble(),
+                );
+              }
+              return const GeoPoint(0, 0);
+            },
+          );
+          print('[SEARCH] Géo: ${docs.length} docs dans le rayon $radiusKm km');
+        } catch (geoError) {
+          print('[WARNING] Recherche géo échouée ($geoError), fallback query classique');
+        }
 
-        // Filtrer manuellement car geoflutterfire_plus ne supporte pas les Query composées
+        // Si la recherche géo retourne 0 (geohash vides ou absents),
+        // fallback sur query classique qui filtre par distance en mémoire
+        if (docs.isEmpty) {
+          print('[SEARCH] Géo vide → fallback query classique + filtre distance mémoire');
+          final fallback = await rawCollection.get();
+          docs = fallback.docs;
+        }
+
         for (var doc in docs) {
           try {
             final data = doc.data() as Map<String, dynamic>;
-            // Appliquer les filtres
-            if (data['disponibilite'] != true) continue;
-            if (categorie != null && categorie.isNotEmpty && data['metierCategorie'] != categorie) continue;
-            if (metier != null && metier.isNotEmpty && data['metier'] != metier) continue;
-            if (ville != null && ville.isNotEmpty && data['ville'] != ville) continue;
-            if (quartier != null && quartier.isNotEmpty && data['quartier'] != quartier) continue;
 
-            final artisan = ArtisanModel.fromFirestore(doc);
-            fetchedArtisans.add(artisan);
+            // Filtre catégorie
+            if (categorie != null && categorie.isNotEmpty) {
+              final cat = _normalizeString(data['metierCategorie'] ?? '');
+              if (!cat.contains(_normalizeString(categorie))) continue;
+            }
+
+            // Filtre métier — recherche partielle insensible à la casse et aux accents
+            if (metierNorm != null && metierNorm.isNotEmpty) {
+              final m = _normalizeString(data['metier'] ?? '');
+              if (!m.contains(metierNorm) && !metierNorm.contains(m)) continue;
+            }
+
+            // Filtre ville
+            if (villeNorm != null && villeNorm.isNotEmpty) {
+              final v = _normalizeString(data['ville'] ?? '');
+              if (!v.contains(villeNorm)) continue;
+            }
+
+            // Filtre quartier
+            if (quartierNorm != null && quartierNorm.isNotEmpty) {
+              final q = _normalizeString(data['quartier'] ?? '');
+              if (!q.contains(quartierNorm)) continue;
+            }
+
+            // Filtre distance en mémoire (pour le fallback sans geohash)
+            final pos = data['position'];
+            if (pos is GeoPoint && pos.latitude != 0 && pos.longitude != 0) {
+              final dist = GeolocationService.calculateDistance(
+                  latitude, longitude, pos.latitude, pos.longitude);
+              if (dist > radiusKm) continue;
+            }
+
+            fetchedArtisans.add(ArtisanModel.fromFirestore(doc));
           } catch (e) {
             print('[ERROR] Erreur parsing artisan ${doc.id}: $e');
           }
         }
+
         // Trier par distance
         fetchedArtisans.sort((a, b) {
           final distA = GeolocationService.calculateDistance(latitude, longitude, a.position.latitude, a.position.longitude);
@@ -185,27 +227,83 @@ class ArtisanProvider extends ChangeNotifier {
           return distA.compareTo(distB);
         });
 
+        // Si toujours 0 résultats après filtre distance, relancer sans filtre distance
+        if (fetchedArtisans.isEmpty) {
+          print('[SEARCH] 0 résultats avec filtre distance → recherche sans limite de rayon');
+          final fallback2 = await rawCollection.get();
+          for (var doc in fallback2.docs) {
+            try {
+              final data = doc.data() as Map<String, dynamic>;
+              if (categorie != null && categorie.isNotEmpty) {
+                final cat = _normalizeString(data['metierCategorie'] ?? '');
+                if (!cat.contains(_normalizeString(categorie))) continue;
+              }
+              if (metierNorm != null && metierNorm.isNotEmpty) {
+                final m = _normalizeString(data['metier'] ?? '');
+                if (!m.contains(metierNorm) && !metierNorm.contains(m)) continue;
+              }
+              if (villeNorm != null && villeNorm.isNotEmpty) {
+                final v = _normalizeString(data['ville'] ?? '');
+                if (!v.contains(villeNorm)) continue;
+              }
+              fetchedArtisans.add(ArtisanModel.fromFirestore(doc));
+            } catch (e) {
+              print('[ERROR] $e');
+            }
+          }
+          print('[SEARCH] Sans limite rayon: ${fetchedArtisans.length} résultats');
+          fetchedArtisans.sort((a, b) {
+            final distA = GeolocationService.calculateDistance(latitude, longitude, a.position.latitude, a.position.longitude);
+            final distB = GeolocationService.calculateDistance(latitude, longitude, b.position.latitude, b.position.longitude);
+            return distA.compareTo(distB);
+          });
+        }
+
       } else {
-        // Pas de localisation → query Firestore classique avec filtres
+        // Pas de localisation → query Firestore classique
+        // On récupère tout et on filtre en mémoire pour gérer
+        // les accents, casse et variations de noms de champs
         Query<Map<String, dynamic>> query = rawCollection;
-        query = query.where('disponibilite', isEqualTo: true);
-        if (categorie != null && categorie.isNotEmpty) query = query.where('metierCategorie', isEqualTo: categorie);
-        if (metier != null && metier.isNotEmpty) query = query.where('metier', isEqualTo: metier);
-        if (ville != null && ville.isNotEmpty) query = query.where('ville', isEqualTo: ville);
-        if (quartier != null && quartier.isNotEmpty) query = query.where('quartier', isEqualTo: quartier);
+
+        // Filtre ville côté Firestore si fourni (champ exact)
+        if (ville != null && ville.isNotEmpty) {
+          query = query.where('ville', isEqualTo: ville);
+        }
 
         final querySnapshot = await query.get();
+        print('[SEARCH] Classique: ${querySnapshot.docs.length} docs Firestore');
+
         for (var doc in querySnapshot.docs) {
           try {
-            final artisan = ArtisanModel.fromFirestore(doc);
-            fetchedArtisans.add(artisan);
+            final data = doc.data() as Map<String, dynamic>;
+
+            // Filtre catégorie en mémoire (insensible aux accents)
+            if (categorie != null && categorie.isNotEmpty) {
+              final cat = _normalizeString(data['metierCategorie'] ?? '');
+              if (!cat.contains(_normalizeString(categorie))) continue;
+            }
+
+            // Filtre métier en mémoire (insensible à la casse et aux accents)
+            if (metierNorm != null && metierNorm.isNotEmpty) {
+              final m = _normalizeString(data['metier'] ?? '');
+              if (!m.contains(metierNorm) && !metierNorm.contains(m)) continue;
+            }
+
+            // Filtre quartier en mémoire
+            if (quartierNorm != null && quartierNorm.isNotEmpty) {
+              final q = _normalizeString(data['quartier'] ?? '');
+              if (!q.contains(quartierNorm)) continue;
+            }
+
+            fetchedArtisans.add(ArtisanModel.fromFirestore(doc));
           } catch (e) {
             print('[ERROR] Erreur parsing artisan ${doc.id}: $e');
           }
         }
+
         fetchedArtisans.sort((a, b) => b.noteGlobale.compareTo(a.noteGlobale));
       }
-      
+
       _artisans = fetchedArtisans;
       print('[SEARCH] Artisans trouvés: ${_artisans.length}');
 
@@ -435,6 +533,17 @@ class ArtisanProvider extends ChangeNotifier {
       });
 
       print('[SUCCESS] Profil artisan mis à jour avec succès');
+
+      // Notifier l'admin qu'un nouveau profil est à valider
+      await FirebaseService.firestore.collection('notifications').add({
+        'userId': 'admin',
+        'titre': 'Nouveau profil à valider',
+        'message': 'Un artisan a soumis son profil pour validation.',
+        'type': 'nouveau_profil',
+        'artisanId': artisanDoc.id,
+        'isRead': false,
+        'createdAt': Timestamp.now(),
+      });
       
       // Recharger le profil
       await loadArtisanProfile(userId);
