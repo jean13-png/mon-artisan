@@ -186,7 +186,16 @@ class _CreateCommandeScreenState extends State<CreateCommandeScreen> {
       }
 
       if (mounted) {
-        // Afficher un message de succès
+        // 1. Demander le partage de position d'abord
+        await ShareLocationDialog.show(
+          context: context,
+          commandeId: commandeId,
+          artisanId: widget.artisan.userId,
+        );
+
+        if (!mounted) return;
+
+        // 2. Afficher le message de succès de la commande
         showDialog(
           context: context,
           barrierDismissible: false,
@@ -239,22 +248,15 @@ class _CreateCommandeScreenState extends State<CreateCommandeScreen> {
             actions: [
               ElevatedButton(
                 onPressed: () {
-                  Navigator.pop(context);
-                  ShareLocationDialog.show(
-                    context: context,
-                    commandeId: commandeId,
-                    artisanId: widget.artisan.userId,
-                  ).then((_) {
-                    if (!context.mounted) return;
-                    context.go(AppRouter.commandesHistory);
-                  });
+                  Navigator.pop(context); // Fermer le dialog
+                  context.go(AppRouter.commandesHistory);
                 },
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppColors.primaryBlue,
                   foregroundColor: AppColors.white,
                   padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
                 ),
-                child: const Text('Continuer', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                child: const Text('OK', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
               ),
             ],
           ),

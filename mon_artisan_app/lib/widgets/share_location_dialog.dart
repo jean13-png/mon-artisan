@@ -14,7 +14,7 @@ class ShareLocationDialog {
     required String commandeId,
     required String artisanId,
   }) async {
-    return showDialog(
+    final bool? wantToShare = await showDialog<bool>(
       context: context,
       barrierDismissible: false,
       builder: (context) => AlertDialog(
@@ -70,9 +70,7 @@ class ShareLocationDialog {
         ),
         actions: [
           TextButton(
-            onPressed: () {
-              Navigator.pop(context);
-            },
+            onPressed: () => Navigator.pop(context, false),
             child: Text(
               'Plus tard',
               style: AppTextStyles.bodyMedium.copyWith(
@@ -81,29 +79,7 @@ class ShareLocationDialog {
             ),
           ),
           ElevatedButton.icon(
-            onPressed: () async {
-              Navigator.pop(context);
-              
-              // Ouvrir le sélecteur de position sur carte
-              final result = await Navigator.push<MapPosition>(
-                context,
-                MaterialPageRoute(
-                  builder: (_) => const LocationPickerScreen(
-                    titre: 'Confirmer votre position',
-                    labelBoutonConfirm: 'Partager cette position',
-                  ),
-                ),
-              );
-
-              if (result != null && context.mounted) {
-                await _sauvegarderEtNotifier(
-                  context: context,
-                  commandeId: commandeId,
-                  artisanId: artisanId,
-                  pos: result,
-                );
-              }
-            },
+            onPressed: () => Navigator.pop(context, true),
             icon: const Icon(Icons.my_location, size: 20),
             label: const Text('Partager ma position'),
             style: ElevatedButton.styleFrom(
@@ -118,6 +94,27 @@ class ShareLocationDialog {
         ],
       ),
     );
+
+    if (wantToShare == true && context.mounted) {
+      final result = await Navigator.push<MapPosition>(
+        context,
+        MaterialPageRoute(
+          builder: (_) => const LocationPickerScreen(
+            titre: 'Confirmer votre position',
+            labelBoutonConfirm: 'Partager cette position',
+          ),
+        ),
+      );
+
+      if (result != null && context.mounted) {
+        await _sauvegarderEtNotifier(
+          context: context,
+          commandeId: commandeId,
+          artisanId: artisanId,
+          pos: result,
+        );
+      }
+    }
   }
 
   static Future<void> _sauvegarderEtNotifier({
