@@ -80,9 +80,9 @@ service cloud.firestore {
     
     // Collection: chats - SÉCURITÉ RENFORCÉE
     match /chats/{chatId} {
-      // Lecture: seulement si on est participant du chat
+      // Lecture: seulement si on est participant du chat (ou si le chat n'existe pas encore pour permettre le check)
       allow read: if isAuthenticated() && 
-                     request.auth.uid in resource.data.participants;
+                     (resource == null || request.auth.uid in resource.data.participants);
       
       // Création: seulement si on est dans les participants
       allow create: if isAuthenticated() && 
