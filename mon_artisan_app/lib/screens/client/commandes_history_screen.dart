@@ -9,6 +9,8 @@ import '../../widgets/loading_widget.dart';
 import 'rate_artisan_screen.dart';
 import 'devis_detail_screen.dart';
 import '../artisan/commande_detail_screen.dart';
+import 'package:go_router/go_router.dart';
+import '../../core/routes/app_router.dart';
 
 class CommandesHistoryScreen extends StatefulWidget {
   final bool isArtisan;
@@ -94,7 +96,15 @@ class _CommandesHistoryScreenState extends State<CommandesHistoryScreen> {
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: AppColors.white),
           onPressed: () {
-            Navigator.pop(context);
+            if (Navigator.canPop(context)) {
+              Navigator.pop(context);
+            } else {
+              if (widget.isArtisan) {
+                context.go(AppRouter.homeArtisan);
+              } else {
+                context.go(AppRouter.homeClient);
+              }
+            }
           },
         ),
         title: Text(
