@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
@@ -29,6 +30,29 @@ class _HomeClientScreenState extends State<HomeClientScreen> {
   String? _selectedQuartier;
   int _unreadNotificationsCount = 0;
   int _unreadMessagesCount = 0;
+  
+  // Carousel
+  int _currentBannerIndex = 0;
+  final PageController _bannerController = PageController(viewportFraction: 0.88);
+  Timer? _bannerTimer;
+
+  final List<Map<String, String>> _banners = [
+    {
+      'image': 'assets/images/image1.png',
+      'title': 'Des professionnels qualifiés',
+      'subtitle': 'Trouvez les meilleurs artisans près de chez vous',
+    },
+    {
+      'image': 'assets/images/image2.png',
+      'title': 'Un service rapide',
+      'subtitle': 'Intervention rapide et paiement sécurisé',
+    },
+    {
+      'image': 'assets/images/image3.png',
+      'title': 'Besoin d\'un dépannage ?',
+      'subtitle': 'Nos artisans sont disponibles et à l\'écoute',
+    },
+  ];
 
   @override
   void initState() {
@@ -36,11 +60,28 @@ class _HomeClientScreenState extends State<HomeClientScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _checkLocationPermission();
       _loadUnreadCounts();
+      
+      // Lancer le timer pour le carousel
+      _bannerTimer = Timer.periodic(const Duration(seconds: 3), (Timer timer) {
+        if (_bannerController.hasClients) {
+          int nextPage = _currentBannerIndex + 1;
+          if (nextPage >= _banners.length) {
+            nextPage = 0;
+          }
+          _bannerController.animateToPage(
+            nextPage,
+            duration: const Duration(milliseconds: 350),
+            curve: Curves.easeIn,
+          );
+        }
+      });
     });
   }
 
   @override
   void dispose() {
+    _bannerTimer?.cancel();
+    _bannerController.dispose();
     _searchController.dispose();
     super.dispose();
   }
@@ -373,32 +414,19 @@ class _HomeClientScreenState extends State<HomeClientScreen> {
 
   // ── Composant Bannière / Carousel ───────────────────────────────────────
   Widget _buildBannerCarousel() {
-    final List<Map<String, String>> banners = [
-      {
-        'image': 'assets/images/image1.png',
-        'title': 'Des professionnels qualifiés',
-        'subtitle': 'Trouvez les meilleurs artisans près de chez vous',
-      },
-      {
-        'image': 'assets/images/image2.png',
-        'title': 'Un service rapide',
-        'subtitle': 'Intervention rapide et paiement sécurisé',
-      },
-      {
-        'image': 'assets/images/image3.png',
-        'title': 'Besoin d\'un dépannage ?',
-        'subtitle': 'Nos artisans sont disponibles et à l\'écoute',
-      },
-    ];
-
     return Container(
       height: 160,
       margin: const EdgeInsets.only(top: 24),
       child: PageView.builder(
-        controller: PageController(viewportFraction: 0.88),
-        itemCount: banners.length,
+        controller: _bannerController,
+        onPageChanged: (index) {
+          setState(() {
+            _currentBannerIndex = index;
+          });
+        },
+        itemCount: _banners.length,
         itemBuilder: (context, index) {
-          final banner = banners[index];
+          final banner = _banners[index];
           return Container(
             margin: const EdgeInsets.symmetric(horizontal: 8),
             decoration: BoxDecoration(
