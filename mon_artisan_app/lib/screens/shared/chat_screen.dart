@@ -1,9 +1,15 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:provider/provider.dart';
+import 'package:record/record.dart';
+import 'package:audioplayers/audioplayers.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:permission_handler/permission_handler.dart';
 import '../../core/constants/colors.dart';
 import '../../core/constants/text_styles.dart';
 import '../../core/services/chat_service.dart';
+import '../../core/services/firebase_service.dart';
 import '../../providers/auth_provider.dart';
 
 class ChatScreen extends StatefulWidget {
@@ -30,10 +36,25 @@ class _ChatScreenState extends State<ChatScreen> {
   bool _hasMore = true;
   bool _isNearTop = false;
 
+  bool _isTyping = false;
+  bool _isRecording = false;
+  final AudioRecorder _audioRecorder = AudioRecorder();
+  String? _recordFilePath;
+  
+  final Map<String, AudioPlayer> _audioPlayers = {};
+  final Map<String, bool> _isPlaying = {};
+  final Map<String, Duration> _audioDurations = {};
+  final Map<String, Duration> _audioPositions = {};
+
   @override
   void initState() {
     super.initState();
     _scrollController.addListener(_onScroll);
+    _messageController.addListener(() {
+      setState(() {
+        _isTyping = _messageController.text.trim().isNotEmpty;
+      });
+    });
     _initializeChat();
   }
 
@@ -84,7 +105,80 @@ class _ChatScreenState extends State<ChatScreen> {
   void dispose() {
     _messageController.dispose();
     _scrollController.dispose();
+    _audioRecorder.dispose();
+    for (var player in _audioPlayers.values) {
+      player.dispose();
+    }
     super.dispose();
+  }
+
+  Future<void> _startRecording() async {
+    try {
+      if (await Permission.microphone.request().isGranted) {
+        final dir = await getApplicationDocumentsDirectory();
+        _recordFilePath = '${dir.path}/audio_${DateTime.now().millisecondsSinceEpoch}.m4a';
+        
+        await _audioRecorder.start(
+          const RecordConfig(encoder: AudioEncoder.aacLc),
+          path: _recordFilePath!,
+        );
+        
+        setState(() {
+          _isRecording = true;
+        });
+      } else {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Permission micro refusée. Veuillez l\'autoriser dans les paramètres.')),
+          );
+        }
+      }
+    } catch (e) {
+      print('[ERROR] start recording: $e');
+    }
+  }
+
+  Future<void> _stopRecordingAndSend() async {
+    if (!_isRecording) return;
+    
+    try {
+      final path = await _audioRecorder.stop();
+      setState(() {
+        _isRecording = false;
+      });
+      
+      if (path != null && _chatId != null) {
+        final authProvider = Provider.of<AuthProvider>(context, listen: false);
+        final currentUserId = authProvider.userModel!.id;
+        
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Envoi du vocal en cours...'), duration: Duration(seconds: 2)),
+          );
+        }
+        
+        final file = File(path);
+        final audioUrl = await FirebaseService.uploadAudioMessage(_chatId!, file);
+        
+        await ChatService.sendMessage(
+          chatId: _chatId!,
+          senderId: currentUserId,
+          receiverId: widget.otherUserId,
+          message: '🎵 Message vocal',
+          type: 'audio',
+          audioUrl: audioUrl,
+        );
+        
+        _scrollToBottom();
+      }
+    } catch (e) {
+      print('[ERROR] stop recording: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Erreur lors de l\'envoi du vocal')),
+        );
+      }
+    }
   }
 
   // Filtre anti-contournement : détecte les numéros de téléphone et liens
@@ -439,14 +533,16 @@ class _ChatScreenState extends State<ChatScreen> {
                   padding: const EdgeInsets.all(16),
                   itemCount: messages.length,
                   itemBuilder: (context, index) {
-                    final message = messages[index].data() as Map<String, dynamic>;
+                    final messageDoc = messages[index];
+                    final message = messageDoc.data() as Map<String, dynamic>;
                     final isMe = message['senderId'] == currentUserId;
                     final timestamp = (message['timestamp'] as Timestamp).toDate();
 
                     return _buildMessageBubble(
-                      message['message'],
+                      message,
                       isMe,
                       timestamp,
+                      messageDoc.id,
                     );
                   },
                 );
@@ -468,40 +564,63 @@ class _ChatScreenState extends State<ChatScreen> {
             child: SafeArea(
               child: Row(
                 children: [
-                  Expanded(
-                    child: TextField(
-                      controller: _messageController,
-                      decoration: InputDecoration(
-                        hintText: 'Écrivez un message...',
-                        hintStyle: AppTextStyles.bodyMedium.copyWith(
-                          color: AppColors.greyMedium,
-                        ),
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(24),
-                          borderSide: const BorderSide(color: AppColors.greyMedium),
-                        ),
-                        focusedBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(24),
-                          borderSide: const BorderSide(color: AppColors.primaryBlue),
-                        ),
-                        contentPadding: const EdgeInsets.symmetric(
-                          horizontal: 16,
-                          vertical: 12,
-                        ),
+                  if (_isRecording)
+                    Expanded(
+                      child: Row(
+                        children: [
+                          const Icon(Icons.mic, color: AppColors.error),
+                          const SizedBox(width: 8),
+                          Text(
+                            'Enregistrement...',
+                            style: AppTextStyles.bodyMedium.copyWith(
+                              color: AppColors.error,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ],
                       ),
-                      maxLines: null,
-                      textCapitalization: TextCapitalization.sentences,
+                    )
+                  else
+                    Expanded(
+                      child: TextField(
+                        controller: _messageController,
+                        decoration: InputDecoration(
+                          hintText: 'Écrivez un message...',
+                          hintStyle: AppTextStyles.bodyMedium.copyWith(
+                            color: AppColors.greyMedium,
+                          ),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(24),
+                            borderSide: const BorderSide(color: AppColors.greyMedium),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(24),
+                            borderSide: const BorderSide(color: AppColors.primaryBlue),
+                          ),
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 12,
+                          ),
+                        ),
+                        maxLines: null,
+                        textCapitalization: TextCapitalization.sentences,
+                      ),
                     ),
-                  ),
                   const SizedBox(width: 8),
-                  Container(
-                    decoration: const BoxDecoration(
-                      color: AppColors.primaryBlue,
-                      shape: BoxShape.circle,
-                    ),
-                    child: IconButton(
-                      icon: const Icon(Icons.send, color: AppColors.white),
-                      onPressed: _sendMessage,
+                  GestureDetector(
+                    onLongPress: _isTyping ? null : _startRecording,
+                    onLongPressUp: _isTyping ? null : _stopRecordingAndSend,
+                    onTap: _isTyping ? _sendMessage : null,
+                    child: Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: const BoxDecoration(
+                        color: AppColors.primaryBlue,
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(
+                        _isTyping ? Icons.send : Icons.mic,
+                        color: AppColors.white,
+                      ),
                     ),
                   ),
                 ],
@@ -513,14 +632,18 @@ class _ChatScreenState extends State<ChatScreen> {
     );
   }
 
-  Widget _buildMessageBubble(String message, bool isMe, DateTime timestamp) {
+  Widget _buildMessageBubble(Map<String, dynamic> messageData, bool isMe, DateTime timestamp, String messageId) {
+    final type = messageData['type'] ?? 'text';
+    final message = messageData['message'] ?? '';
+    final audioUrl = messageData['audioUrl'];
+
     return Align(
       alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
       child: Container(
         margin: const EdgeInsets.only(bottom: 12),
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
         constraints: BoxConstraints(
-          maxWidth: MediaQuery.of(context).size.width * 0.7,
+          maxWidth: MediaQuery.of(context).size.width * 0.75,
         ),
         decoration: BoxDecoration(
           color: isMe ? AppColors.primaryBlue : AppColors.white,
@@ -541,12 +664,15 @@ class _ChatScreenState extends State<ChatScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              message,
-              style: AppTextStyles.bodyMedium.copyWith(
-                color: isMe ? AppColors.white : AppColors.black,
+            if (type == 'audio' && audioUrl != null)
+              _buildAudioPlayer(audioUrl, messageId, isMe)
+            else
+              Text(
+                message,
+                style: AppTextStyles.bodyMedium.copyWith(
+                  color: isMe ? AppColors.white : AppColors.black,
+                ),
               ),
-            ),
             const SizedBox(height: 4),
             Text(
               '${timestamp.hour}:${timestamp.minute.toString().padLeft(2, '0')}',
@@ -560,6 +686,85 @@ class _ChatScreenState extends State<ChatScreen> {
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildAudioPlayer(String audioUrl, String messageId, bool isMe) {
+    if (!_audioPlayers.containsKey(messageId)) {
+      final player = AudioPlayer();
+      _audioPlayers[messageId] = player;
+      _isPlaying[messageId] = false;
+      
+      player.onDurationChanged.listen((d) {
+        if (mounted) setState(() => _audioDurations[messageId] = d);
+      });
+      player.onPositionChanged.listen((p) {
+        if (mounted) setState(() => _audioPositions[messageId] = p);
+      });
+      player.onPlayerComplete.listen((_) {
+        if (mounted) {
+          setState(() {
+            _isPlaying[messageId] = false;
+            _audioPositions[messageId] = Duration.zero;
+          });
+        }
+      });
+      
+      player.setSourceUrl(audioUrl);
+    }
+    
+    final isPlaying = _isPlaying[messageId] ?? false;
+    final position = _audioPositions[messageId] ?? Duration.zero;
+    final duration = _audioDurations[messageId] ?? Duration.zero;
+    
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        GestureDetector(
+          onTap: () async {
+            final player = _audioPlayers[messageId]!;
+            if (isPlaying) {
+              await player.pause();
+              setState(() => _isPlaying[messageId] = false);
+            } else {
+              // Pause all others
+              for (var p in _audioPlayers.keys) {
+                if (p != messageId && _isPlaying[p] == true) {
+                  await _audioPlayers[p]!.pause();
+                  setState(() => _isPlaying[p] = false);
+                }
+              }
+              await player.resume();
+              setState(() => _isPlaying[messageId] = true);
+            }
+          },
+          child: Icon(
+            isPlaying ? Icons.pause_circle_filled : Icons.play_circle_fill,
+            color: isMe ? AppColors.white : AppColors.primaryBlue,
+            size: 36,
+          ),
+        ),
+        const SizedBox(width: 8),
+        SizedBox(
+          width: 120,
+          child: SliderTheme(
+            data: SliderThemeData(
+              thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 6),
+              trackHeight: 3,
+            ),
+            child: Slider(
+              value: position.inMilliseconds.toDouble(),
+              max: duration.inMilliseconds.toDouble() > 0 ? duration.inMilliseconds.toDouble() : 100,
+              onChanged: (val) {
+                final player = _audioPlayers[messageId]!;
+                player.seek(Duration(milliseconds: val.toInt()));
+              },
+              activeColor: isMe ? AppColors.white : AppColors.primaryBlue,
+              inactiveColor: isMe ? AppColors.white.withOpacity(0.3) : AppColors.greyLight,
+            ),
+          ),
+        ),
+      ],
     );
   }
 }

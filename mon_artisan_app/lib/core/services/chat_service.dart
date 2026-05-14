@@ -55,9 +55,11 @@ class ChatService {
     required String senderId,
     required String receiverId,
     required String message,
+    String type = 'text',
+    String? audioUrl,
   }) async {
     print('[INFO] sendMessage - ChatId: $chatId');
-    print('[INFO] sendMessage - De: $senderId vers: $receiverId');
+    print('[INFO] sendMessage - De: $senderId vers: $receiverId (type: $type)');
     print('[INFO] sendMessage - Message: ${message.substring(0, message.length > 50 ? 50 : message.length)}...');
     
     try {
@@ -70,6 +72,8 @@ class ChatService {
         'senderId': senderId,
         'receiverId': receiverId,
         'message': message,
+        'type': type,
+        if (audioUrl != null) 'audioUrl': audioUrl,
         'timestamp': Timestamp.now(),
         'isRead': false,
       });

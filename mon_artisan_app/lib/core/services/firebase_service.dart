@@ -102,4 +102,18 @@ class FirebaseService {
       throw Exception('Erreur lors de la suppression de la photo: $e');
     }
   }
+
+  // Upload Audio Message
+  static Future<String> uploadAudioMessage(String chatId, dynamic file) async {
+    try {
+      final fileName = '${DateTime.now().millisecondsSinceEpoch}.m4a';
+      final ref = _storage.ref().child('chat_audios/$chatId/$fileName');
+      
+      await ref.putFile(file);
+      final downloadUrl = await ref.getDownloadURL();
+      return downloadUrl;
+    } catch (e) {
+      throw Exception('Erreur lors de l\'upload du vocal: $e');
+    }
+  }
 }
