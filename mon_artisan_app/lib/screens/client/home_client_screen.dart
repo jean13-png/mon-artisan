@@ -312,6 +312,9 @@ class _HomeClientScreenState extends State<HomeClientScreen> {
                 ),
               ),
 
+              // ── Bannières / Carousel ──────────────────────────────────
+              _buildBannerCarousel(),
+
               const SizedBox(height: 28),
 
               // ── Toutes les catégories ─────────────────────────────────
@@ -364,6 +367,83 @@ class _HomeClientScreenState extends State<HomeClientScreen> {
             ],
           ),
         ),
+      ),
+    );
+  }
+
+  // ── Composant Bannière / Carousel ───────────────────────────────────────
+  Widget _buildBannerCarousel() {
+    final List<Map<String, String>> banners = [
+      {
+        'image': 'assets/images/image1.png',
+        'title': 'Des professionnels qualifiés',
+        'subtitle': 'Trouvez les meilleurs artisans près de chez vous',
+      },
+      {
+        'image': 'assets/images/image2.png',
+        'title': 'Un service rapide',
+        'subtitle': 'Intervention rapide et paiement sécurisé',
+      },
+      {
+        'image': 'assets/images/image3.png',
+        'title': 'Besoin d\'un dépannage ?',
+        'subtitle': 'Nos artisans sont disponibles et à l\'écoute',
+      },
+    ];
+
+    return Container(
+      height: 160,
+      margin: const EdgeInsets.only(top: 24),
+      child: PageView.builder(
+        controller: PageController(viewportFraction: 0.88),
+        itemCount: banners.length,
+        itemBuilder: (context, index) {
+          final banner = banners[index];
+          return Container(
+            margin: const EdgeInsets.symmetric(horizontal: 8),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(16),
+              boxShadow: [
+                BoxShadow(
+                  color: AppColors.black.withOpacity(0.1),
+                  blurRadius: 8,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+              image: DecorationImage(
+                image: AssetImage(banner['image']!),
+                fit: BoxFit.cover,
+                colorFilter: ColorFilter.mode(
+                  AppColors.black.withOpacity(0.45),
+                  BlendMode.darken,
+                ),
+              ),
+            ),
+            child: Padding(
+              padding: const EdgeInsets.all(20),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  Text(
+                    banner['title']!,
+                    style: AppTextStyles.h3.copyWith(
+                      color: AppColors.white,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    banner['subtitle']!,
+                    style: AppTextStyles.bodyMedium.copyWith(
+                      color: AppColors.white.withOpacity(0.9),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          );
+        },
       ),
     );
   }

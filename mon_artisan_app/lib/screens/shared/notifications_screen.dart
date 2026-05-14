@@ -8,6 +8,8 @@ import '../../core/routes/app_router.dart';
 import '../../core/services/firestore_service.dart';
 import '../../providers/auth_provider.dart';
 import '../../widgets/loading_widget.dart';
+import '../client/devis_detail_screen.dart';
+import '../artisan/commande_detail_screen.dart';
 
 class NotificationsScreen extends StatefulWidget {
   const NotificationsScreen({super.key});
@@ -227,11 +229,66 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     final notificationId = notification['id'] as String;
 
     return GestureDetector(
-      onTap: () {
+      onTap: () async {
         if (!isRead) {
           _markAsRead(notificationId);
         }
-        // TODO: Naviguer vers l'écran approprié selon le type
+        
+        final data = notification['data'] as Map<String, dynamic>?;
+        final commandeId = data?['commandeId'] as String?;
+        
+        if (commandeId != null && context.mounted) {
+          // Afficher un indicateur de chargement
+          showDialog(
+            context: context,
+            barrierDismissible: false,
+            builder: (_) => const Center(child: CircularProgressIndicator()),
+          );
+          
+          try {
+            final commande = await FirestoreService.getCommande(commandeId);
+            
+            if (!context.mounted) return;
+            Navigator.pop(context); // Fermer le loader
+            
+            if (commande != null) {
+              final authProvider = Provider.of<AuthProvider>(context, listen: false);
+              final isArtisan = authProvider.userModel?.role == 'artisan';
+              
+              if (isArtisan) {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => CommandeDetailScreen(commande: commande),
+                  ),
+                );
+              } else {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => DevisDetailScreen(commande: commande),
+                  ),
+                );
+              }
+            } else {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('Cette commande est introuvable.'),
+                  backgroundColor: AppColors.error,
+                ),
+              );
+            }
+          } catch (e) {
+            if (!context.mounted) return;
+            Navigator.pop(context); // Fermer le loader
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Erreur lors du chargement de la commande.'),
+                backgroundColor: AppColors.error,
+              ),
+            );
+          }
+        }
       },
       child: Container(
         margin: const EdgeInsets.only(bottom: 12),
