@@ -804,6 +804,57 @@ class CommandeProvider extends ChangeNotifier {
     }
   }
 
+  // Annuler complètement la commande
+  Future<bool> annulerCommande(String commandeId) async {
+    final operationKey = 'annuler_$commandeId';
+    if (_isOperationInProgress(operationKey)) return false;
+    _lockOperation(operationKey);
+    
+    try {
+      final commandeDoc = await FirebaseService.firestore
+          .collection('commandes')
+          .doc(commandeId)
+          .get();
+      
+      if (!commandeDoc.exists) {
+        _errorMessage = 'Commande introuvable';
+        notifyListeners();
+        return false;
+      }
+      
+      final commande = CommandeModel.fromFirestore(commandeDoc);
+      
+      await FirebaseService.firestore
+          .collection('commandes')
+          .doc(commandeId)
+          .update({
+        'statut': 'annulee',
+        'updatedAt': Timestamp.now(),
+      });
+      
+      if (commande.artisanId != null) {
+        await FirestoreService.createNotification({
+          'userId': commande.artisanId,
+          'type': 'commande_annulee',
+          'titre': 'Commande annulée',
+          'message': 'Le client a annulé la commande',
+          'data': {
+            'commandeId': commandeId,
+          },
+        });
+      }
+      
+      return true;
+    } catch (e) {
+      print('[ERROR] Erreur annulation: $e');
+      _errorMessage = 'Erreur lors de l\'annulation de la commande';
+      notifyListeners();
+      return false;
+    } finally {
+      _unlockOperation(operationKey);
+    }
+  }
+
   // Marquer le paiement comme effectué (après paiement FedaPay - met en escrow)
   Future<bool> effectuerPaiement(String commandeId) async {
     // ✅ IDEMPOTENCE: Vérifier si l'opération est déjà en cours

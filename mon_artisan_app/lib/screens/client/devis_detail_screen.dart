@@ -8,6 +8,10 @@ import '../../models/commande_model.dart';
 import '../../providers/commande_provider.dart';
 import '../../widgets/custom_button.dart';
 import '../../widgets/custom_textfield.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:url_launcher/url_launcher.dart';
+import '../../core/constants/app_constants.dart';
+import '../../core/services/fedapay_service.dart';
 
 class DevisDetailScreen extends StatefulWidget {
   final CommandeModel commande;
@@ -20,6 +24,7 @@ class DevisDetailScreen extends StatefulWidget {
 
 class _DevisDetailScreenState extends State<DevisDetailScreen> {
   bool _isLoading = false;
+  String? _transactionId;
 
   Future<void> _accepterDevis() async {
     final confirmed = await showDialog<bool>(
@@ -27,7 +32,7 @@ class _DevisDetailScreenState extends State<DevisDetailScreen> {
       builder: (context) => AlertDialog(
         title: Text('Accepter le devis', style: AppTextStyles.h3),
         content: Text(
-          'Confirmez-vous accepter ce devis de ${widget.commande.montantDevis!.toStringAsFixed(0)} FCFA ? Vous serez redirigé vers le paiement sécurisé.',
+          'Confirmez-vous accepter ce devis de ${widget.commande.montantDevis!.toStringAsFixed(0)} FCFA ? Vous serez redirigé vers FedaPay pour le paiement sécurisé.',
           style: AppTextStyles.bodyMedium,
         ),
         actions: [
@@ -58,10 +63,43 @@ class _DevisDetailScreenState extends State<DevisDetailScreen> {
       final success = await commandeProvider.accepterDevis(widget.commande.id);
 
       if (success && mounted) {
-        // Rediriger vers le paiement FedaPay avec paramètres dans l'URL
-        context.push(
-          '${AppRouter.payment}?commandeId=${widget.commande.id}&montant=${widget.commande.montantDevis!.toStringAsFixed(0)}',
+        // Lancement direct de FedaPay
+        final user = FirebaseAuth.instance.currentUser;
+        if (user == null) {
+          throw Exception('Utilisateur non connecté');
+        }
+
+        final montant = widget.commande.montantDevis!;
+        
+        final transactionData = await FedaPayService.createTransaction(
+          amount: montant,
+          description: 'Paiement commande ${widget.commande.id}',
+          customerEmail: user.email ?? 'client@monartisan.com',
+          customerPhone: user.phoneNumber ?? '+22900000000',
+          commandeId: widget.commande.id,
         );
+
+        if (transactionData['v1'] == null || transactionData['v1']['id'] == null) {
+          throw Exception('Format de réponse FedaPay invalide');
+        }
+        
+        _transactionId = transactionData['v1']['id'].toString();
+        final paymentUrl = transactionData['v1']['url'] as String?;
+
+        if (paymentUrl == null || paymentUrl.isEmpty) {
+          throw Exception('URL de paiement non disponible');
+        }
+
+        final uri = Uri.parse(paymentUrl);
+        
+        if (AppConstants.simulateFedaPay) {
+          if (mounted) _showPaymentVerificationDialog();
+        } else if (await canLaunchUrl(uri)) {
+          await launchUrl(uri, mode: LaunchMode.externalApplication);
+          if (mounted) _showPaymentVerificationDialog();
+        } else {
+          throw Exception('Impossible d\'ouvrir la page de paiement');
+        }
       } else if (mounted) {
         setState(() => _isLoading = false);
         ScaffoldMessenger.of(context).showSnackBar(
@@ -80,6 +118,220 @@ class _DevisDetailScreenState extends State<DevisDetailScreen> {
             backgroundColor: AppColors.error,
           ),
         );
+      }
+    }
+  }
+
+  void _showPaymentVerificationDialog() {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const CircularProgressIndicator(),
+            const SizedBox(height: 24),
+            Text(
+              'Vérification du paiement...',
+              style: AppTextStyles.h3,
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 12),
+            Text(
+              'Veuillez patienter',
+              style: AppTextStyles.bodyMedium,
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
+      ),
+    );
+
+    Future.delayed(const Duration(seconds: 5), () {
+      _verifyPaymentStatus();
+    });
+  }
+
+  Future<void> _verifyPaymentStatus() async {
+    if (_transactionId == null) {
+      if (mounted) {
+        Navigator.of(context).pop();
+        setState(() => _isLoading = false);
+      }
+      return;
+    }
+
+    try {
+      final status = await FedaPayService.checkTransactionStatus(_transactionId!);
+
+      if (!mounted) return;
+
+      if (status == 'approved' || status == 'completed') {
+        final commandeProvider = Provider.of<CommandeProvider>(context, listen: false);
+        final success = await commandeProvider.effectuerPaiement(widget.commande.id);
+
+        if (mounted) {
+          Navigator.of(context).pop(); // Fermer le dialog
+          setState(() => _isLoading = false);
+          
+          if (success) {
+            _showSuccessDialog();
+          } else {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(commandeProvider.errorMessage ?? 'Erreur lors de la validation'),
+                backgroundColor: AppColors.error,
+              ),
+            );
+          }
+        }
+      } else if (status == 'pending') {
+        if (mounted) {
+          Future.delayed(const Duration(seconds: 3), () {
+            _verifyPaymentStatus();
+          });
+        }
+      } else {
+        if (mounted) {
+          Navigator.of(context).pop();
+          setState(() => _isLoading = false);
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Paiement ${status == 'canceled' ? 'annulé' : 'échoué'}. Commande en attente de paiement.'),
+              backgroundColor: AppColors.error,
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        Navigator.of(context).pop();
+        setState(() => _isLoading = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Erreur lors de la vérification: $e'),
+            backgroundColor: AppColors.error,
+          ),
+        );
+      }
+    }
+  }
+
+  void _showSuccessDialog() {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 80,
+              height: 80,
+              decoration: BoxDecoration(
+                color: AppColors.success.withOpacity(0.1),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Icons.check_circle, color: AppColors.success, size: 50),
+            ),
+            const SizedBox(height: 24),
+            Text('Paiement sécurisé !', style: AppTextStyles.h2.copyWith(color: AppColors.success)),
+            const SizedBox(height: 12),
+            Text(
+              'Votre paiement est sécurisé en escrow. L\'artisan sera payé après votre validation de la prestation.',
+              style: AppTextStyles.bodyMedium,
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 24),
+            CustomButton(
+              text: 'Continuer',
+              onPressed: () {
+                Navigator.of(context).pop(); // Fermer le succès
+                if (Navigator.canPop(context)) {
+                  Navigator.pop(context); // Quitter la page
+                } else {
+                  context.go(AppRouter.homeClient);
+                }
+              },
+              backgroundColor: AppColors.success,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _annulerCommande() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('Annuler la commande', style: AppTextStyles.h3),
+        content: Text(
+          'Êtes-vous sûr de vouloir annuler cette commande ?',
+          style: AppTextStyles.bodyMedium,
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: Text('Non', style: AppTextStyles.bodyMedium),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: ElevatedButton.styleFrom(backgroundColor: AppColors.error),
+            child: Text('Oui, annuler', style: AppTextStyles.button),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true) return;
+    if (!mounted) return;
+
+    setState(() => _isLoading = true);
+
+    try {
+      final commandeProvider = Provider.of<CommandeProvider>(context, listen: false);
+      final success = await commandeProvider.annulerCommande(widget.commande.id);
+
+      if (success && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Commande annulée avec succès'),
+            backgroundColor: AppColors.success,
+          ),
+        );
+        if (Navigator.canPop(context)) {
+          Navigator.pop(context);
+        } else {
+          context.go(AppRouter.homeClient);
+        }
+      } else if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(commandeProvider.errorMessage ?? 'Erreur lors de l\'annulation'),
+            backgroundColor: AppColors.error,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Erreur: $e'),
+            backgroundColor: AppColors.error,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
       }
     }
   }
@@ -186,6 +438,14 @@ class _DevisDetailScreenState extends State<DevisDetailScreen> {
           _getStatutText(widget.commande.statut),
           style: AppTextStyles.h3.copyWith(color: AppColors.white),
         ),
+        actions: [
+          if (['en_attente', 'diagnostic_demande', 'devis_envoye', 'devis_accepte', 'acceptee'].contains(widget.commande.statut))
+            IconButton(
+              icon: const Icon(Icons.cancel_outlined, color: AppColors.white),
+              tooltip: 'Annuler la commande',
+              onPressed: _annulerCommande,
+            ),
+        ],
       ),
       body: SingleChildScrollView(
         child: Column(
