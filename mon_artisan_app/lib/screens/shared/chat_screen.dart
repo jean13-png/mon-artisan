@@ -34,7 +34,6 @@ class _ChatScreenState extends State<ChatScreen> {
   String? _initError;
   int _limit = 20;
   bool _hasMore = true;
-  bool _isNearTop = false;
 
   bool _isTyping = false;
   bool _isRecording = false;
@@ -114,7 +113,8 @@ class _ChatScreenState extends State<ChatScreen> {
 
   Future<void> _startRecording() async {
     try {
-      if (await Permission.microphone.request().isGranted) {
+      final status = await Permission.microphone.request();
+      if (status.isGranted) {
         final dir = await getApplicationDocumentsDirectory();
         _recordFilePath = '${dir.path}/audio_${DateTime.now().millisecondsSinceEpoch}.m4a';
         
@@ -128,8 +128,25 @@ class _ChatScreenState extends State<ChatScreen> {
         });
       } else {
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Permission micro refusée. Veuillez l\'autoriser dans les paramètres.')),
+          showDialog(
+            context: context,
+            builder: (context) => AlertDialog(
+              title: const Text('Permission refusée'),
+              content: const Text('L\'application a besoin d\'accéder à votre microphone pour envoyer des notes vocales. Veuillez l\'autoriser dans les paramètres de l\'application.'),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text('Annuler'),
+                ),
+                ElevatedButton(
+                  onPressed: () async {
+                    Navigator.pop(context);
+                    await openAppSettings();
+                  },
+                  child: const Text('Paramètres'),
+                ),
+              ],
+            ),
           );
         }
       }

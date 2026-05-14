@@ -1,3 +1,4 @@
+import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:geocoding/geocoding.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -6,7 +7,6 @@ import 'dart:math' as math;
 
 class GeolocationService {
 
-  /// Demander la permission de localisation
   static Future<bool> requestLocationPermission() async {
     try {
       final permission = await Geolocator.checkPermission();
@@ -26,6 +26,69 @@ class GeolocationService {
     } catch (e) {
       throw Exception('Erreur lors de la demande de permission: $e');
     }
+  }
+
+  /// Vérifie et demande la permission de localisation, en guidant vers les paramètres si nécessaire.
+  static Future<bool> handleLocationPermission(BuildContext context) async {
+    bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+    if (!serviceEnabled) {
+      if (context.mounted) {
+        showDialog(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: const Text('Localisation désactivée'),
+            content: const Text('Le service de localisation est désactivé. Veuillez l\'activer dans vos paramètres.'),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('Annuler'),
+              ),
+              ElevatedButton(
+                onPressed: () async {
+                  Navigator.pop(context);
+                  await Geolocator.openLocationSettings();
+                },
+                child: const Text('Paramètres'),
+              ),
+            ],
+          ),
+        );
+      }
+      return false;
+    }
+
+    LocationPermission permission = await Geolocator.checkPermission();
+    if (permission == LocationPermission.denied) {
+      permission = await Geolocator.requestPermission();
+    }
+
+    if (permission == LocationPermission.denied || permission == LocationPermission.deniedForever) {
+      if (context.mounted) {
+        showDialog(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: const Text('Permission refusée'),
+            content: const Text('L\'application a besoin d\'accéder à votre position. Veuillez l\'autoriser dans les paramètres de l\'application.'),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('Annuler'),
+              ),
+              ElevatedButton(
+                onPressed: () async {
+                  Navigator.pop(context);
+                  await Geolocator.openAppSettings();
+                },
+                child: const Text('Paramètres'),
+              ),
+            ],
+          ),
+        );
+      }
+      return false;
+    }
+
+    return true;
   }
 
   /// Obtenir la position actuelle

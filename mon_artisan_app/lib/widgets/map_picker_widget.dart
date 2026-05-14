@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart' as ll;
-import 'package:geolocator/geolocator.dart';
 import 'package:geocoding/geocoding.dart';
 import '../core/constants/colors.dart';
 import '../core/constants/text_styles.dart';
@@ -93,6 +92,18 @@ class _MapPickerWidgetState extends State<MapPickerWidget> {
     });
 
     try {
+      final hasPermission = await GeolocationService.handleLocationPermission(context);
+      if (!hasPermission) {
+        if (!mounted) return;
+        setState(() {
+          _isLoadingPosition = false;
+          _markerPosition = _defaultPosition;
+          _erreur = 'Permission ou service refusé';
+          _adresseAffichee = 'Position non disponible';
+        });
+        return;
+      }
+
       final pos = await GeolocationService.getCurrentPosition();
       if (!mounted) return;
 

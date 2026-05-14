@@ -57,15 +57,20 @@ class _SearchArtisanScreenState extends State<SearchArtisanScreen> {
   Future<void> _loadUserPosition() async {
     setState(() => _isLoadingPosition = true);
     try {
-      final position = await GeolocationService.getCurrentPosition();
-      setState(() {
-        _userPosition = position;
-        _isLoadingPosition = false;
-      });
-      await _searchArtisans();
+      final hasPermission = await GeolocationService.handleLocationPermission(context);
+      if (hasPermission) {
+        final position = await GeolocationService.getCurrentPosition();
+        setState(() {
+          _userPosition = position;
+        });
+      }
     } catch (e) {
-      setState(() => _isLoadingPosition = false);
-      await _searchArtisans();
+      // Ignore
+    } finally {
+      if (mounted) {
+        setState(() => _isLoadingPosition = false);
+        await _searchArtisans();
+      }
     }
   }
 

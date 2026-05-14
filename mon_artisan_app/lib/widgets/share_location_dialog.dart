@@ -1,9 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:geocoding/geocoding.dart';
 import '../core/constants/colors.dart';
 import '../core/constants/text_styles.dart';
-import '../core/services/geolocation_service.dart';
 import '../core/services/firebase_service.dart';
 import '../screens/shared/location_picker_screen.dart';
 import '../widgets/map_picker_widget.dart';
