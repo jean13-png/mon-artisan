@@ -806,8 +806,9 @@ class _CommandeDetailScreenState extends State<CommandeDetailScreen> {
               const SizedBox(height: 16),
             ],
 
-            // Section devis post-diagnostic (si diagnostic validé)
-            if (commande.typeCommande == 'diagnostic_requis' &&
+            // Section devis post-diagnostic (Seul l'artisan peut soumettre le devis final)
+            if (!_isClient && 
+                commande.typeCommande == 'diagnostic_requis' &&
                 commande.statut == 'diagnostic_valide') ...[
               const SizedBox(height: 16),
               _buildDevisPostDiagnosticSection(context, commande),
