@@ -327,10 +327,13 @@ class _CommandesHistoryScreenState extends State<CommandesHistoryScreen> {
                   color: AppColors.greyDark,
                 ),
                 const SizedBox(width: 4),
-                Text(
-                  '${commande.dateIntervention.day}/${commande.dateIntervention.month}/${commande.dateIntervention.year} à ${commande.heureIntervention}',
-                  style: AppTextStyles.bodySmall.copyWith(
-                    color: AppColors.greyDark,
+                Expanded(
+                  child: Text(
+                    '${commande.dateIntervention.day}/${commande.dateIntervention.month}/${commande.dateIntervention.year} à ${commande.heureIntervention}',
+                    style: AppTextStyles.bodySmall.copyWith(
+                      color: AppColors.greyDark,
+                    ),
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ),
               ],

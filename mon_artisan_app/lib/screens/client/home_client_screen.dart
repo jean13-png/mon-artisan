@@ -359,13 +359,16 @@ class _HomeClientScreenState extends State<HomeClientScreen> {
                               const Icon(Icons.location_on,
                                   color: AppColors.white, size: 16),
                               const SizedBox(width: 4),
-                              Text(
-                                _selectedQuartier != null
-                                    ? '$_selectedQuartier, $_selectedVille'
-                                    : _selectedVille!,
-                                style: AppTextStyles.bodySmall.copyWith(
-                                    color: AppColors.white,
-                                    fontWeight: FontWeight.w600),
+                              Expanded(
+                                child: Text(
+                                  _selectedQuartier != null
+                                      ? '$_selectedQuartier, $_selectedVille'
+                                      : _selectedVille!,
+                                  style: AppTextStyles.bodySmall.copyWith(
+                                      color: AppColors.white,
+                                      fontWeight: FontWeight.w600),
+                                  overflow: TextOverflow.ellipsis,
+                                ),
                               ),
                               const SizedBox(width: 4),
                               const Icon(Icons.edit,

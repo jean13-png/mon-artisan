@@ -347,12 +347,14 @@ class _HomeArtisanScreenState extends State<HomeArtisanScreen> {
                     ),
                   ),
                   const SizedBox(width: 10),
-                  Text(
-                    artisan.disponibilite ? 'Disponible' : 'Non disponible',
-                    style: AppTextStyles.bodyMedium.copyWith(
-                        color: AppColors.white, fontWeight: FontWeight.w600),
+                  Expanded(
+                    child: Text(
+                      artisan.disponibilite ? 'Disponible' : 'Non disponible',
+                      style: AppTextStyles.bodyMedium.copyWith(
+                          color: AppColors.white, fontWeight: FontWeight.w600),
+                      overflow: TextOverflow.ellipsis,
+                    ),
                   ),
-                  const Spacer(),
                   Transform.scale(
                     scale: 0.85,
                     child: Switch(
@@ -772,12 +774,15 @@ class _HomeArtisanScreenState extends State<HomeArtisanScreen> {
                     children: [
                       Icon(Icons.payments_outlined, size: 15, color: AppColors.greyDark),
                       const SizedBox(width: 4),
-                      Text(
-                        isDiag
-                            ? 'Diagnostic : ${commande.montantDiagnostic?.toStringAsFixed(0) ?? '---'} FCFA'
-                            : '${commande.montant.toStringAsFixed(0)} FCFA',
-                        style: AppTextStyles.bodySmall
-                            .copyWith(color: AppColors.greyDark),
+                      Expanded(
+                        child: Text(
+                          isDiag
+                              ? 'Diagnostic : ${commande.montantDiagnostic?.toStringAsFixed(0) ?? '---'} FCFA'
+                              : '${commande.montant.toStringAsFixed(0)} FCFA',
+                          style: AppTextStyles.bodySmall
+                              .copyWith(color: AppColors.greyDark),
+                          overflow: TextOverflow.ellipsis,
+                        ),
                       ),
                       if (isPaye) ...[
                         const SizedBox(width: 8),
