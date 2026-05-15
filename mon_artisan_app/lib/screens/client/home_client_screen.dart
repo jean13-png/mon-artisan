@@ -417,7 +417,7 @@ class _HomeClientScreenState extends State<HomeClientScreen> {
                   gridDelegate:
                       const SliverGridDelegateWithFixedCrossAxisCount(
                     crossAxisCount: 2,
-                    childAspectRatio: 1.55,
+                    childAspectRatio: 0.95,
                     crossAxisSpacing: 12,
                     mainAxisSpacing: 12,
                   ),
@@ -695,65 +695,81 @@ class _HomeClientScreenState extends State<HomeClientScreen> {
     );
   }
 
-  // ── Carte catégorie avec image réelle ──────────────────────────────────
+  // ── Carte catégorie avec design Premium ──────────────────────────────────
   Widget _buildCategorieCard(String categorie) {
     final nbMetiers = metiersData[categorie]?.length ?? 0;
     return GestureDetector(
       onTap: () => _searchByCategorie(categorie),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(14),
-        child: Stack(
-          fit: StackFit.expand,
-          children: [
-            // Image de fond
-            CachedNetworkImage(
-              imageUrl: categoryImageUrl(categorie),
-              fit: BoxFit.cover,
-              placeholder: (_, __) => Container(
-                color: AppColors.primaryBlue.withOpacity(0.15),
-                child: Icon(categoryIcon(categorie),
-                    color: AppColors.primaryBlue, size: 36),
-              ),
-              errorWidget: (_, __, ___) => Container(
-                color: AppColors.primaryBlue.withOpacity(0.15),
-                child: Icon(categoryIcon(categorie),
-                    color: AppColors.primaryBlue, size: 36),
-              ),
+      child: Container(
+        decoration: BoxDecoration(
+          color: AppColors.white,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: AppColors.greyLight.withOpacity(0.8)),
+          boxShadow: [
+            BoxShadow(
+              color: AppColors.black.withOpacity(0.04),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
             ),
-            Positioned(
-              left: 0,
-              right: 0,
-              bottom: 0,
-              child: Container(
-                padding: const EdgeInsets.fromLTRB(10, 12, 10, 10),
-                color: AppColors.primaryBlue.withValues(alpha: 0.94),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      categorie,
-                      style: AppTextStyles.bodyMedium.copyWith(
-                        color: AppColors.white,
-                        fontWeight: FontWeight.w700,
-                        fontSize: 12,
-                      ),
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      '$nbMetiers métiers',
-                      style: AppTextStyles.bodySmall.copyWith(
-                        color: AppColors.white.withValues(alpha: 0.9),
-                        fontSize: 10,
-                      ),
+          ],
+        ),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 16),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              // Photo circulaire
+              Container(
+                width: 65,
+                height: 65,
+                decoration: BoxDecoration(
+                  color: AppColors.primaryBlue.withOpacity(0.05),
+                  shape: BoxShape.circle,
+                  boxShadow: [
+                    BoxShadow(
+                      color: AppColors.primaryBlue.withOpacity(0.1),
+                      blurRadius: 8,
+                      offset: const Offset(0, 4),
                     ),
                   ],
                 ),
+                child: ClipOval(
+                  child: CachedNetworkImage(
+                    imageUrl: categoryImageUrl(categorie),
+                    fit: BoxFit.cover,
+                    placeholder: (_, __) => Icon(categoryIcon(categorie),
+                        color: AppColors.primaryBlue.withOpacity(0.5), size: 30),
+                    errorWidget: (_, __, ___) => Icon(categoryIcon(categorie),
+                        color: AppColors.primaryBlue.withOpacity(0.5), size: 30),
+                  ),
+                ),
               ),
-            ),
-          ],
+              const SizedBox(height: 14),
+              // Texte
+              Text(
+                categorie,
+                style: AppTextStyles.bodyMedium.copyWith(
+                  color: AppColors.primaryBlue,
+                  fontWeight: FontWeight.w700,
+                  fontSize: 13,
+                  height: 1.2,
+                ),
+                textAlign: TextAlign.center,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+              ),
+              const SizedBox(height: 4),
+              Text(
+                '$nbMetiers métiers',
+                style: AppTextStyles.bodySmall.copyWith(
+                  color: AppColors.greyDark,
+                  fontWeight: FontWeight.w600,
+                  fontSize: 11,
+                ),
+                textAlign: TextAlign.center,
+              ),
+            ],
+          ),
         ),
       ),
     );
