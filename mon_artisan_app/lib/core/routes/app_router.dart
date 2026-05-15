@@ -8,6 +8,7 @@ import '../../screens/auth/register_screen.dart';
 import '../../screens/auth/contrat_engagement_screen.dart';
 import '../../screens/auth/artisan_payment_screen.dart';
 import '../../screens/client/home_client_screen.dart';
+import '../../screens/client/all_categories_screen.dart';
 import '../../screens/client/category_metiers_screen.dart';
 import '../../screens/client/search_artisan_screen.dart';
 import '../../screens/client/artisan_profile_screen.dart';
@@ -47,6 +48,7 @@ class AppRouter {
 
   // ── Routes protégées : client ──────────────────────────────────────────────
   static const String homeClient = '/home-client';
+  static const String allCategories = '/all-categories';
   static const String categoryMetiers = '/category-metiers';
   static const String searchArtisan = '/search-artisan';
   static const String artisanProfile = '/artisan-profile';
@@ -88,7 +90,7 @@ class AppRouter {
     adminDashboard, adminValidateArtisans, adminManageAgents, adminManageUsers, adminReports, adminTransactions,
   };
   static const _clientRoutes = {
-    homeClient, categoryMetiers, searchArtisan, artisanProfile, selectCommandeType,
+    homeClient, allCategories, categoryMetiers, searchArtisan, artisanProfile, selectCommandeType,
     createCommande, payment, commandesHistory, rateArtisan, locationPicker,
   };
   static const _artisanRoutes = {
@@ -164,6 +166,10 @@ class AppRouter {
       GoRoute(
         path: adminTransactions,
         builder: (context, state) => const AdminTransactionsScreen(),
+      ),
+      GoRoute(
+        path: allCategories,
+        builder: (context, state) => const AllCategoriesScreen(),
       ),
       GoRoute(
         path: categoryMetiers,

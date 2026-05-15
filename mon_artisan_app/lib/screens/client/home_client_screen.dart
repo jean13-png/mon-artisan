@@ -397,7 +397,7 @@ class _HomeClientScreenState extends State<HomeClientScreen> {
                       ),
                     ),
                     TextButton(
-                      onPressed: () => context.push(AppRouter.searchArtisan),
+                      onPressed: () => context.push(AppRouter.allCategories),
                       child: Text('Voir tout',
                           style: AppTextStyles.bodyMedium.copyWith(
                               color: AppColors.primaryBlue,
@@ -421,7 +421,7 @@ class _HomeClientScreenState extends State<HomeClientScreen> {
                     crossAxisSpacing: 12,
                     mainAxisSpacing: 12,
                   ),
-                  itemCount: metiersData.keys.length,
+                  itemCount: metiersData.keys.length > 4 ? 4 : metiersData.keys.length,
                   itemBuilder: (context, index) {
                     final categorie = metiersData.keys.elementAt(index);
                     return _buildCategorieCard(categorie);
