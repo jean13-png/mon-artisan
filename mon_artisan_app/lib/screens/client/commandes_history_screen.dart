@@ -339,15 +339,18 @@ class _CommandesHistoryScreenState extends State<CommandesHistoryScreen> {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text(
-                  commande.montant > 0 
-                      ? '${commande.montant.toStringAsFixed(0)} FCFA'
-                      : 'En attente de devis',
-                  style: AppTextStyles.bodyLarge.copyWith(
-                    color: commande.montant > 0 ? AppColors.primaryBlue : AppColors.warning,
-                    fontWeight: FontWeight.w600,
+                Expanded(
+                  child: Text(
+                    commande.montant > 0 
+                        ? '${commande.montant.toStringAsFixed(0)} FCFA'
+                        : 'En attente de devis',
+                    style: AppTextStyles.bodyLarge.copyWith(
+                      color: commande.montant > 0 ? AppColors.primaryBlue : AppColors.warning,
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
                 ),
+                const SizedBox(width: 8),
                 if (commande.statut == 'devis_envoye')
                   ElevatedButton(
                     onPressed: () {
@@ -436,6 +439,21 @@ class _CommandesHistoryScreenState extends State<CommandesHistoryScreen> {
             if (commande.paiementStatut == 'bloque')
               Padding(
                 padding: const EdgeInsets.only(top: 8),
+                child: Row(
+                  children: [
+                    Icon(Icons.security, size: 14, color: AppColors.success),
+                    const SizedBox(width: 4),
+                    Expanded(
+                      child: Text(
+                        'Paiement sécurisé en escrow',
+                        style: AppTextStyles.bodySmall.copyWith(
+                          color: AppColors.success,
+                          fontStyle: FontStyle.italic,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
               )
             else if (commande.paiementStatut == 'debloque')
               Padding(
@@ -444,11 +462,13 @@ class _CommandesHistoryScreenState extends State<CommandesHistoryScreen> {
                   children: [
                     Icon(Icons.check_circle, size: 14, color: AppColors.success),
                     const SizedBox(width: 4),
-                    Text(
-                      'Paiement débloqué',
-                      style: AppTextStyles.bodySmall.copyWith(
-                        color: AppColors.success,
-                        fontStyle: FontStyle.italic,
+                    Expanded(
+                      child: Text(
+                        'Paiement débloqué',
+                        style: AppTextStyles.bodySmall.copyWith(
+                          color: AppColors.success,
+                          fontStyle: FontStyle.italic,
+                        ),
                       ),
                     ),
                   ],
@@ -461,11 +481,13 @@ class _CommandesHistoryScreenState extends State<CommandesHistoryScreen> {
                   children: [
                     Icon(Icons.replay, size: 14, color: AppColors.primaryBlue),
                     const SizedBox(width: 4),
-                    Text(
-                      'Remboursé',
-                      style: AppTextStyles.bodySmall.copyWith(
-                        color: AppColors.primaryBlue,
-                        fontStyle: FontStyle.italic,
+                    Expanded(
+                      child: Text(
+                        'Remboursé',
+                        style: AppTextStyles.bodySmall.copyWith(
+                          color: AppColors.primaryBlue,
+                          fontStyle: FontStyle.italic,
+                        ),
                       ),
                     ),
                   ],
