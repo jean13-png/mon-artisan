@@ -396,25 +396,31 @@ class _CommandeDetailScreenState extends State<CommandeDetailScreen> {
                   children: [
                     const Icon(Icons.search, color: AppColors.white, size: 18),
                     const SizedBox(width: 8),
-                    Text(
-                      'DIAGNOSTIC',
-                      style: AppTextStyles.bodyMedium.copyWith(
-                        color: AppColors.white,
-                        fontWeight: FontWeight.bold,
-                        letterSpacing: 1.2,
+                    Flexible(
+                      child: Text(
+                        'DIAGNOSTIC',
+                        style: AppTextStyles.bodyMedium.copyWith(
+                          color: AppColors.white,
+                          fontWeight: FontWeight.bold,
+                          letterSpacing: 1.2,
+                        ),
+                        overflow: TextOverflow.ellipsis,
                       ),
                     ),
                     if (commande.montantDiagnostic != null) ...[
-                      const SizedBox(width: 16),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                        decoration: BoxDecoration(
-                          color: AppColors.white.withOpacity(0.25),
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Text(
-                          'Frais : ${commande.montantDiagnostic!.toStringAsFixed(0)} FCFA',
-                          style: AppTextStyles.bodySmall.copyWith(color: AppColors.white),
+                      const SizedBox(width: 12),
+                      Flexible(
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                          decoration: BoxDecoration(
+                            color: AppColors.white.withOpacity(0.25),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Text(
+                            '${commande.montantDiagnostic!.toStringAsFixed(0)} F',
+                            style: AppTextStyles.bodySmall.copyWith(color: AppColors.white),
+                            overflow: TextOverflow.ellipsis,
+                          ),
                         ),
                       ),
                     ],
@@ -436,11 +442,16 @@ class _CommandeDetailScreenState extends State<CommandeDetailScreen> {
                     size: 24,
                   ),
                   const SizedBox(width: 8),
-                  Text(
-                    _getStatutText(commande.statut, _isClient),
-                    style: AppTextStyles.bodyLarge.copyWith(
-                      color: _getStatutColor(commande.statut),
-                      fontWeight: FontWeight.w600,
+                  Flexible(
+                    child: Text(
+                      _getStatutText(commande.statut, _isClient),
+                      style: AppTextStyles.bodyLarge.copyWith(
+                        color: _getStatutColor(commande.statut),
+                        fontWeight: FontWeight.w600,
+                      ),
+                      textAlign: TextAlign.center,
+                      overflow: TextOverflow.ellipsis,
+                      maxLines: 2,
                     ),
                   ),
                 ],
@@ -699,11 +710,13 @@ class _CommandeDetailScreenState extends State<CommandeDetailScreen> {
                     // Frais de diagnostic (si applicable)
                     if (commande.typeCommande == 'diagnostic_requis' && commande.montantDiagnostic != null) ...[
                       Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          Text('Frais de diagnostic (déplacement)',
-                              style: AppTextStyles.bodyMedium
-                                  .copyWith(color: AppColors.greyDark)),
+                          Expanded(
+                            child: Text('Frais de diagnostic (déplacement)',
+                                style: AppTextStyles.bodyMedium
+                                    .copyWith(color: AppColors.greyDark)),
+                          ),
+                          const SizedBox(width: 8),
                           Text(
                               '${commande.montantDiagnostic!.toStringAsFixed(0)} FCFA',
                               style: AppTextStyles.bodyMedium.copyWith(
@@ -724,9 +737,12 @@ class _CommandeDetailScreenState extends State<CommandeDetailScreen> {
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          Text('Montant des travaux',
-                              style: AppTextStyles.bodyMedium
-                                  .copyWith(color: AppColors.greyDark)),
+                          Expanded(
+                            child: Text('Montant des travaux',
+                                style: AppTextStyles.bodyMedium
+                                    .copyWith(color: AppColors.greyDark)),
+                          ),
+                          const SizedBox(width: 8),
                           Text(
                               '${commande.montantDevis!.toStringAsFixed(0)} FCFA',
                               style: AppTextStyles.bodyMedium),
@@ -739,9 +755,12 @@ class _CommandeDetailScreenState extends State<CommandeDetailScreen> {
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          Text('Montant total',
-                              style: AppTextStyles.bodyMedium
-                                  .copyWith(color: AppColors.greyDark)),
+                          Expanded(
+                            child: Text('Montant total',
+                                style: AppTextStyles.bodyMedium
+                                    .copyWith(color: AppColors.greyDark)),
+                          ),
+                          const SizedBox(width: 8),
                           Text('${commande.montant.toStringAsFixed(0)} FCFA',
                               style: AppTextStyles.bodyMedium),
                         ],
@@ -753,9 +772,12 @@ class _CommandeDetailScreenState extends State<CommandeDetailScreen> {
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          Text('Commission (10%)',
-                              style: AppTextStyles.bodyMedium
-                                  .copyWith(color: AppColors.greyDark)),
+                          Expanded(
+                            child: Text('Commission (10%)',
+                                style: AppTextStyles.bodyMedium
+                                    .copyWith(color: AppColors.greyDark)),
+                          ),
+                          const SizedBox(width: 8),
                           Text(
                               '- ${commande.commission.toStringAsFixed(0)} FCFA',
                               style: AppTextStyles.bodyMedium
@@ -766,7 +788,10 @@ class _CommandeDetailScreenState extends State<CommandeDetailScreen> {
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          Text('Vous recevrez', style: AppTextStyles.h3),
+                          Expanded(
+                            child: Text('Vous recevrez', style: AppTextStyles.h3),
+                          ),
+                          const SizedBox(width: 8),
                           Text(
                             '${commande.montantArtisan.toStringAsFixed(0)} FCFA',
                             style: AppTextStyles.h2
@@ -779,7 +804,10 @@ class _CommandeDetailScreenState extends State<CommandeDetailScreen> {
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          Text('Total des travaux', style: AppTextStyles.h3),
+                          Expanded(
+                            child: Text('Total des travaux', style: AppTextStyles.h3),
+                          ),
+                          const SizedBox(width: 8),
                           Text(
                             '${(commande.montantDevis ?? commande.montant).toStringAsFixed(0)} FCFA',
                             style: AppTextStyles.h2
