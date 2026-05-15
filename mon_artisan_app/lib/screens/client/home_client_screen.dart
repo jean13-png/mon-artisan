@@ -165,16 +165,33 @@ class _HomeClientScreenState extends State<HomeClientScreen> {
         appBar: AppBar(
           backgroundColor: AppColors.primaryBlue,
           elevation: 0,
-          title: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Image.asset('assets/images/logo_mon_artisan.png',
-                  height: 36, fit: BoxFit.contain),
-              const SizedBox(width: 8),
-              Text('Mon Artisan',
-                  style: AppTextStyles.h3
-                      .copyWith(color: AppColors.white, fontSize: 19)),
-            ],
+          automaticallyImplyLeading: false,
+          titleSpacing: 20,
+          title: RichText(
+            text: TextSpan(
+              children: [
+                TextSpan(
+                  text: 'Mon ',
+                  style: TextStyle(
+                    fontFamily: 'Poppins',
+                    fontSize: 22,
+                    fontWeight: FontWeight.w800,
+                    color: AppColors.accentRed,
+                    letterSpacing: 0.3,
+                  ),
+                ),
+                TextSpan(
+                  text: 'Artisan',
+                  style: TextStyle(
+                    fontFamily: 'Poppins',
+                    fontSize: 22,
+                    fontWeight: FontWeight.w300,
+                    color: AppColors.white,
+                    letterSpacing: 1.2,
+                  ),
+                ),
+              ],
+            ),
           ),
           actions: [
             BadgeIcon(
