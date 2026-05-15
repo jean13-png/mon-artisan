@@ -1096,31 +1096,36 @@ class CommandeProvider extends ChangeNotifier {
       });
 
       // Recalculer la note globale de l'artisan depuis tous ses avis
+      // On filtre en mémoire pour éviter d'avoir besoin d'un index composite Firestore
       final avisSnapshot = await FirebaseService.firestore
           .collection('avis')
           .where('artisanId', isEqualTo: artisanId)
-          .where('isVisible', isEqualTo: true)
           .get();
 
       if (avisSnapshot.docs.isNotEmpty) {
-        double totalNote = 0;
-        for (var doc in avisSnapshot.docs) {
-          totalNote += (doc.data()['note'] as num).toDouble();
-        }
-        final noteGlobale = totalNote / avisSnapshot.docs.length;
+        final avisVisibles = avisSnapshot.docs.where((doc) => doc.data()['isVisible'] == true).toList();
+        
+        if (avisVisibles.isNotEmpty) {
+          double totalNote = 0;
+          for (var doc in avisVisibles) {
+            totalNote += (doc.data()['note'] as num).toDouble();
+          }
+          final noteGlobale = totalNote / avisVisibles.length;
 
-        final artisanQuery = await FirebaseService.firestore
-            .collection('artisans')
-            .where('userId', isEqualTo: artisanId)
-            .limit(1)
-            .get();
+          final artisanQuery = await FirebaseService.firestore
+              .collection('artisans')
+              .where('userId', isEqualTo: artisanId)
+              .limit(1)
+              .get();
 
-        if (artisanQuery.docs.isNotEmpty) {
-          await artisanQuery.docs.first.reference.update({
-            'noteGlobale': noteGlobale,
-            'nombreAvis': avisSnapshot.docs.length,
-            'updatedAt': Timestamp.now(),
-          });
+          if (artisanQuery.docs.isNotEmpty) {
+            await artisanQuery.docs.first.reference.update({
+              'noteGlobale': noteGlobale,
+              'nombreAvis': avisVisibles.length,
+              'updatedAt': Timestamp.now(),
+            });
+            print('[SUCCESS] Note globale de l\'artisan mise à jour: ${noteGlobale.toStringAsFixed(1)}');
+          }
         }
       }
 
