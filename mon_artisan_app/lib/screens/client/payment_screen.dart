@@ -364,56 +364,36 @@ class _PaymentScreenState extends State<PaymentScreen> {
                 ],
               ),
             ),
-
             const SizedBox(height: 16),
 
-            // Moyens de paiement
+            // Information FedaPay (Simplifié)
             Container(
               width: double.infinity,
               padding: const EdgeInsets.all(24),
               color: AppColors.white,
               child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    'Choisir un moyen de paiement',
-                    style: AppTextStyles.h3,
+                  const Icon(
+                    Icons.security_outlined,
+                    color: AppColors.success,
+                    size: 48,
                   ),
                   const SizedBox(height: 16),
-
-                  // MTN Mobile Money
-                  _buildPaymentMethod(
-                    'mtn',
-                    'MTN Mobile Money',
-                    Icons.phone_android,
-                    AppColors.warning,
+                  Text(
+                    'Paiement Sécurisé',
+                    style: AppTextStyles.h3.copyWith(color: AppColors.success),
                   ),
-                  const SizedBox(height: 12),
-
-                  // Moov Money
-                  _buildPaymentMethod(
-                    'moov',
-                    'Moov Money',
-                    Icons.phone_android,
-                    AppColors.primaryBlue,
-                  ),
-                  const SizedBox(height: 12),
-
-                  // Carte bancaire
-                  _buildPaymentMethod(
-                    'card',
-                    'Carte bancaire',
-                    Icons.credit_card,
-                    AppColors.greyDark,
+                  const SizedBox(height: 8),
+                  Text(
+                    'En cliquant sur le bouton ci-dessous, vous serez redirigé vers l\'interface sécurisée de FedaPay pour finaliser votre transaction via Mobile Money ou Carte Bancaire.',
+                    style: AppTextStyles.bodyMedium,
+                    textAlign: TextAlign.center,
                   ),
                 ],
               ),
             ),
 
-            const SizedBox(height: 24),
-
-            // Informations
-            Container(
+            const SizedBox(height: 24),           Container(
               margin: const EdgeInsets.symmetric(horizontal: 24),
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(

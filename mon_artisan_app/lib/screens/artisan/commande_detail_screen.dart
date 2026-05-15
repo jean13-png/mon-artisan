@@ -923,7 +923,7 @@ class _CommandeDetailScreenState extends State<CommandeDetailScreen> {
       return _buildBottomBar(
         child: CustomButton(
           text: 'Payer les frais de déplacement (${commande.montantDiagnostic?.toInt()} F)',
-          onPressed: () => context.push(AppRouter.payment, extra: commande),
+          onPressed: () => context.push('${AppRouter.payment}?commandeId=${commande.id}&montant=${commande.montantDiagnostic?.toInt() ?? 0}'),
           backgroundColor: AppColors.primaryBlue,
         ),
       );
@@ -948,7 +948,7 @@ class _CommandeDetailScreenState extends State<CommandeDetailScreen> {
               flex: 2,
               child: CustomButton(
                 text: 'Accepter et Payer',
-                onPressed: () => context.push(AppRouter.payment, extra: commande),
+                onPressed: () => context.push('${AppRouter.payment}?commandeId=${commande.id}&montant=${(commande.montantDevis ?? commande.montant).toInt()}'),
                 backgroundColor: AppColors.success,
               ),
             ),
