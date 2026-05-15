@@ -140,7 +140,7 @@ class SelectCommandeTypeScreen extends StatelessWidget {
               title: 'J\'ai besoin d\'un diagnostic',
               description: 'Vous ne connaissez pas exactement le problème et avez besoin d\'un diagnostic',
               features: [
-                'Frais de déplacement: 1000 FCFA',
+                'Frais de déplacement calculés automatiquement',
                 'Diagnostic sur place par l\'artisan',
                 'Devis détaillé après diagnostic',
                 'Vous décidez ensuite de continuer ou non',
