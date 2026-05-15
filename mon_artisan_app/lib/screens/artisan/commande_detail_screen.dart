@@ -499,10 +499,9 @@ class _CommandeDetailScreenState extends State<CommandeDetailScreen> {
               ),
             ),
 
-            const SizedBox(height: 16),
-
             // Position du client (Seul l'artisan voit la position et l'itinéraire)
             if (!_isClient && (commande.clientPosition != null || commande.position != null)) ...[
+              const SizedBox(height: 16),
               Builder(
                 builder: (context) {
                   final position = commande.clientPosition ?? commande.position!;
