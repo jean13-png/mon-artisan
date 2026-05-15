@@ -308,7 +308,7 @@ class _ConversationsListScreenState extends State<ConversationsListScreen> {
                 margin: const EdgeInsets.only(left: 8),
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 decoration: BoxDecoration(
-                  color: AppColors.accentRed,
+                  color: AppColors.primaryBlue,
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Text(

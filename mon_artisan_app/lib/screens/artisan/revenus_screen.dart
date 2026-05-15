@@ -8,7 +8,6 @@ import '../../core/routes/app_router.dart';
 import '../../providers/artisan_provider.dart';
 import '../../providers/commande_provider.dart';
 import '../../widgets/loading_widget.dart';
-import '../../widgets/custom_button.dart';
 
 class RevenusScreen extends StatefulWidget {
   const RevenusScreen({super.key});
@@ -42,7 +41,7 @@ class _RevenusScreenState extends State<RevenusScreen> {
     return Scaffold(
       backgroundColor: AppColors.greyLight,
       appBar: AppBar(
-        backgroundColor: AppColors.accentRed,
+        backgroundColor: AppColors.primaryBlue,
         elevation: 0,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: AppColors.white),
@@ -66,7 +65,7 @@ class _RevenusScreenState extends State<RevenusScreen> {
               width: double.infinity,
               padding: const EdgeInsets.all(24),
               decoration: const BoxDecoration(
-                color: AppColors.accentRed,
+                color: AppColors.primaryBlue,
                 borderRadius: BorderRadius.only(
                   bottomLeft: Radius.circular(24),
                   bottomRight: Radius.circular(24),
@@ -90,24 +89,59 @@ class _RevenusScreenState extends State<RevenusScreen> {
                     ),
                   ),
                   const SizedBox(height: 24),
-                  CustomButton(
-                    text: 'Demander un retrait',
-                    onPressed: artisan.revenusDisponibles >= 5000
-                        ? () {
-                            _showWithdrawalDialog(context, artisan.revenusDisponibles);
-                          }
-                        : null,
-                    backgroundColor: AppColors.white,
-                    textColor: AppColors.accentRed,
+                  const SizedBox(height: 20),
+                  // Bouton retrait
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton.icon(
+                      onPressed: artisan.revenusDisponibles >= 5000
+                          ? () => _showWithdrawalDialog(context, artisan.revenusDisponibles)
+                          : null,
+                      icon: Icon(
+                        Icons.account_balance_wallet_outlined,
+                        color: artisan.revenusDisponibles >= 5000
+                            ? AppColors.primaryBlue
+                            : AppColors.white.withOpacity(0.4),
+                        size: 20,
+                      ),
+                      label: Text(
+                        'Demander un retrait',
+                        style: AppTextStyles.button.copyWith(
+                          color: artisan.revenusDisponibles >= 5000
+                              ? AppColors.primaryBlue
+                              : AppColors.white.withOpacity(0.5),
+                          fontSize: 15,
+                        ),
+                      ),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: artisan.revenusDisponibles >= 5000
+                            ? AppColors.white
+                            : AppColors.white.withOpacity(0.15),
+                        disabledBackgroundColor: AppColors.white.withOpacity(0.15),
+                        elevation: artisan.revenusDisponibles >= 5000 ? 2 : 0,
+                        shadowColor: AppColors.black.withOpacity(0.2),
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14),
+                          side: artisan.revenusDisponibles >= 5000
+                              ? BorderSide.none
+                              : BorderSide(
+                                  color: AppColors.white.withOpacity(0.3),
+                                  width: 1,
+                                ),
+                        ),
+                      ),
+                    ),
                   ),
                   if (artisan.revenusDisponibles < 5000)
                     Padding(
                       padding: const EdgeInsets.only(top: 8),
                       child: Text(
-                        'Minimum 5 000 FCFA pour un retrait',
+                        'Minimum 5 000 FCFA requis pour un retrait',
                         style: AppTextStyles.bodySmall.copyWith(
-                          color: AppColors.white,
+                          color: AppColors.white.withOpacity(0.7),
                         ),
+                        textAlign: TextAlign.center,
                       ),
                     ),
                 ],

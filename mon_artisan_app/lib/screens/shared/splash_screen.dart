@@ -16,11 +16,10 @@ class SplashScreen extends StatefulWidget {
 
 class _SplashScreenState extends State<SplashScreen> {
   /// Durée minimale d'affichage du splash (animation).
-  static const _kMinSplashDuration = Duration(milliseconds: 1500);
+  static const _kMinSplashDuration = Duration(milliseconds: 500);
 
   /// Timeout maximal pour que Firestore charge le userModel.
-  /// Sur réseau très lent (3G), 8 secondes est un seuil raisonnable.
-  static const _kUserModelTimeout = Duration(seconds: 8);
+  static const _kUserModelTimeout = Duration(seconds: 5);
 
   @override
   void initState() {
@@ -197,7 +196,7 @@ class _SplashScreenState extends State<SplashScreen> {
                     context.go(AppRouter.homeArtisan);
                   },
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.accentRed,
+                    backgroundColor: AppColors.primaryBlue,
                     padding: const EdgeInsets.symmetric(vertical: 16),
                   ),
                   child: Text('Artisan', style: AppTextStyles.button),

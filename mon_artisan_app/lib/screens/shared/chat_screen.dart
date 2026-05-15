@@ -10,6 +10,7 @@ import '../../core/constants/colors.dart';
 import '../../core/constants/text_styles.dart';
 import '../../core/services/chat_service.dart';
 import '../../core/services/firebase_service.dart';
+import '../../core/services/cloudinary_service.dart';
 import '../../providers/auth_provider.dart';
 
 class ChatScreen extends StatefulWidget {
@@ -37,8 +38,10 @@ class _ChatScreenState extends State<ChatScreen> {
 
   bool _isTyping = false;
   bool _isRecording = false;
+  bool _isStartingRecording = false;
   final AudioRecorder _audioRecorder = AudioRecorder();
   String? _recordFilePath;
+  DateTime? _recordingStartTime;
   
   final Map<String, AudioPlayer> _audioPlayers = {};
   final Map<String, bool> _isPlaying = {};
@@ -112,9 +115,15 @@ class _ChatScreenState extends State<ChatScreen> {
   }
 
   Future<void> _startRecording() async {
+    if (_isStartingRecording || _isRecording) return;
+
     try {
       final status = await Permission.microphone.request();
       if (status.isGranted) {
+        setState(() {
+          _isStartingRecording = true;
+        });
+
         final dir = await getApplicationDocumentsDirectory();
         _recordFilePath = '${dir.path}/audio_${DateTime.now().millisecondsSinceEpoch}.m4a';
         
@@ -123,9 +132,13 @@ class _ChatScreenState extends State<ChatScreen> {
           path: _recordFilePath!,
         );
         
-        setState(() {
-          _isRecording = true;
-        });
+        if (mounted) {
+          setState(() {
+            _isStartingRecording = false;
+            _isRecording = true;
+            _recordingStartTime = DateTime.now();
+          });
+        }
       } else {
         if (mounted) {
           showDialog(
@@ -152,18 +165,49 @@ class _ChatScreenState extends State<ChatScreen> {
       }
     } catch (e) {
       print('[ERROR] start recording: $e');
+      if (mounted) {
+        setState(() {
+          _isStartingRecording = false;
+          _isRecording = false;
+        });
+      }
     }
   }
 
   Future<void> _stopRecordingAndSend() async {
+    // Si on est en train de démarrer, on attend un peu que l'initialisation se termine
+    if (_isStartingRecording) {
+      int attempts = 0;
+      while (_isStartingRecording && attempts < 10) {
+        await Future.delayed(const Duration(milliseconds: 100));
+        attempts++;
+      }
+    }
+
     if (!_isRecording) return;
     
     try {
       final path = await _audioRecorder.stop();
+      final duration = _recordingStartTime != null 
+          ? DateTime.now().difference(_recordingStartTime!) 
+          : Duration.zero;
+
       setState(() {
         _isRecording = false;
+        _recordingStartTime = null;
       });
       
+      // Si l'enregistrement est trop court (moins de 1 seconde), on ignore
+      if (duration.inSeconds < 1) {
+        print('[INFO] Enregistrement trop court, annulé.');
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Appuyez longuement pour enregistrer'), duration: Duration(seconds: 1)),
+          );
+        }
+        return;
+      }
+
       if (path != null && _chatId != null) {
         final authProvider = Provider.of<AuthProvider>(context, listen: false);
         final currentUserId = authProvider.userModel!.id;
@@ -175,7 +219,8 @@ class _ChatScreenState extends State<ChatScreen> {
         }
         
         final file = File(path);
-        final audioUrl = await FirebaseService.uploadAudioMessage(_chatId!, file);
+        // Upload vers Cloudinary au lieu de Firebase
+        final audioUrl = await CloudinaryService.uploadAudio(path, 'chat_audios/$_chatId');
         
         await ChatService.sendMessage(
           chatId: _chatId!,

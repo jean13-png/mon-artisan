@@ -425,7 +425,7 @@ class _CommandesHistoryScreenState extends State<CommandesHistoryScreen> {
                     child: Text(
                       'Noter l\'artisan',
                       style: AppTextStyles.bodySmall.copyWith(
-                        color: AppColors.accentRed,
+                        color: AppColors.primaryBlue,
                         fontWeight: FontWeight.w600,
                       ),
                     ),

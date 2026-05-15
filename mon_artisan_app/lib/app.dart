@@ -56,7 +56,7 @@ class _AppRouterState extends State<_AppRouter> {
     final colorScheme = ColorScheme.light(
       primary: AppColors.primaryBlue,
       onPrimary: AppColors.white,
-      secondary: AppColors.accentRed,
+      secondary: AppColors.primaryBlue,
       onSecondary: AppColors.white,
       surface: AppColors.surfaceCard,
       onSurface: AppColors.onSurface,
@@ -126,7 +126,7 @@ class _AppRouterState extends State<_AppRouter> {
         ),
       ),
       floatingActionButtonTheme: const FloatingActionButtonThemeData(
-        backgroundColor: AppColors.accentRed,
+        backgroundColor: AppColors.primaryBlue,
         foregroundColor: AppColors.white,
       ),
     );

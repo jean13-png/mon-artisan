@@ -169,6 +169,27 @@ class FirestoreService {
     }
   }
 
+  /// Créditer le compte d'un artisan après une prestation validée
+  static Future<void> crediterArtisan(String artisanId, double montant) async {
+    try {
+      await _firestore.runTransaction((transaction) async {
+        final artisanDoc = await transaction.get(artisans.doc(artisanId));
+        if (artisanDoc.exists) {
+          final revenusTotal = (artisanDoc['revenusTotal'] ?? 0.0).toDouble();
+          final revenusDisponibles = (artisanDoc['revenusDisponibles'] ?? 0.0).toDouble();
+          
+          transaction.update(artisans.doc(artisanId), {
+            'revenusTotal': revenusTotal + montant,
+            'revenusDisponibles': revenusDisponibles + montant,
+            'updatedAt': Timestamp.now(),
+          });
+        }
+      });
+    } catch (e) {
+      throw Exception('Erreur lors du crédit de l\'artisan: $e');
+    }
+  }
+
   // ==================== COMMANDES ====================
 
   /// Créer une commande
@@ -454,6 +475,32 @@ class FirestoreService {
       await notifications.doc(notificationId).update({'isRead': true});
     } catch (e) {
       throw Exception('Erreur lors de la mise à jour de la notification: $e');
+    }
+  }
+
+  /// Supprimer une notification
+  static Future<void> deleteNotification(String notificationId) async {
+    try {
+      await notifications.doc(notificationId).delete();
+    } catch (e) {
+      throw Exception('Erreur lors de la suppression de la notification: $e');
+    }
+  }
+
+  /// Supprimer toutes les notifications d'un utilisateur
+  static Future<void> deleteAllNotifications(String userId) async {
+    try {
+      final querySnapshot = await notifications
+          .where('userId', isEqualTo: userId)
+          .get();
+
+      final batch = _firestore.batch();
+      for (var doc in querySnapshot.docs) {
+        batch.delete(doc.reference);
+      }
+      await batch.commit();
+    } catch (e) {
+      throw Exception('Erreur lors de la suppression des notifications: $e');
     }
   }
 

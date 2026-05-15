@@ -108,7 +108,13 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
   Future<void> _markAsRead(String notificationId) async {
     try {
       await FirestoreService.markNotificationAsRead(notificationId);
-      await _loadNotifications();
+      // Plus besoin de recharger tout, on met à jour localement pour la fluidité
+      setState(() {
+        final index = _notifications.indexWhere((n) => n['id'] == notificationId);
+        if (index != -1) {
+          _notifications[index]['isRead'] = true;
+        }
+      });
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -117,6 +123,69 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
             backgroundColor: AppColors.error,
           ),
         );
+      }
+    }
+  }
+
+  Future<void> _deleteNotification(String notificationId) async {
+    try {
+      await FirestoreService.deleteNotification(notificationId);
+      setState(() {
+        _notifications.removeWhere((n) => n['id'] == notificationId);
+      });
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Erreur lors de la suppression: $e'),
+            backgroundColor: AppColors.error,
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _deleteAllNotifications() async {
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    if (authProvider.userModel == null) return;
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Supprimer tout'),
+        content: const Text('Voulez-vous vraiment supprimer toutes vos notifications ? Cette action est irréversible.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Annuler'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: TextButton.styleFrom(foregroundColor: AppColors.error),
+            child: const Text('Supprimer'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true) {
+      setState(() => _isLoading = true);
+      try {
+        await FirestoreService.deleteAllNotifications(authProvider.userModel!.id);
+        setState(() {
+          _notifications = [];
+          _isLoading = false;
+        });
+      } catch (e) {
+        setState(() => _isLoading = false);
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Erreur: $e'),
+              backgroundColor: AppColors.error,
+            ),
+          );
+        }
       }
     }
   }
@@ -149,24 +218,26 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
           style: AppTextStyles.h3.copyWith(color: AppColors.white),
         ),
         actions: [
-          if (_notifications.any((n) => n['isRead'] == false))
-            TextButton(
-              onPressed: () async {
-                // Marquer toutes comme lues
-                for (var notif in _notifications) {
-                  if (notif['isRead'] == false) {
-                    await FirestoreService.markNotificationAsRead(notif['id']);
+          if (_notifications.isNotEmpty) ...[
+            if (_notifications.any((n) => n['isRead'] == false))
+              IconButton(
+                icon: const Icon(Icons.done_all, color: AppColors.white),
+                tooltip: 'Tout marquer lu',
+                onPressed: () async {
+                  for (var notif in _notifications) {
+                    if (notif['isRead'] == false) {
+                      await FirestoreService.markNotificationAsRead(notif['id']);
+                    }
                   }
-                }
-                await _loadNotifications();
-              },
-              child: Text(
-                'Tout marquer lu',
-                style: AppTextStyles.bodySmall.copyWith(
-                  color: AppColors.white,
-                ),
+                  await _loadNotifications();
+                },
               ),
+            IconButton(
+              icon: const Icon(Icons.delete_sweep_outlined, color: AppColors.white),
+              tooltip: 'Tout supprimer',
+              onPressed: _deleteAllNotifications,
             ),
+          ],
         ],
       ),
       body: _isLoading
@@ -207,7 +278,24 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                     itemBuilder: (context, index) {
                       if (index < _notifications.length) {
                         final notification = _notifications[index];
-                        return _buildNotificationCard(notification);
+                        return Dismissible(
+                          key: Key(notification['id']),
+                          direction: DismissDirection.endToStart,
+                          background: Container(
+                            alignment: Alignment.centerRight,
+                            padding: const EdgeInsets.only(right: 20.0),
+                            margin: const EdgeInsets.only(bottom: 12),
+                            decoration: BoxDecoration(
+                              color: AppColors.error,
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: const Icon(Icons.delete, color: Colors.white),
+                          ),
+                          onDismissed: (direction) {
+                            _deleteNotification(notification['id']);
+                          },
+                          child: _buildNotificationCard(notification),
+                        );
                       } else {
                         return const Padding(
                           padding: EdgeInsets.symmetric(vertical: 32),
@@ -347,7 +435,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                           width: 8,
                           height: 8,
                           decoration: const BoxDecoration(
-                            color: AppColors.accentRed,
+                            color: AppColors.primaryBlue,
                             shape: BoxShape.circle,
                           ),
                         ),

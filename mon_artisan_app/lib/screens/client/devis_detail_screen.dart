@@ -439,7 +439,7 @@ class _DevisDetailScreenState extends State<DevisDetailScreen> {
           style: AppTextStyles.h3.copyWith(color: AppColors.white),
         ),
         actions: [
-          if (['en_attente', 'diagnostic_demande', 'devis_envoye', 'devis_accepte', 'acceptee'].contains(widget.commande.statut))
+          if (['en_attente', 'diagnostic_demande', 'devis_envoye', 'devis_post_diagnostic_envoye', 'devis_accepte', 'acceptee'].contains(widget.commande.statut))
             IconButton(
               icon: const Icon(Icons.cancel_outlined, color: AppColors.white),
               tooltip: 'Annuler la commande',
@@ -501,6 +501,47 @@ class _DevisDetailScreenState extends State<DevisDetailScreen> {
             ),
 
             const SizedBox(height: 16),
+
+            // Rapport de diagnostic (si disponible)
+            if (widget.commande.descriptionProbleme != null && widget.commande.descriptionProbleme!.isNotEmpty) ...[
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(24),
+                color: AppColors.white,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        const Icon(Icons.fact_check_outlined, color: AppColors.primaryBlue, size: 24),
+                        const SizedBox(width: 8),
+                        Text('Rapport de diagnostic', style: AppTextStyles.h3),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+                    Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: AppColors.info.withOpacity(0.05),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: AppColors.info.withOpacity(0.2)),
+                      ),
+                      child: Text(
+                        widget.commande.descriptionProbleme!,
+                        style: AppTextStyles.bodyMedium.copyWith(height: 1.5),
+                      ),
+                    ),
+                    if (widget.commande.justificationMontant != null && widget.commande.justificationMontant!.isNotEmpty) ...[
+                      const SizedBox(height: 12),
+                      Text('Justification du montant :', style: AppTextStyles.bodySmall.copyWith(fontWeight: FontWeight.bold)),
+                      const SizedBox(height: 4),
+                      Text(widget.commande.justificationMontant!, style: AppTextStyles.bodyMedium.copyWith(color: AppColors.greyDark)),
+                    ],
+                  ],
+                ),
+              ),
+              const SizedBox(height: 16),
+            ],
 
             // Montant du devis
             if (widget.commande.montantDevis != null)
@@ -571,7 +612,7 @@ class _DevisDetailScreenState extends State<DevisDetailScreen> {
             ],
 
             // Information
-            if (widget.commande.statut == 'devis_envoye')
+            if (['devis_envoye', 'devis_post_diagnostic_envoye'].contains(widget.commande.statut))
               Container(
               margin: const EdgeInsets.symmetric(horizontal: 16),
               padding: const EdgeInsets.all(16),
@@ -602,7 +643,7 @@ class _DevisDetailScreenState extends State<DevisDetailScreen> {
       ),
 
       // Boutons d'action
-      bottomNavigationBar: widget.commande.statut == 'devis_envoye' ? Container(
+      bottomNavigationBar: ['devis_envoye', 'devis_post_diagnostic_envoye'].contains(widget.commande.statut) ? Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
           color: AppColors.white,
@@ -679,6 +720,14 @@ class _DevisDetailScreenState extends State<DevisDetailScreen> {
       case 'en_attente':
       case 'diagnostic_demande':
         return AppColors.warning;
+      case 'diagnostic_paye':
+        return AppColors.primaryBlue;
+      case 'diagnostic_valide':
+        return AppColors.success;
+      case 'devis_post_diagnostic_envoye':
+        return AppColors.primaryBlue;
+      case 'devis_post_diagnostic_accepte':
+        return AppColors.success;
       case 'devis_envoye':
         return AppColors.primaryBlue;
       case 'devis_accepte':
@@ -704,6 +753,14 @@ class _DevisDetailScreenState extends State<DevisDetailScreen> {
       case 'en_attente':
       case 'diagnostic_demande':
         return Icons.schedule;
+      case 'diagnostic_paye':
+        return Icons.payment;
+      case 'diagnostic_valide':
+        return Icons.fact_check;
+      case 'devis_post_diagnostic_envoye':
+        return Icons.description;
+      case 'devis_post_diagnostic_accepte':
+        return Icons.check_circle;
       case 'devis_envoye':
         return Icons.description;
       case 'devis_accepte':
@@ -731,7 +788,15 @@ class _DevisDetailScreenState extends State<DevisDetailScreen> {
       case 'en_attente':
         return 'En attente d\'une réponse';
       case 'diagnostic_demande':
-        return 'Diagnostic demandé';
+        return 'Diagnostic demandé (non payé)';
+      case 'diagnostic_paye':
+        return 'Diagnostic payé - En route';
+      case 'diagnostic_valide':
+        return 'Diagnostic effectué';
+      case 'devis_post_diagnostic_envoye':
+        return 'Devis reçu après diagnostic';
+      case 'devis_post_diagnostic_accepte':
+        return 'Devis diagnostic accepté';
       case 'devis_envoye':
         return 'Devis reçu';
       case 'devis_accepte':

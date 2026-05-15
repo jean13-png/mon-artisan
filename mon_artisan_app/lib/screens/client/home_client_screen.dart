@@ -12,6 +12,7 @@ import '../../core/routes/app_router.dart';
 import '../../core/services/firebase_service.dart';
 import '../../core/services/chat_service.dart';
 import '../../providers/auth_provider.dart';
+import '../../providers/commande_provider.dart';
 import '../../widgets/double_tap_to_exit.dart';
 import '../../widgets/location_permission_dialog.dart';
 import '../../widgets/badge_icon.dart';
@@ -61,6 +62,13 @@ class _HomeClientScreenState extends State<HomeClientScreen> {
       _checkLocationPermission();
       _loadUnreadCounts();
       
+      // Charger les commandes du client
+      final authProvider = Provider.of<AuthProvider>(context, listen: false);
+      if (authProvider.userModel != null) {
+        Provider.of<CommandeProvider>(context, listen: false)
+            .loadClientCommandes(authProvider.userModel!.id);
+      }
+
       // Lancer le timer pour le carousel
       _bannerTimer = Timer.periodic(const Duration(seconds: 3), (Timer timer) {
         if (_bannerController.hasClients) {
@@ -249,7 +257,7 @@ class _HomeClientScreenState extends State<HomeClientScreen> {
                 PopupMenuItem(
                     value: 'logout',
                     child: Row(children: [
-                      Icon(Icons.logout, color: AppColors.accentRed),
+                      Icon(Icons.logout, color: AppColors.error),
                       const SizedBox(width: 8),
                       Text('Déconnexion',
                           style:
@@ -405,11 +413,205 @@ class _HomeClientScreenState extends State<HomeClientScreen> {
               ),
 
               const SizedBox(height: 32),
+
+              // ── Commandes en cours ─────────────────────────────────────
+              _buildOngoingOrdersSection(),
+
+              const SizedBox(height: 32),
             ],
           ),
         ),
       ),
     );
+  }
+
+  Widget _buildOngoingOrdersSection() {
+    return Consumer<CommandeProvider>(
+      builder: (context, provider, child) {
+        final activeCommandes = provider.commandes
+            .where((c) => 
+                c.statut != 'validee' && 
+                c.statut != 'annulee' && 
+                c.statut != 'refusee' &&
+                c.statut != 'archivee')
+            .toList();
+
+        if (activeCommandes.isEmpty) return const SizedBox.shrink();
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    'Commandes en cours',
+                    style: AppTextStyles.h3.copyWith(
+                      color: AppColors.primaryBlue,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                  TextButton(
+                    onPressed: () => context.push(AppRouter.commandesHistory),
+                    child: Text('Historique',
+                        style: AppTextStyles.bodyMedium.copyWith(
+                            color: AppColors.primaryBlue,
+                            fontWeight: FontWeight.w600)),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 12),
+            SizedBox(
+              height: 160,
+              child: ListView.builder(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                scrollDirection: Axis.horizontal,
+                itemCount: activeCommandes.length,
+                itemBuilder: (context, index) {
+                  final commande = activeCommandes[index];
+                  return _buildOngoingOrderCard(commande);
+                },
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _buildOngoingOrderCard(dynamic commande) {
+    return GestureDetector(
+      onTap: () => context.push(AppRouter.commandeDetail, extra: commande),
+      child: Container(
+        width: 280,
+        margin: const EdgeInsets.only(right: 12, bottom: 8),
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: AppColors.white,
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(
+              color: AppColors.black.withOpacity(0.08),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: _getStatusColor(commande.statut).withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  child: Text(
+                    _getStatusText(commande.statut).toUpperCase(),
+                    style: AppTextStyles.bodySmall.copyWith(
+                      color: _getStatusColor(commande.statut),
+                      fontWeight: FontWeight.w800,
+                      fontSize: 10,
+                    ),
+                  ),
+                ),
+                const Spacer(),
+                Text(
+                  '${commande.montant.toInt()} F',
+                  style: AppTextStyles.bodyMedium.copyWith(
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.primaryBlue,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Text(
+              commande.metier,
+              style: AppTextStyles.bodyLarge.copyWith(
+                fontWeight: FontWeight.bold,
+              ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+            const SizedBox(height: 4),
+            Text(
+              commande.description,
+              style: AppTextStyles.bodySmall.copyWith(
+                color: AppColors.greyDark,
+              ),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+            ),
+            const Spacer(),
+            Row(
+              children: [
+                const Icon(Icons.access_time, size: 14, color: AppColors.greyDark),
+                const SizedBox(width: 4),
+                Expanded(
+                  child: Text(
+                    'Prévu le ${_formatDate(commande.dateIntervention)}',
+                    style: AppTextStyles.bodySmall.copyWith(fontSize: 11),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+                Icon(Icons.arrow_forward_ios, size: 12, color: AppColors.primaryBlue),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  String _getStatusText(String statut) {
+    switch (statut) {
+      case 'en_attente': return 'En attente';
+      case 'acceptee': return 'Acceptée';
+      case 'diagnostic_demande': return 'Diagnostic';
+      case 'diagnostic_paye': return 'Diag. payé';
+      case 'diagnostic_en_cours': return 'En diagnostic';
+      case 'diagnostic_valide': return 'Diag. validé';
+      case 'devis_envoye': return 'Devis reçu';
+      case 'devis_accepte': return 'Devis accepté';
+      case 'devis_post_diagnostic_envoye': return 'Devis final';
+      case 'en_cours': return 'En cours';
+      case 'terminee': return 'À valider';
+      case 'validee': return 'Terminée';
+      case 'annulee': return 'Annulée';
+      case 'refusee': return 'Refusée';
+      default: return statut;
+    }
+  }
+
+  Color _getStatusColor(String statut) {
+    switch (statut) {
+      case 'en_attente': return AppColors.warning;
+      case 'acceptee': return AppColors.success;
+      case 'diagnostic_demande': return AppColors.primaryBlue;
+      case 'diagnostic_paye': return AppColors.success;
+      case 'diagnostic_en_cours': return AppColors.primaryBlue;
+      case 'diagnostic_valide': return AppColors.success;
+      case 'devis_envoye': return AppColors.warning;
+      case 'devis_accepte': return AppColors.success;
+      case 'devis_post_diagnostic_envoye': return AppColors.warning;
+      case 'en_cours': return AppColors.primaryBlue;
+      case 'terminee': return AppColors.warning;
+      case 'validee': return AppColors.success;
+      case 'annulee': return AppColors.error;
+      case 'refusee': return AppColors.error;
+      default: return AppColors.greyDark;
+    }
+  }
+
+  String _formatDate(DateTime date) {
+    return '${date.day}/${date.month}/${date.year}';
   }
 
   // ── Composant Bannière / Carousel ───────────────────────────────────────
@@ -589,7 +791,7 @@ class _HomeClientScreenState extends State<HomeClientScreen> {
                       },
                       child: Text('Réinitialiser',
                           style: AppTextStyles.bodySmall
-                              .copyWith(color: AppColors.accentRed)),
+                              .copyWith(color: AppColors.greyDark)),
                     ),
                   ],
                 ),

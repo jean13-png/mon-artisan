@@ -41,6 +41,14 @@ class CommandeModel {
   final String? clientAdresseExacte; // Adresse complète récupérée via geocoding
   final bool clientPositionPartagee; // Si le client a partagé sa position
   final DateTime? datePartagePosition; // Date du partage de position
+
+  // Flux diagnostic
+  final bool diagnosticValideArtisan; // Artisan a confirmé être sur place
+  final String? descriptionProbleme; // Description du problème après diagnostic
+  final String? justificationMontant; // Justification optionnelle du montant
+  final double? montantDiagnostic; // Frais de déplacement calculés dynamiquement
+  final String? fedapayTransactionIdDiagnostic; // Transaction du paiement diagnostic
+  final DateTime? dateDiagnosticValide; // Date où artisan a validé le diagnostic
   
   final DateTime createdAt;
   final DateTime? acceptedAt;
@@ -86,6 +94,12 @@ class CommandeModel {
     this.clientAdresseExacte,
     this.clientPositionPartagee = false,
     this.datePartagePosition,
+    this.diagnosticValideArtisan = false,
+    this.descriptionProbleme,
+    this.justificationMontant,
+    this.montantDiagnostic,
+    this.fedapayTransactionIdDiagnostic,
+    this.dateDiagnosticValide,
     required this.createdAt,
     this.acceptedAt,
     this.completedAt,
@@ -139,6 +153,14 @@ class CommandeModel {
       datePartagePosition: data['datePartagePosition'] != null 
           ? (data['datePartagePosition'] as Timestamp).toDate() 
           : null,
+      diagnosticValideArtisan: data['diagnosticValideArtisan'] ?? false,
+      descriptionProbleme: data['descriptionProbleme'],
+      justificationMontant: data['justificationMontant'],
+      montantDiagnostic: data['montantDiagnostic']?.toDouble(),
+      fedapayTransactionIdDiagnostic: data['fedapayTransactionIdDiagnostic'],
+      dateDiagnosticValide: data['dateDiagnosticValide'] != null
+          ? (data['dateDiagnosticValide'] as Timestamp).toDate()
+          : null,
       createdAt: (data['createdAt'] as Timestamp).toDate(),
       acceptedAt: data['acceptedAt'] != null ? (data['acceptedAt'] as Timestamp).toDate() : null,
       completedAt: data['completedAt'] != null ? (data['completedAt'] as Timestamp).toDate() : null,
@@ -191,6 +213,14 @@ class CommandeModel {
       'datePartagePosition': datePartagePosition != null 
           ? Timestamp.fromDate(datePartagePosition!) 
           : null,
+      'diagnosticValideArtisan': diagnosticValideArtisan,
+      'descriptionProbleme': descriptionProbleme,
+      'justificationMontant': justificationMontant,
+      'montantDiagnostic': montantDiagnostic,
+      'fedapayTransactionIdDiagnostic': fedapayTransactionIdDiagnostic,
+      'dateDiagnosticValide': dateDiagnosticValide != null
+          ? Timestamp.fromDate(dateDiagnosticValide!)
+          : null,
       'createdAt': Timestamp.fromDate(createdAt),
       'acceptedAt': acceptedAt != null ? Timestamp.fromDate(acceptedAt!) : null,
       'completedAt': completedAt != null ? Timestamp.fromDate(completedAt!) : null,
@@ -237,6 +267,12 @@ class CommandeModel {
     String? clientAdresseExacte,
     bool? clientPositionPartagee,
     DateTime? datePartagePosition,
+    bool? diagnosticValideArtisan,
+    String? descriptionProbleme,
+    String? justificationMontant,
+    double? montantDiagnostic,
+    String? fedapayTransactionIdDiagnostic,
+    DateTime? dateDiagnosticValide,
     DateTime? createdAt,
     DateTime? acceptedAt,
     DateTime? completedAt,
@@ -281,6 +317,12 @@ class CommandeModel {
       clientAdresseExacte: clientAdresseExacte ?? this.clientAdresseExacte,
       clientPositionPartagee: clientPositionPartagee ?? this.clientPositionPartagee,
       datePartagePosition: datePartagePosition ?? this.datePartagePosition,
+      diagnosticValideArtisan: diagnosticValideArtisan ?? this.diagnosticValideArtisan,
+      descriptionProbleme: descriptionProbleme ?? this.descriptionProbleme,
+      justificationMontant: justificationMontant ?? this.justificationMontant,
+      montantDiagnostic: montantDiagnostic ?? this.montantDiagnostic,
+      fedapayTransactionIdDiagnostic: fedapayTransactionIdDiagnostic ?? this.fedapayTransactionIdDiagnostic,
+      dateDiagnosticValide: dateDiagnosticValide ?? this.dateDiagnosticValide,
       createdAt: createdAt ?? this.createdAt,
       acceptedAt: acceptedAt ?? this.acceptedAt,
       completedAt: completedAt ?? this.completedAt,

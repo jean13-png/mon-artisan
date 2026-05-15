@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -103,17 +104,4 @@ class FirebaseService {
     }
   }
 
-  // Upload Audio Message
-  static Future<String> uploadAudioMessage(String chatId, dynamic file) async {
-    try {
-      final fileName = '${DateTime.now().millisecondsSinceEpoch}.m4a';
-      final ref = _storage.ref().child('chat_audios/$chatId/$fileName');
-      
-      await ref.putFile(file);
-      final downloadUrl = await ref.getDownloadURL();
-      return downloadUrl;
-    } catch (e) {
-      throw Exception('Erreur lors de l\'upload du vocal: $e');
-    }
-  }
 }

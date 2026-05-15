@@ -453,7 +453,7 @@ class _UsersManagementScreenState extends State<UsersManagementScreen> with Sing
       margin: const EdgeInsets.only(bottom: 12),
       child: ListTile(
         leading: CircleAvatar(
-          backgroundColor: AppColors.accentRed,
+          backgroundColor: AppColors.primaryBlue,
           child: Text(
             (artisan.prenom?.isNotEmpty == true) ? artisan.prenom![0].toUpperCase() : 'A',
             style: const TextStyle(color: AppColors.white),

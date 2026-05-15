@@ -372,8 +372,8 @@ class _SearchArtisanScreenState extends State<SearchArtisanScreen> {
                         tempRayon = 50;
                       }),
                       child: Text('Réinitialiser',
-                          style: AppTextStyles.bodySmall
-                              .copyWith(color: AppColors.accentRed)),
+                           style: AppTextStyles.bodySmall
+                              .copyWith(color: AppColors.greyDark)),
                     ),
                   ],
                 ),

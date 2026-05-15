@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'dart:io';
 import '../models/commande_model.dart';
+import '../core/constants/app_constants.dart';
 import '../core/services/firebase_service.dart';
 import '../core/services/firestore_service.dart';
 import '../core/services/notification_service.dart';
@@ -65,8 +66,10 @@ class CommandeProvider extends ChangeNotifier {
 
     try {
       // Calculer la commission (10%)
-      final commission = montant * 0.10;
-      final montantArtisan = montant - commission;
+      // Si c'est un diagnostic, la base est les frais de déplacement
+      final baseCalcul = typeCommande == 'diagnostic_requis' ? (fraisDeplacement ?? 0.0) : montant;
+      final commission = baseCalcul * AppConstants.commissionRate;
+      final montantArtisan = baseCalcul - commission;
 
       final newCommande = CommandeModel(
         id: '', // Sera généré par Firestore
@@ -84,7 +87,8 @@ class CommandeProvider extends ChangeNotifier {
         heureIntervention: heureIntervention,
         statut: typeCommande == 'diagnostic_requis' ? 'diagnostic_demande' : 'en_attente',
         montant: montant,
-        fraisDeplacement: fraisDeplacement,
+        fraisDeplacement: fraisDeplacement, // calculé dynamiquement par l'appelant
+        montantDiagnostic: fraisDeplacement, // même valeur, stockée séparément
         fraisDeplacementPayes: false,
         commission: commission,
         montantArtisan: montantArtisan,
@@ -309,7 +313,11 @@ class CommandeProvider extends ChangeNotifier {
   }
 
   // Refuser une commande (artisan)
-  Future<bool> refuserCommande(String commandeId) async {
+  Future<bool> refuserCommande(String commandeId, [String? raison]) async {
+    _isLoading = true;
+    _errorMessage = null;
+    notifyListeners();
+
     try {
       // Récupérer la commande pour libérer l'artisan
       final commandeDoc = await FirebaseService.firestore
@@ -319,6 +327,7 @@ class CommandeProvider extends ChangeNotifier {
 
       if (!commandeDoc.exists) {
         _errorMessage = 'Commande introuvable';
+        _isLoading = false;
         notifyListeners();
         return false;
       }
@@ -329,7 +338,8 @@ class CommandeProvider extends ChangeNotifier {
           .collection('commandes')
           .doc(commandeId)
           .update({
-        'statut': 'refusee', // Mo7 — statut distinct de 'annulee' (annulée par le client)
+        'statut': 'refusee',
+        'motifRefus': raison,
         'updatedAt': Timestamp.now(),
       });
 
@@ -345,8 +355,11 @@ class CommandeProvider extends ChangeNotifier {
         'data': {'commandeId': commandeId},
       });
 
+      _isLoading = false;
+      notifyListeners();
       return true;
     } catch (e) {
+      _isLoading = false;
       _errorMessage = 'Erreur lors du refus de la commande';
       notifyListeners();
       return false;
@@ -407,83 +420,6 @@ class CommandeProvider extends ChangeNotifier {
   void clearError() {
     _errorMessage = null;
     notifyListeners();
-  }
-
-  // Valider une prestation (client) - Débloquer le paiement
-  Future<bool> validerPrestation(String commandeId) async {
-    // ✅ IDEMPOTENCE: Vérifier si l'opération est déjà en cours
-    final operationKey = 'valider_$commandeId';
-    if (_isOperationInProgress(operationKey)) {
-      print('[WARNING] Validation déjà en cours pour $commandeId');
-      return false;
-    }
-    
-    // Verrouiller l'opération
-    _lockOperation(operationKey);
-    
-    try {
-      // Récupérer la commande
-      final commandeDoc = await FirebaseService.firestore
-          .collection('commandes')
-          .doc(commandeId)
-          .get();
-      
-      if (!commandeDoc.exists) {
-        _errorMessage = 'Commande introuvable';
-        notifyListeners();
-        return false;
-      }
-      
-      final commande = CommandeModel.fromFirestore(commandeDoc);
-      
-      // ✅ IDEMPOTENCE: Vérifier si déjà validé
-      if (commande.paiementStatut == 'debloque' || commande.statut == 'validee') {
-        print('[INFO] Commande déjà validée: $commandeId');
-        return true; // Retourner succès car déjà fait
-      }
-      
-      // Mettre à jour le statut de paiement et débloquer l'argent
-      await FirebaseService.firestore
-          .collection('commandes')
-          .doc(commandeId)
-          .update({
-        'statut': 'validee',
-        'paiementStatut': 'debloque',
-        'dateValidationClient': Timestamp.now(),
-        'dateDeblocagePaiement': Timestamp.now(),
-        'updatedAt': Timestamp.now(),
-      });
-
-      // Créditer le portefeuille de l'artisan
-      await _crediterArtisan(commande.artisanId, commande.montantArtisan);
-      
-      // Libérer l'artisan IMMÉDIATEMENT
-      await FirestoreService.setArtisanAvailable(commande.artisanId);
-
-      // Créer une notification pour l'artisan
-      await FirestoreService.createNotification({
-        'userId': commande.artisanId,
-        'type': 'paiement_debloque',
-        'titre': 'Paiement débloqué !',
-        'message': 'Le client a validé la prestation. ${commande.montantArtisan.toStringAsFixed(0)} FCFA ont été crédités sur votre portefeuille.',
-        'data': {
-          'commandeId': commandeId,
-          'montant': commande.montantArtisan,
-        },
-      });
-
-      // Recharger les commandes
-      await loadClientCommandes(commande.clientId);
-      
-      return true;
-    } catch (e) {
-      _errorMessage = 'Erreur lors de la validation: $e';
-      notifyListeners();
-      return false;
-    } finally {
-      // ✅ IDEMPOTENCE: Toujours déverrouiller
-      _unlockOperation(operationKey);
-    }
   }
 
   // M5 — Créditer le portefeuille de l'artisan de façon atomique
@@ -681,6 +617,115 @@ class CommandeProvider extends ChangeNotifier {
     }
   }
 
+  // ─── DIAGNOSTIC : Artisan confirme être sur place ─────────────────────────
+  Future<bool> validerDiagnosticArtisan(String commandeId) async {
+    final operationKey = 'valider_diag_$commandeId';
+    if (_isOperationInProgress(operationKey)) return false;
+    _lockOperation(operationKey);
+
+    try {
+      final commandeDoc = await FirebaseService.firestore
+          .collection('commandes').doc(commandeId).get();
+      if (!commandeDoc.exists) { _errorMessage = 'Commande introuvable'; notifyListeners(); return false; }
+
+      final commande = CommandeModel.fromFirestore(commandeDoc);
+
+      // Idempotence
+      if (commande.diagnosticValideArtisan) return true;
+
+      await FirebaseService.firestore.collection('commandes').doc(commandeId).update({
+        'diagnosticValideArtisan': true,
+        'dateDiagnosticValide': Timestamp.now(),
+        'statut': 'diagnostic_valide',
+        'updatedAt': Timestamp.now(),
+      });
+
+      // ✅ Si les frais de déplacement ont été payés (bloqués), on les crédite à l'artisan
+      if (commande.fraisDeplacementPayes == true && commande.montantDiagnostic != null) {
+        // Pour les frais de déplacement, on crédite le montant net à l'artisan
+        await FirestoreService.crediterArtisan(commande.artisanId, commande.montantDiagnostic!);
+        print('[SUCCESS] Frais de diagnostic (${commande.montantDiagnostic} FCFA) crédités à l\'artisan');
+      }
+
+      // Notifier le client
+      await FirestoreService.createNotification({
+        'userId': commande.clientId,
+        'type': 'diagnostic_valide',
+        'titre': 'Diagnostic effectué',
+        'message': 'L\'artisan est arrivé et a effectué le diagnostic. Un devis vous sera envoyé prochainement.',
+        'data': {'commandeId': commandeId},
+      });
+
+      return true;
+    } catch (e) {
+      _errorMessage = 'Erreur lors de la validation du diagnostic: $e';
+      notifyListeners();
+      return false;
+    } finally {
+      _unlockOperation(operationKey);
+    }
+  }
+
+  // ─── DIAGNOSTIC : Artisan soumet le devis final après intervention ──────────
+  Future<bool> soumettreDevisPostDiagnostic({
+    required String commandeId,
+    required double montantDevis,
+    required String descriptionProbleme,
+    String? justificationMontant,
+  }) async {
+    final operationKey = 'devis_post_diag_$commandeId';
+    if (_isOperationInProgress(operationKey)) return false;
+    _lockOperation(operationKey);
+
+    try {
+      final commandeDoc = await FirebaseService.firestore
+          .collection('commandes').doc(commandeId).get();
+      if (!commandeDoc.exists) { _errorMessage = 'Commande introuvable'; notifyListeners(); return false; }
+
+      final commande = CommandeModel.fromFirestore(commandeDoc);
+
+      final commissionDevis = montantDevis * AppConstants.commissionRate;
+      final montantArtisanDevis = montantDevis - commissionDevis;
+
+      // Calculer le nouveau total (Diagnostic déjà payé + Devis final)
+      final nouveauMontantTotal = (commande.montantDiagnostic ?? 0.0) + montantDevis;
+      final nouvelleCommissionTotale = (commande.commission ?? 0.0) + commissionDevis;
+      final nouveauMontantArtisanTotal = (commande.montantArtisan ?? 0.0) + montantArtisanDevis;
+
+      await FirebaseService.firestore.collection('commandes').doc(commandeId).update({
+        'montantDevis': montantDevis,
+        'descriptionProbleme': descriptionProbleme,
+        'justificationMontant': justificationMontant,
+        'statut': 'devis_post_diagnostic_envoye',
+        'montant': nouveauMontantTotal, // Le montant total de la commande inclut maintenant le devis
+        'commission': nouvelleCommissionTotale,
+        'montantArtisan': nouveauMontantArtisanTotal,
+        'dateDevis': Timestamp.now(),
+        'updatedAt': Timestamp.now(),
+      });
+
+      // Notifier le client
+      await FirestoreService.createNotification({
+        'userId': commande.clientId,
+        'type': 'devis_post_diagnostic',
+        'titre': 'Devis reçu !',
+        'message': 'L\'artisan vous a envoyé un devis de ${montantDevis.toStringAsFixed(0)} FCFA après diagnostic.',
+        'data': {
+          'commandeId': commandeId,
+          'montantDevis': montantDevis,
+        },
+      });
+
+      return true;
+    } catch (e) {
+      _errorMessage = 'Erreur lors de l\'envoi du devis post-diagnostic: $e';
+      notifyListeners();
+      return false;
+    } finally {
+      _unlockOperation(operationKey);
+    }
+  }
+
   // Accepter un devis (client)
   Future<bool> accepterDevis(String commandeId) async {
     // ✅ IDEMPOTENCE: Vérifier si l'opération est déjà en cours
@@ -721,15 +766,26 @@ class CommandeProvider extends ChangeNotifier {
       }
       
       // Mettre à jour la commande
+      final nouveauStatut = commande.statut == 'devis_post_diagnostic_envoye' 
+          ? 'devis_post_diagnostic_accepte' 
+          : 'devis_accepte';
+
+      // Le montant est déjà mis à jour de manière cumulative dans soumettreDevisPostDiagnostic
+      // On ne le met à jour ici que si c'est une commande classique (non diagnostic)
+      final mapUpdate = {
+        'dateAcceptationDevis': Timestamp.now(),
+        'statut': nouveauStatut,
+        'updatedAt': Timestamp.now(),
+      };
+      
+      if (commande.typeCommande != 'diagnostic_requis') {
+        mapUpdate['montant'] = commande.montantDevis!;
+      }
+
       await FirebaseService.firestore
           .collection('commandes')
           .doc(commandeId)
-          .update({
-        'montant': commande.montantDevis,
-        'dateAcceptationDevis': Timestamp.now(),
-        'statut': 'devis_accepte',
-        'updatedAt': Timestamp.now(),
-      });
+          .update(mapUpdate);
 
       // Créer une notification pour l'artisan
       await FirestoreService.createNotification({
@@ -882,22 +938,37 @@ class CommandeProvider extends ChangeNotifier {
       
       final commande = CommandeModel.fromFirestore(commandeDoc);
       
-      // ✅ IDEMPOTENCE: Vérifier si déjà en escrow ou débloqué
-      if (commande.paiementStatut == 'bloque' ||
-          commande.paiementStatut == 'debloque' ||
-          commande.paiementStatut == 'paye') {
-        print('[INFO] Paiement déjà effectué pour $commandeId (statut: ${commande.paiementStatut})');
+      // ✅ IDEMPOTENCE & FLUX: Vérifier si déjà payé pour ce flux
+      if (commande.statut == 'diagnostic_demande' && commande.fraisDeplacementPayes == true) {
+        print('[INFO] Frais de diagnostic déjà payés pour $commandeId');
         return true;
       }
       
+      if (commande.statut == 'devis_post_diagnostic_accepte' && commande.paiementStatut == 'bloque' && (commande.fedapayTransactionId?.isNotEmpty ?? false)) {
+         print('[INFO] Paiement final déjà effectué pour $commandeId');
+         return true;
+      }
+
       // Mettre le paiement en escrow (bloqué jusqu'à validation client)
-      // NE PAS créditer l'artisan ici — seulement lors de validerPrestation()
+      // Déterminer le nouveau statut en fonction du flux
+      String nouveauStatut = 'acceptee';
+      String messageNotif = '${commande.montant.toStringAsFixed(0)} FCFA sont bloqués en escrow. Réalisez la prestation pour recevoir votre paiement.';
+
+      if (commande.statut == 'diagnostic_demande') {
+        nouveauStatut = 'diagnostic_paye';
+        messageNotif = 'Le client a payé les frais de diagnostic (${commande.fraisDeplacement?.toStringAsFixed(0)} FCFA). Vous pouvez vous déplacer.';
+      } else if (commande.statut == 'devis_post_diagnostic_accepte') {
+        nouveauStatut = 'en_cours';
+        messageNotif = 'Le paiement du devis final a été effectué. Vous pouvez terminer les travaux.';
+      }
+
       await FirebaseService.firestore
           .collection('commandes')
           .doc(commandeId)
           .update({
         'paiementStatut': 'bloque', // Argent bloqué en escrow
-        'statut': 'acceptee',       // Commande acceptée, travaux peuvent commencer
+        'statut': nouveauStatut,
+        'fraisDeplacementPayes': (commande.statut == 'diagnostic_demande') ? true : commande.fraisDeplacementPayes,
         'updatedAt': Timestamp.now(),
       });
 
@@ -906,7 +977,7 @@ class CommandeProvider extends ChangeNotifier {
         'userId': commande.artisanId,
         'type': 'paiement_recu',
         'titre': 'Paiement sécurisé !',
-        'message': '${commande.montant.toStringAsFixed(0)} FCFA sont bloqués en escrow. Réalisez la prestation pour recevoir votre paiement.',
+        'message': messageNotif,
         'data': {
           'commandeId': commandeId,
           'montant': commande.montantArtisan,
@@ -922,6 +993,57 @@ class CommandeProvider extends ChangeNotifier {
       return false;
     } finally {
       // ✅ IDEMPOTENCE: Toujours déverrouiller
+      _unlockOperation(operationKey);
+    }
+  }
+
+  // Valider la prestation (Client confirme que le travail est fait - libère l'argent)
+  Future<bool> validerPrestation(String commandeId) async {
+    final operationKey = 'valider_prest_$commandeId';
+    if (_isOperationInProgress(operationKey)) return false;
+    _lockOperation(operationKey);
+
+    try {
+      final commandeDoc = await FirebaseService.firestore
+          .collection('commandes').doc(commandeId).get();
+      if (!commandeDoc.exists) { _errorMessage = 'Commande introuvable'; notifyListeners(); return false; }
+
+      final commande = CommandeModel.fromFirestore(commandeDoc);
+
+      // Vérifier si déjà validé
+      if (commande.statut == 'validee') return true;
+
+      // Mettre à jour la commande
+      await FirebaseService.firestore.collection('commandes').doc(commandeId).update({
+        'statut': 'validee',
+        'paiementStatut': 'debloque',
+        'dateValidationClient': Timestamp.now(),
+        'dateDeblocagePaiement': Timestamp.now(),
+        'updatedAt': Timestamp.now(),
+      });
+
+      // ✅ Créditer l'artisan pour le montant final
+      await FirestoreService.crediterArtisan(commande.artisanId, commande.montantArtisan);
+
+      // ✅ Libérer l'artisan (le rendre disponible)
+      await FirestoreService.setArtisanAvailable(commande.artisanId);
+
+      // Notifier l'artisan
+      await FirestoreService.createNotification({
+        'userId': commande.artisanId,
+        'type': 'prestation_validee',
+        'titre': 'Paiement débloqué !',
+        'message': 'Le client a validé la prestation. ${commande.montantArtisan.toStringAsFixed(0)} FCFA ont été ajoutés à votre solde.',
+        'data': {'commandeId': commandeId, 'montant': commande.montantArtisan},
+      });
+
+      print('[SUCCESS] Prestation validée par le client. Argent débloqué.');
+      return true;
+    } catch (e) {
+      _errorMessage = 'Erreur lors de la validation: $e';
+      notifyListeners();
+      return false;
+    } finally {
       _unlockOperation(operationKey);
     }
   }

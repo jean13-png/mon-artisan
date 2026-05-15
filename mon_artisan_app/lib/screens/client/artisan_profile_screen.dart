@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import '../../core/constants/colors.dart';
 import '../../core/constants/text_styles.dart';
 import '../../core/routes/app_router.dart';
@@ -29,10 +30,21 @@ class ArtisanProfileScreen extends StatelessWidget {
               onPressed: () => Navigator.pop(context),
             ),
             flexibleSpace: FlexibleSpaceBar(
-              background: artisan.photoUrl != null
-                  ? Image.network(
-                      artisan.photoUrl!,
+              background: artisan.photoUrl != null && artisan.photoUrl!.isNotEmpty
+                  ? CachedNetworkImage(
+                      imageUrl: artisan.photoUrl!,
                       fit: BoxFit.cover,
+                      placeholder: (context, url) => const Center(
+                        child: CircularProgressIndicator(color: AppColors.white),
+                      ),
+                      errorWidget: (context, url, error) => Container(
+                        color: AppColors.primaryBlue,
+                        child: const Icon(
+                          Icons.person,
+                          size: 80,
+                          color: AppColors.white,
+                        ),
+                      ),
                     )
                   : Container(
                       color: AppColors.primaryBlue,

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import '../core/constants/colors.dart';
 import '../core/constants/text_styles.dart';
 import '../models/artisan_model.dart';
@@ -52,10 +53,28 @@ class ArtisanCard extends StatelessWidget {
                     color: AppColors.primaryBlue.withValues(alpha: disponible ? 0.1 : 0.05),
                     shape: BoxShape.circle,
                   ),
-                  child: Icon(
-                    Icons.person,
-                    color: disponible ? AppColors.primaryBlue : AppColors.greyMedium,
-                    size: 30,
+                  child: ClipOval(
+                    child: artisan.photoUrl != null && artisan.photoUrl!.isNotEmpty
+                        ? CachedNetworkImage(
+                            imageUrl: artisan.photoUrl!,
+                            fit: BoxFit.cover,
+                            placeholder: (context, url) => Center(
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: disponible ? AppColors.primaryBlue : AppColors.greyMedium,
+                              ),
+                            ),
+                            errorWidget: (context, url, error) => Icon(
+                              Icons.person,
+                              color: disponible ? AppColors.primaryBlue : AppColors.greyMedium,
+                              size: 30,
+                            ),
+                          )
+                        : Icon(
+                            Icons.person,
+                            color: disponible ? AppColors.primaryBlue : AppColors.greyMedium,
+                            size: 30,
+                          ),
                   ),
                 ),
                 const SizedBox(width: 16),

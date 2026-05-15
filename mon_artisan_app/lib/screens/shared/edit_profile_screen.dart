@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:provider/provider.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:go_router/go_router.dart';
@@ -111,6 +112,26 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
           .collection('users')
           .doc(userId)
           .update(updates);
+
+      // Si c'est un artisan, mettre à jour aussi sa collection dénormalisée
+      if (authProvider.userModel!.isArtisan) {
+        final artisanUpdates = {
+          'nom': updates['nom'],
+          'prenom': updates['prenom'],
+          if (photoUrl != null) 'photoUrl': photoUrl,
+          'updatedAt': Timestamp.now(),
+        };
+        
+        final artisanQuery = await FirebaseService.firestore
+            .collection('artisans')
+            .where('userId', isEqualTo: userId)
+            .limit(1)
+            .get();
+            
+        if (artisanQuery.docs.isNotEmpty) {
+          await artisanQuery.docs.first.reference.update(artisanUpdates);
+        }
+      }
 
       // Recharger les données utilisateur
       final updatedUser = await FirebaseService.firestore

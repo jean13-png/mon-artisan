@@ -168,7 +168,7 @@ class _EnvoyerDevisScreenState extends State<EnvoyerDevisScreen> {
                   }
                 },
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.accentRed,
+                  backgroundColor: AppColors.primaryBlue,
                   foregroundColor: AppColors.white,
                   padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
                 ),
@@ -206,7 +206,7 @@ class _EnvoyerDevisScreenState extends State<EnvoyerDevisScreen> {
     return Scaffold(
       backgroundColor: AppColors.greyLight,
       appBar: AppBar(
-        backgroundColor: AppColors.accentRed,
+        backgroundColor: AppColors.primaryBlue,
         elevation: 0,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: AppColors.white),
@@ -441,7 +441,7 @@ class _EnvoyerDevisScreenState extends State<EnvoyerDevisScreen> {
             text: 'Envoyer le devis',
             onPressed: _envoyerDevis,
             isLoading: _isLoading,
-            backgroundColor: AppColors.accentRed,
+            backgroundColor: AppColors.primaryBlue,
           ),
         ),
       ),

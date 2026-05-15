@@ -92,7 +92,7 @@ class AppRouter {
     createCommande, payment, commandesHistory, rateArtisan, locationPicker,
   };
   static const _artisanRoutes = {
-    homeArtisan, commandeDetail, revenus, completeProfile,
+    homeArtisan, revenus, completeProfile,
   };
 
   // ── Factory ───────────────────────────────────────────────────────────────

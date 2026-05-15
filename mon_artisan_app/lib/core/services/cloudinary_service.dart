@@ -13,21 +13,15 @@ class CloudinaryService {
   );
 
   /// Upload une image vers Cloudinary
-  /// 
-  /// [filePath] : Chemin local du fichier
-  /// [folder] : Dossier dans Cloudinary (ex: 'artisans/userId/diplome')
-  /// 
-  /// Retourne l'URL publique de l'image uploadée
   static Future<String> uploadImage(String filePath, String folder) async {
     try {
-      print('[UPLOAD] Upload Cloudinary: $filePath vers $folder');
+      print('[UPLOAD] Upload Image Cloudinary: $filePath vers $folder');
       
       final file = File(filePath);
       if (!await file.exists()) {
         throw Exception('Fichier introuvable: $filePath');
       }
 
-      // Upload vers Cloudinary avec timeout
       final response = await _cloudinary.uploadFile(
         CloudinaryFile.fromFile(
           filePath,
@@ -36,16 +30,45 @@ class CloudinaryService {
         ),
       ).timeout(
         const Duration(seconds: 90),
-        onTimeout: () => throw Exception('Délai dépassé. Vérifiez votre connexion.'),
+        onTimeout: () => throw Exception('Délai dépassé pour l\'upload image.'),
+      );
+
+      return response.secureUrl;
+    } catch (e) {
+      print('[ERROR] Erreur upload Image Cloudinary: $e');
+      throw Exception('Erreur upload image: $e');
+    }
+  }
+
+  /// Upload un fichier audio vers Cloudinary
+  static Future<String> uploadAudio(String filePath, String folder) async {
+    try {
+      print('[UPLOAD] Upload Audio Cloudinary: $filePath vers $folder');
+      
+      final file = File(filePath);
+      if (!await file.exists()) {
+        throw Exception('Fichier audio introuvable: $filePath');
+      }
+
+      // Upload vers Cloudinary
+      final response = await _cloudinary.uploadFile(
+        CloudinaryFile.fromFile(
+          filePath,
+          folder: folder,
+          resourceType: CloudinaryResourceType.Video, // Utiliser Video pour l'audio
+        ),
+      ).timeout(
+        const Duration(seconds: 90),
+        onTimeout: () => throw Exception('Délai dépassé pour l\'upload audio.'),
       );
 
       final url = response.secureUrl;
-      print('[SUCCESS] Upload réussi: $url');
+      print('[SUCCESS] Upload Audio réussi: $url');
       
       return url;
     } catch (e) {
-      print('[ERROR] Erreur upload Cloudinary: $e');
-      throw Exception('Erreur upload: $e');
+      print('[ERROR] Erreur upload Audio Cloudinary: $e');
+      throw Exception('Erreur upload audio: $e');
     }
   }
 
@@ -57,15 +80,10 @@ class CloudinaryService {
     final List<String> urls = [];
     
     for (int i = 0; i < filePaths.length; i++) {
-      print('[UPLOAD] Upload ${i + 1}/${filePaths.length}');
       final url = await uploadImage(filePaths[i], folder);
       urls.add(url);
     }
     
     return urls;
   }
-
-  /// Note: La suppression d'images nécessite l'API Admin de Cloudinary
-  /// qui n'est pas disponible dans cloudinary_public (client-side only)
-  /// Pour supprimer des images, utilisez l'API Admin depuis un backend
 }

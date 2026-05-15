@@ -402,7 +402,7 @@ class _CompleteProfileScreenState extends State<CompleteProfileScreen> {
               context.go(AppRouter.homeArtisan);
             },
             style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.accentRed,
+              backgroundColor: AppColors.primaryBlue,
               foregroundColor: AppColors.white,
               padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
             ),
@@ -428,7 +428,7 @@ class _CompleteProfileScreenState extends State<CompleteProfileScreen> {
       child: Scaffold(
       backgroundColor: AppColors.white,
       appBar: AppBar(
-        backgroundColor: AppColors.accentRed,
+        backgroundColor: AppColors.primaryBlue,
         elevation: 0,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: AppColors.white),
@@ -931,7 +931,7 @@ class _CompleteProfileScreenState extends State<CompleteProfileScreen> {
                       ? null
                       : _submitProfile,
                   isLoading: _isLoading,
-                  backgroundColor: AppColors.accentRed,
+                  backgroundColor: AppColors.primaryBlue,
                 ),
                 
                 const SizedBox(height: 16),

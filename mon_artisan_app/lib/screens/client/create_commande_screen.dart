@@ -6,9 +6,14 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'dart:io' as dart_io;
 import '../../core/constants/colors.dart';
 import '../../core/constants/text_styles.dart';
+import '../../core/constants/app_constants.dart';
 import '../../core/routes/app_router.dart';
 import '../../core/services/firebase_service.dart';
 import '../../core/services/adresse_service.dart';
+import '../../core/services/geolocation_service.dart';
+import 'package:firebase_auth/firebase_auth.dart' hide AuthProvider;
+import 'package:url_launcher/url_launcher.dart';
+import '../../core/services/fedapay_service.dart';
 import '../../models/artisan_model.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/commande_provider.dart';
@@ -40,7 +45,10 @@ class _CreateCommandeScreenState extends State<CreateCommandeScreen> {
   TimeOfDay? _selectedTime;
   List<XFile> _selectedImages = [];
   bool _isLoading = false;
+  bool _isCalculatingFrais = false;
   AdresseDetectee? _adresseDetectee; // Position GPS détectée
+  double? _fraisDiagnostic; // Calculé dynamiquement selon distance
+  double? _distanceKm; // Distance artisan → client
 
   bool get _isDiagnosticMode => widget.typeCommande == 'diagnostic_requis';
 
@@ -50,17 +58,52 @@ class _CreateCommandeScreenState extends State<CreateCommandeScreen> {
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
     final user = authProvider.userModel;
     if (user != null) {
-      // Pré-remplir avec les données du profil
       _adresseController.text =
           [user.quartier, user.ville].where((s) => s.isNotEmpty).join(', ');
     }
+    // Calculer les frais de déplacement si mode diagnostic
+    if (_isDiagnosticMode) {
+      _calculerFraisDiagnostic();
+    }
   }
+
+  String? _transactionId;
 
   @override
   void dispose() {
     _descriptionController.dispose();
     _adresseController.dispose();
     super.dispose();
+  }
+
+  /// Calcule dynamiquement les frais de déplacement (formule interne cachée).
+  Future<void> _calculerFraisDiagnostic() async {
+    setState(() => _isCalculatingFrais = true);
+    try {
+      final authProvider = Provider.of<AuthProvider>(context, listen: false);
+      final user = authProvider.userModel;
+      if (user == null) { setState(() { _fraisDiagnostic = AppConstants.diagnosticMontantMin; _isCalculatingFrais = false; }); return; }
+
+      // Distance artisan -> client
+      final distance = GeolocationService.calculateDistance(
+        widget.artisan.position.latitude,
+        widget.artisan.position.longitude,
+        user.position.latitude,
+        user.position.longitude,
+      );
+
+      final frais = AppConstants.calculerFraisDiagnostic(distance);
+      setState(() {
+        _distanceKm = distance;
+        _fraisDiagnostic = frais;
+        _isCalculatingFrais = false;
+      });
+    } catch (e) {
+      setState(() {
+        _fraisDiagnostic = AppConstants.diagnosticMontantMin;
+        _isCalculatingFrais = false;
+      });
+    }
   }
 
   Future<void> _selectDate() async {
@@ -154,7 +197,9 @@ class _CreateCommandeScreenState extends State<CreateCommandeScreen> {
             ? '${_selectedTime!.hour}:${_selectedTime!.minute.toString().padLeft(2, '0')}'
             : 'À définir',
         montant: 0,
-        fraisDeplacement: _isDiagnosticMode ? 1000.0 : null,
+        fraisDeplacement: _isDiagnosticMode 
+            ? (_fraisDiagnostic ?? AppConstants.diagnosticMontantMin)
+            : null,
         photos: [],
       );
 
@@ -195,80 +240,18 @@ class _CreateCommandeScreenState extends State<CreateCommandeScreen> {
 
         if (!mounted) return;
 
-        // 2. Afficher le message de succès de la commande
-        showDialog(
-          context: context,
-          barrierDismissible: false,
-          builder: (context) => AlertDialog(
-            title: Row(
-              children: [
-                Icon(Icons.check_circle, color: AppColors.success, size: 32),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Text('Demande envoyée !', style: AppTextStyles.h3),
-                ),
-              ],
-            ),
-            content: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Votre demande a été envoyée à l\'artisan.',
-                  style: AppTextStyles.bodyMedium.copyWith(fontWeight: FontWeight.bold),
-                ),
-                const SizedBox(height: 12),
-                Row(
-                  children: [
-                    Icon(Icons.schedule, color: AppColors.greyDark, size: 20),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        'L\'artisan vous enverra un devis',
-                        style: AppTextStyles.bodyMedium,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 8),
-                Row(
-                  children: [
-                    Icon(Icons.notifications_active, color: AppColors.greyDark, size: 20),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        'Vous recevrez une notification',
-                        style: AppTextStyles.bodyMedium,
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-            actions: [
-              ElevatedButton(
-                onPressed: () {
-                  Navigator.pop(context); // Fermer le dialog
-                  context.go(AppRouter.commandesHistory);
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.primaryBlue,
-                  foregroundColor: AppColors.white,
-                  padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
-                ),
-                child: const Text('OK', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-              ),
-            ],
-          ),
-        );
+        // 3. Si c'est un diagnostic, déclencher le paiement IMMÉDIAT
+        if (_isDiagnosticMode) {
+          await _lancerPaiementDiagnostic(commandeId);
+        } else {
+          // 4. Sinon, afficher le message de succès classique (panne connue)
+          _showSuccessDialog();
+        }
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Erreur: $e'),
-            backgroundColor: AppColors.error,
-          ),
+          SnackBar(content: Text('Erreur: $e'), backgroundColor: AppColors.error),
         );
       }
     } finally {
@@ -276,6 +259,152 @@ class _CreateCommandeScreenState extends State<CreateCommandeScreen> {
         setState(() => _isLoading = false);
       }
     }
+  }
+
+  Future<void> _lancerPaiementDiagnostic(String commandeId) async {
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) throw Exception('Utilisateur non connecté');
+
+      final montant = _fraisDiagnostic ?? AppConstants.diagnosticMontantMin;
+
+      final transactionData = await FedaPayService.createTransaction(
+        amount: montant,
+        description: 'Frais de diagnostic - Commande $commandeId',
+        customerEmail: user.email ?? 'client@monartisan.com',
+        customerPhone: user.phoneNumber ?? '+22900000000',
+        commandeId: commandeId,
+      );
+
+      _transactionId = transactionData['v1']['id'].toString();
+      final paymentUrl = transactionData['v1']['url'] as String?;
+
+      if (paymentUrl != null && paymentUrl.isNotEmpty) {
+        final uri = Uri.parse(paymentUrl);
+        if (AppConstants.simulateFedaPay) {
+          _showPaymentVerificationDialog(commandeId);
+        } else if (await canLaunchUrl(uri)) {
+          await launchUrl(uri, mode: LaunchMode.externalApplication);
+          _showPaymentVerificationDialog(commandeId);
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Erreur paiement: $e'), backgroundColor: AppColors.error),
+        );
+        setState(() => _isLoading = false);
+      }
+    }
+  }
+
+  void _showPaymentVerificationDialog(String commandeId) {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const CircularProgressIndicator(),
+            const SizedBox(height: 24),
+            Text('Vérification du paiement...', style: AppTextStyles.h3, textAlign: TextAlign.center),
+            const SizedBox(height: 12),
+            const Text('Veuillez patienter pendant la validation de vos frais de diagnostic.', textAlign: TextAlign.center),
+          ],
+        ),
+      ),
+    );
+
+    Future.delayed(const Duration(seconds: 5), () {
+      _verifyPaymentStatus(commandeId);
+    });
+  }
+
+  Future<void> _verifyPaymentStatus(String commandeId) async {
+    if (_transactionId == null) return;
+
+    try {
+      final status = await FedaPayService.checkTransactionStatus(_transactionId!);
+      if (!mounted) return;
+
+      if (status == 'approved' || status == 'completed') {
+        final success = await Provider.of<CommandeProvider>(context, listen: false).effectuerPaiement(commandeId);
+        if (mounted) {
+          Navigator.of(context).pop(); // Fermer le dialog de vérif
+          if (success) {
+            _showSuccessDialog();
+          }
+        }
+      } else if (status == 'pending') {
+        Future.delayed(const Duration(seconds: 3), () => _verifyPaymentStatus(commandeId));
+      } else {
+        if (mounted) {
+          Navigator.of(context).pop();
+          setState(() => _isLoading = false);
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Le paiement a échoué. Votre demande n\'est pas encore transmise.'), backgroundColor: AppColors.error),
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        Navigator.of(context).pop();
+        setState(() => _isLoading = false);
+      }
+    }
+  }
+
+  void _showSuccessDialog() {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => AlertDialog(
+        title: Row(
+          children: [
+            Icon(Icons.check_circle, color: AppColors.success, size: 32),
+            const SizedBox(width: 12),
+            Expanded(child: Text('Demande envoyée !', style: AppTextStyles.h3)),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              _isDiagnosticMode 
+                  ? 'Frais de diagnostic payés. L\'artisan a été notifié et va se déplacer.'
+                  : 'Votre demande a été envoyée à l\'artisan.',
+              style: AppTextStyles.bodyMedium.copyWith(fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 12),
+            if (!_isDiagnosticMode)
+              Row(
+                children: [
+                  Icon(Icons.schedule, color: AppColors.greyDark, size: 20),
+                  const SizedBox(width: 8),
+                  const Expanded(child: Text('L\'artisan vous enverra un devis')),
+                ],
+              ),
+          ],
+        ),
+        actions: [
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(context);
+              context.go(AppRouter.commandesHistory);
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.primaryBlue,
+              foregroundColor: AppColors.white,
+              padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
+            ),
+            child: const Text('OK', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+          ),
+        ],
+      ),
+    );
   }
 
   @override
@@ -389,22 +518,44 @@ class _CreateCommandeScreenState extends State<CreateCommandeScreen> {
                         decoration: BoxDecoration(
                           color: AppColors.info.withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(8),
-                          border: Border.all(
-                            color: AppColors.info.withValues(alpha: 0.3),
-                          ),
+                          border: Border.all(color: AppColors.info.withValues(alpha: 0.3)),
                         ),
                         child: Row(
                           children: [
                             Icon(Icons.info_outline, color: AppColors.info, size: 20),
                             const SizedBox(width: 12),
                             Expanded(
-                              child: Text(
-                                'Frais de déplacement: 1000 FCFA',
-                                style: AppTextStyles.bodyMedium.copyWith(
-                                  fontWeight: FontWeight.bold,
-                                  color: AppColors.info,
-                                ),
-                              ),
+                              child: _isCalculatingFrais
+                                  ? Row(
+                                      children: [
+                                        SizedBox(
+                                          width: 14, height: 14,
+                                          child: CircularProgressIndicator(
+                                            strokeWidth: 1.5,
+                                            color: AppColors.info,
+                                          ),
+                                        ),
+                                        const SizedBox(width: 8),
+                                        Text('Calcul des frais...', style: AppTextStyles.bodyMedium.copyWith(color: AppColors.info)),
+                                      ],
+                                    )
+                                  : Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          'Frais de déplacement : ${(_fraisDiagnostic ?? AppConstants.diagnosticMontantMin).toStringAsFixed(0)} FCFA',
+                                          style: AppTextStyles.bodyMedium.copyWith(
+                                            fontWeight: FontWeight.bold,
+                                            color: AppColors.info,
+                                          ),
+                                        ),
+                                        if (_distanceKm != null)
+                                          Text(
+                                            'Distance estimée : ${_distanceKm!.toStringAsFixed(1)} km',
+                                            style: AppTextStyles.bodySmall.copyWith(color: AppColors.info),
+                                          ),
+                                      ],
+                                    ),
                             ),
                           ],
                         ),
@@ -635,11 +786,11 @@ class _CreateCommandeScreenState extends State<CreateCommandeScreen> {
                           ),
                           const SizedBox(height: 12),
                           if (_isDiagnosticMode) ...[
-                            _buildProcessStep('1', 'Vous payez 1000 FCFA de frais de déplacement'),
+                            _buildProcessStep('1', 'Vous payez les frais de déplacement (${(_fraisDiagnostic ?? AppConstants.diagnosticMontantMin).toStringAsFixed(0)} FCFA)'),
                             _buildProcessStep('2', 'L\'artisan se déplace pour le diagnostic'),
                             _buildProcessStep('3', 'Il vous envoie un devis détaillé'),
                             _buildProcessStep('4', 'Vous acceptez ou refusez le devis'),
-                            _buildProcessStep('5', 'Si accepté: paiement et travaux'),
+                            _buildProcessStep('5', 'Si accepté : paiement et travaux'),
                           ] else ...[
                             _buildProcessStep('1', 'L\'artisan reçoit votre demande'),
                             _buildProcessStep('2', 'Il vous envoie un devis basé sur la complexité'),

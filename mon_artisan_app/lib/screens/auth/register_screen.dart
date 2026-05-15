@@ -337,8 +337,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   text: 'S\'inscrire',
                   onPressed: _handleRegister,
                   isLoading: authProvider.isLoading,
-                  backgroundColor:
-                      isArtisan ? AppColors.accentRed : AppColors.primaryBlue,
+                  backgroundColor: AppColors.primaryBlue,
                 ),
                 const SizedBox(height: 16),
 

@@ -93,7 +93,7 @@ class _ContratEngagementScreenState extends State<ContratEngagementScreen> {
       child: Scaffold(
       backgroundColor: AppColors.white,
       appBar: AppBar(
-        backgroundColor: AppColors.accentRed,
+        backgroundColor: AppColors.primaryBlue,
         elevation: 0,
         title: Text(
           'Contrat d\'engagement',
@@ -159,7 +159,7 @@ class _ContratEngagementScreenState extends State<ContratEngagementScreen> {
                   Text(
                     'CONTRAT D\'ENGAGEMENT ARTISAN',
                     style: AppTextStyles.h2.copyWith(
-                      color: AppColors.accentRed,
+                      color: AppColors.primaryBlue,
                     ),
                     textAlign: TextAlign.center,
                   ),
@@ -284,7 +284,7 @@ class _ContratEngagementScreenState extends State<ContratEngagementScreen> {
                             _hasAccepted = value ?? false;
                           });
                         },
-                        activeColor: AppColors.accentRed,
+                        activeColor: AppColors.primaryBlue,
                       ),
                       Expanded(
                         child: Padding(
@@ -308,7 +308,7 @@ class _ContratEngagementScreenState extends State<ContratEngagementScreen> {
                   text: 'Finaliser l\'inscription',
                   onPressed: _hasAccepted ? _acceptContract : null,
                   isLoading: _isLoading,
-                  backgroundColor: _hasAccepted ? AppColors.accentRed : AppColors.greyMedium,
+                  backgroundColor: _hasAccepted ? AppColors.primaryBlue : AppColors.greyMedium,
                 ),
               ],
             ),
@@ -329,7 +329,7 @@ class _ContratEngagementScreenState extends State<ContratEngagementScreen> {
             title,
             style: AppTextStyles.bodyLarge.copyWith(
               fontWeight: FontWeight.w700,
-              color: AppColors.accentRed,
+              color: AppColors.primaryBlue,
             ),
           ),
           const SizedBox(height: 8),
