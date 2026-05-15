@@ -63,6 +63,26 @@ class _SearchArtisanScreenState extends State<SearchArtisanScreen> {
         setState(() {
           _userPosition = position;
         });
+      } else {
+        // Fallback sur la position du profil si GPS refusé
+        final authProvider = Provider.of<AuthProvider>(context, listen: false);
+        final user = authProvider.userModel;
+        if (user != null) {
+          setState(() {
+            _userPosition = Position(
+              latitude: user.position.latitude,
+              longitude: user.position.longitude,
+              timestamp: DateTime.now(),
+              accuracy: 0,
+              altitude: 0,
+              heading: 0,
+              speed: 0,
+              speedAccuracy: 0,
+              altitudeAccuracy: 0,
+              headingAccuracy: 0,
+            );
+          });
+        }
       }
     } catch (e) {
       // Ignore
@@ -213,10 +233,19 @@ class _SearchArtisanScreenState extends State<SearchArtisanScreen> {
                             itemCount: sorted.length,
                             itemBuilder: (context, index) {
                               final artisan = sorted[index];
-                              final distance = _userPosition != null
+                              final authProvider = Provider.of<AuthProvider>(context, listen: false);
+                              final user = authProvider.userModel;
+                              
+                              // On utilise la position du profil pour le calcul financier et la distance fixe
+                              // pour être cohérent avec CreateCommandeScreen
+                              final referencePos = user?.position ?? (_userPosition != null 
+                                ? GeoPoint(_userPosition!.latitude, _userPosition!.longitude)
+                                : null);
+
+                              final distance = referencePos != null
                                   ? GeolocationService.calculateDistance(
-                                      _userPosition!.latitude,
-                                      _userPosition!.longitude,
+                                      referencePos.latitude,
+                                      referencePos.longitude,
                                       artisan.position.latitude,
                                       artisan.position.longitude,
                                     )

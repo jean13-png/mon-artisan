@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../core/constants/colors.dart';
 import '../core/constants/text_styles.dart';
+import '../core/constants/app_constants.dart';
 import '../models/artisan_model.dart';
 
 class ArtisanCard extends StatelessWidget {
@@ -156,22 +157,47 @@ class ArtisanCard extends StatelessWidget {
                               overflow: TextOverflow.ellipsis,
                             ),
                           ),
-                          if (distance != null)
+                          if (distance != null) ...[
                             Container(
                               padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                               decoration: BoxDecoration(
                                 color: AppColors.primaryBlue.withValues(alpha: 0.1),
                                 borderRadius: BorderRadius.circular(4),
                               ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(Icons.directions_run, size: 10, color: AppColors.primaryBlue),
+                                  const SizedBox(width: 2),
+                                  Text(
+                                    '${distance!.toStringAsFixed(1)} km',
+                                    style: AppTextStyles.bodySmall.copyWith(
+                                      color: AppColors.primaryBlue,
+                                      fontWeight: FontWeight.w600,
+                                      fontSize: 10,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(width: 6),
+                            // Badge Prix Diagnostic (en fonction de la distance)
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: AppColors.success.withValues(alpha: 0.1),
+                                borderRadius: BorderRadius.circular(4),
+                              ),
                               child: Text(
-                                '${distance!.toStringAsFixed(1)} km',
+                                'Diag: ${AppConstants.calculerFraisDiagnostic(distance!).toStringAsFixed(0)} F',
                                 style: AppTextStyles.bodySmall.copyWith(
-                                  color: AppColors.primaryBlue,
-                                  fontWeight: FontWeight.w600,
+                                  color: AppColors.success,
+                                  fontWeight: FontWeight.w700,
                                   fontSize: 10,
                                 ),
                               ),
                             ),
+                          ],
                         ],
                       ),
                       const SizedBox(height: 4),
