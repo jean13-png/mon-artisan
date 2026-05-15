@@ -135,6 +135,11 @@ service cloud.firestore {
       // Suppression: seulement ses propres notifications
       allow delete: if isAuthenticated() && 
                        resource.data.userId == request.auth.uid;
+    // Collection: avis
+    match /avis/{avisId} {
+      allow read: if true;
+      allow create: if isAuthenticated();
+      allow update, delete: if isAdmin();
     }
   }
 }
