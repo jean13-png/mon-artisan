@@ -814,6 +814,31 @@ class _CommandeDetailScreenState extends State<CommandeDetailScreen> {
               _buildDevisPostDiagnosticSection(context, commande),
             ],
 
+            // Info en attente client (pour l'artisan)
+            if (!_isClient && (commande.statut == 'devis_envoye' || commande.statut == 'devis_post_diagnostic_envoye')) ...[
+              const SizedBox(height: 16),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(24),
+                color: AppColors.warning.withOpacity(0.1),
+                child: Row(
+                  children: [
+                    const Icon(Icons.hourglass_empty, color: AppColors.warning),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: Text(
+                        'Devis envoyé au client. En attente de son acceptation et du paiement.',
+                        style: AppTextStyles.bodyMedium.copyWith(
+                          color: AppColors.warning,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+
             // Description du problème (si rempli par l'artisan)
             if (commande.descriptionProbleme != null &&
                 commande.descriptionProbleme!.isNotEmpty) ...[

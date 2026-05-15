@@ -793,6 +793,20 @@ class _HomeArtisanScreenState extends State<HomeArtisanScreen> {
                                   fontWeight: FontWeight.bold,
                                   fontSize: 10)),
                         ),
+                      ] else if (commande.statut == 'devis_envoye' || commande.statut == 'devis_post_diagnostic_envoye') ...[
+                        const SizedBox(width: 8),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: AppColors.warning.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                          child: Text('DEVIS ENVOYÉ',
+                              style: AppTextStyles.bodySmall.copyWith(
+                                  color: AppColors.warning,
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 10)),
+                        ),
                       ],
                     ],
                   ),
