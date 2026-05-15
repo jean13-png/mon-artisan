@@ -11,6 +11,7 @@ import '../../providers/auth_provider.dart';
 import '../../core/services/firebase_service.dart';
 import '../../core/services/cloudinary_service.dart';
 import '../../widgets/custom_button.dart';
+import '../../widgets/custom_textfield.dart';
 import '../../widgets/loading_widget.dart';
 import '../../widgets/ville_quartier_selector.dart';
 import '../../widgets/position_client_widget.dart';
@@ -28,6 +29,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   final _prenomController = TextEditingController();
   final _telephoneController = TextEditingController();
   final _emailController = TextEditingController();
+  final _tarifController = TextEditingController(text: '5000');
   
   String? _selectedVille;
   String? _selectedQuartier;
@@ -40,7 +42,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     _loadUserData();
   }
 
-  void _loadUserData() {
+  Future<void> _loadUserData() async {
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
     final user = authProvider.userModel;
     if (user != null) {
@@ -48,8 +50,31 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       _prenomController.text = user.prenom;
       _telephoneController.text = user.telephone;
       _emailController.text = user.email;
-      _selectedVille = user.ville;
-      _selectedQuartier = user.quartier;
+      setState(() {
+        _selectedVille = user.ville;
+        _selectedQuartier = user.quartier;
+      });
+
+      if (user.isArtisan) {
+        try {
+          final artisanQuery = await FirebaseService.firestore
+              .collection('artisans')
+              .where('userId', isEqualTo: user.id)
+              .limit(1)
+              .get();
+          if (artisanQuery.docs.isNotEmpty) {
+            final data = artisanQuery.docs.first.data();
+            final tarifs = data['tarifs'] as Map<String, dynamic>?;
+            if (tarifs != null) {
+              setState(() {
+                _tarifController.text = (tarifs['horaire'] ?? tarifs['tarifHoraire'] ?? 5000).toString();
+              });
+            }
+          }
+        } catch (e) {
+          print('Erreur chargement tarif: $e');
+        }
+      }
     }
   }
 
@@ -115,10 +140,12 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
 
       // Si c'est un artisan, mettre à jour aussi sa collection dénormalisée
       if (authProvider.userModel!.isArtisan) {
+        final double? newTarif = double.tryParse(_tarifController.text.trim());
         final artisanUpdates = {
           'nom': updates['nom'],
           'prenom': updates['prenom'],
           if (photoUrl != null) 'photoUrl': photoUrl,
+          if (newTarif != null) 'tarifs': {'horaire': newTarif},
           'updatedAt': Timestamp.now(),
         };
         
@@ -184,6 +211,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     _prenomController.dispose();
     _telephoneController.dispose();
     _emailController.dispose();
+    _tarifController.dispose();
     super.dispose();
   }
 
@@ -358,17 +386,35 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
 
                     const SizedBox(height: 16),
 
-                    TextField(
+                    CustomTextField(
+                      label: 'Email',
                       controller: _emailController,
-                      decoration: InputDecoration(
-                        labelText: 'Email',
-                        prefixIcon: const Icon(Icons.email_outlined),
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                      ),
+                      prefixIcon: const Icon(Icons.email_outlined),
                       keyboardType: TextInputType.emailAddress,
+                      enabled: false, // Email généralement non modifiable
                     ),
+                    const SizedBox(height: 16),
+                    
+                    if (user.isArtisan) ...[
+                      CustomTextField(
+                        label: 'Tarif Horaire (FCFA)',
+                        controller: _tarifController,
+                        prefixIcon: const Icon(Icons.payments_outlined),
+                        keyboardType: TextInputType.number,
+                        validator: (value) {
+                          if (value == null || value.isEmpty) {
+                            return 'Veuillez entrer votre tarif horaire';
+                          }
+                          if (double.tryParse(value) == null) {
+                            return 'Veuillez entrer un nombre valide';
+                          }
+                          return null;
+                        },
+                      ),
+                      const SizedBox(height: 16),
+                    ],
+
+                    Text('Localisation', style: AppTextStyles.h3),
 
                     const SizedBox(height: 16),
 
