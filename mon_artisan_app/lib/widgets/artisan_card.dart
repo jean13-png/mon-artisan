@@ -157,7 +157,7 @@ class ArtisanCard extends StatelessWidget {
                               overflow: TextOverflow.ellipsis,
                             ),
                           ),
-                          if (distance != null) ...[
+                          if (distance != null)
                             Container(
                               padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                               decoration: BoxDecoration(
@@ -170,7 +170,9 @@ class ArtisanCard extends StatelessWidget {
                                   Icon(Icons.directions_run, size: 10, color: AppColors.primaryBlue),
                                   const SizedBox(width: 2),
                                   Text(
-                                    '${distance!.toStringAsFixed(1)} km',
+                                    distance! < 1 
+                                        ? '${(distance! * 1000).toStringAsFixed(0)} m'
+                                        : '${distance!.toStringAsFixed(1)} km',
                                     style: AppTextStyles.bodySmall.copyWith(
                                       color: AppColors.primaryBlue,
                                       fontWeight: FontWeight.w600,
@@ -180,24 +182,6 @@ class ArtisanCard extends StatelessWidget {
                                 ],
                               ),
                             ),
-                            const SizedBox(width: 6),
-                            // Badge Prix Diagnostic (en fonction de la distance)
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                              decoration: BoxDecoration(
-                                color: AppColors.success.withValues(alpha: 0.1),
-                                borderRadius: BorderRadius.circular(4),
-                              ),
-                              child: Text(
-                                'Diag: ${AppConstants.calculerFraisDiagnostic(distance!).toStringAsFixed(0)} F',
-                                style: AppTextStyles.bodySmall.copyWith(
-                                  color: AppColors.success,
-                                  fontWeight: FontWeight.w700,
-                                  fontSize: 10,
-                                ),
-                              ),
-                            ),
-                          ],
                         ],
                       ),
                       const SizedBox(height: 4),
