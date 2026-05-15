@@ -968,8 +968,29 @@ class _CommandeDetailScreenState extends State<CommandeDetailScreen> {
       );
     }
 
-    // En attente
-    if (statut == 'diagnostic_paye' || statut == 'diagnostic_valide' || statut == 'devis_post_diagnostic_accepte' || statut == 'acceptee' || statut == 'en_cours') {
+    // Action : Marquer le service comme rendu (Validation client)
+    if (statut == 'en_cours' || statut == 'devis_post_diagnostic_accepte' || statut == 'acceptee') {
+      return _buildBottomBar(
+        child: Row(
+          children: [
+            Expanded(
+              child: CustomButton(
+                text: 'Service rendu & Noter',
+                onPressed: () => _validerPrestationClient(commande),
+                backgroundColor: AppColors.success,
+              ),
+            ),
+            const SizedBox(width: 12),
+            _buildChatButton(),
+            const SizedBox(width: 8),
+            _buildCallButton(),
+          ],
+        ),
+      );
+    }
+
+    // En attente (Diagnostic en cours)
+    if (statut == 'diagnostic_paye' || statut == 'diagnostic_valide') {
       return _buildBottomBar(
         child: Row(
           children: [
@@ -978,8 +999,7 @@ class _CommandeDetailScreenState extends State<CommandeDetailScreen> {
             Expanded(
               child: Text(
                 statut == 'diagnostic_paye' ? 'Artisan en route pour le diagnostic' :
-                statut == 'diagnostic_valide' ? 'Diagnostic effectué, en attente du devis' :
-                'Intervention en cours...',
+                'Diagnostic effectué, en attente du devis',
                 style: AppTextStyles.bodyMedium.copyWith(color: AppColors.primaryBlue, fontWeight: FontWeight.bold),
               ),
             ),
