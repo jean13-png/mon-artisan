@@ -14,6 +14,7 @@ import '../../widgets/double_tap_to_exit.dart';
 import '../../widgets/loading_widget.dart';
 import '../../widgets/location_permission_dialog.dart';
 import '../../widgets/badge_icon.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import '../shared/conversations_list_screen.dart';
 
 class HomeArtisanScreen extends StatefulWidget {
@@ -168,6 +169,7 @@ class _HomeArtisanScreenState extends State<HomeArtisanScreen> {
     return AppBar(
       backgroundColor: AppColors.primaryBlue,
       elevation: 0,
+      automaticallyImplyLeading: false,
       titleSpacing: 20,
       title: RichText(
         text: TextSpan(
@@ -289,8 +291,16 @@ class _HomeArtisanScreenState extends State<HomeArtisanScreen> {
                     color: AppColors.white.withOpacity(0.15),
                     shape: BoxShape.circle,
                     border: Border.all(color: AppColors.white.withOpacity(0.3), width: 2),
+                    image: user.photoUrl != null && user.photoUrl!.isNotEmpty
+                        ? DecorationImage(
+                            image: CachedNetworkImageProvider(user.photoUrl!),
+                            fit: BoxFit.cover,
+                          )
+                        : null,
                   ),
-                  child: const Icon(Icons.person, color: AppColors.white, size: 30),
+                  child: user.photoUrl == null || user.photoUrl!.isEmpty
+                      ? const Icon(Icons.person, color: AppColors.white, size: 30)
+                      : null,
                 ),
                 const SizedBox(width: 14),
                 Expanded(
