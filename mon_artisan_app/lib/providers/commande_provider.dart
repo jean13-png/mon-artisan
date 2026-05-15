@@ -278,11 +278,15 @@ class CommandeProvider extends ChangeNotifier {
       
       final commande = CommandeModel.fromFirestore(commandeDoc);
       
+      final newStatut = commande.typeCommande == 'diagnostic_requis' 
+          ? 'diagnostic_acceptee' 
+          : 'acceptee';
+      
       await FirebaseService.firestore
           .collection('commandes')
           .doc(commandeId)
           .update({
-        'statut': 'acceptee',
+        'statut': newStatut,
         'acceptedAt': Timestamp.now(),
         'updatedAt': Timestamp.now(),
       });
@@ -954,10 +958,10 @@ class CommandeProvider extends ChangeNotifier {
       String nouveauStatut = 'acceptee';
       String messageNotif = '${commande.montant.toStringAsFixed(0)} FCFA sont bloqués en escrow. Réalisez la prestation pour recevoir votre paiement.';
 
-      if (commande.statut == 'diagnostic_demande') {
+      if (commande.statut == 'diagnostic_demande' || commande.statut == 'diagnostic_acceptee') {
         nouveauStatut = 'diagnostic_paye';
         messageNotif = 'Le client a payé les frais de diagnostic (${commande.fraisDeplacement?.toStringAsFixed(0)} FCFA). Vous pouvez vous déplacer.';
-      } else if (commande.statut == 'devis_post_diagnostic_accepte') {
+      } else if (commande.statut == 'devis_post_diagnostic_envoye' || commande.statut == 'devis_post_diagnostic_accepte') {
         nouveauStatut = 'en_cours';
         messageNotif = 'Le paiement du devis final a été effectué. Vous pouvez terminer les travaux.';
       }

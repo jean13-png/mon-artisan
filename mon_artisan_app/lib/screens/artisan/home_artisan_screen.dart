@@ -128,8 +128,12 @@ class _HomeArtisanScreenState extends State<HomeArtisanScreen> {
       return const LoadingWidget(message: 'Chargement de votre profil...');
     }
 
-    final nouvellesCommandes = commandeProvider.commandes
-        .where((c) => c.statut == 'en_attente' || c.statut == 'diagnostic_paye')
+    final activeInterventions = commandeProvider.commandes
+        .where((c) => 
+            c.statut != 'validee' && 
+            c.statut != 'refusee' && 
+            c.statut != 'annulee' &&
+            c.statut != 'archivee')
         .toList();
 
     return DoubleTapToExit(
@@ -155,7 +159,7 @@ class _HomeArtisanScreenState extends State<HomeArtisanScreen> {
                 const SizedBox(height: 20),
                 _buildStatsRow(artisan),
                 const SizedBox(height: 24),
-                _buildCommandesSection(context, nouvellesCommandes),
+                _buildCommandesSection(context, activeInterventions),
                 const SizedBox(height: 32),
               ],
             ),
@@ -632,7 +636,7 @@ class _HomeArtisanScreenState extends State<HomeArtisanScreen> {
     );
   }
 
-  Widget _buildCommandesSection(BuildContext context, List<dynamic> commandes) {
+  Widget _buildCommandesSection(BuildContext context, List<dynamic> activeInterventions) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20),
       child: Column(
@@ -641,7 +645,7 @@ class _HomeArtisanScreenState extends State<HomeArtisanScreen> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text('Nouvelles demandes (${commandes.length})',
+              Text('Interventions actives (${activeInterventions.length})',
                   style: AppTextStyles.h3.copyWith(fontSize: 16)),
               TextButton(
                 onPressed: () =>
@@ -653,7 +657,7 @@ class _HomeArtisanScreenState extends State<HomeArtisanScreen> {
             ],
           ),
           const SizedBox(height: 12),
-          if (commandes.isEmpty)
+          if (activeInterventions.isEmpty)
             Container(
               width: double.infinity,
               padding: const EdgeInsets.symmetric(vertical: 36),
@@ -665,18 +669,18 @@ class _HomeArtisanScreenState extends State<HomeArtisanScreen> {
                 children: [
                   Icon(Icons.inbox_outlined, size: 44, color: AppColors.greyMedium),
                   const SizedBox(height: 12),
-                  Text('Aucune nouvelle demande',
+                  Text('Aucune intervention en cours',
                       style: AppTextStyles.bodyLarge
                           .copyWith(color: AppColors.greyDark, fontWeight: FontWeight.w600)),
                   const SizedBox(height: 6),
-                  Text('Les nouvelles commandes apparaîtront ici',
+                  Text('Vos interventions actives apparaîtront ici',
                       style: AppTextStyles.bodySmall.copyWith(color: AppColors.greyMedium),
                       textAlign: TextAlign.center),
                 ],
               ),
             )
           else
-            ...commandes.take(5).map((c) => _commandeCard(context, c)),
+            ...activeInterventions.take(5).map((c) => _commandeCard(context, c)),
         ],
       ),
     );

@@ -155,6 +155,46 @@ class _CommandeDetailScreenState extends State<CommandeDetailScreen> {
     }
   }
 
+  Future<void> _accepterCommande() async {
+    final commandeProvider = Provider.of<CommandeProvider>(context, listen: false);
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Text('Accepter la commande', style: AppTextStyles.h3),
+        content: Text(
+          'Voulez-vous accepter cette intervention ?',
+          style: AppTextStyles.bodyMedium,
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: Text('Annuler', style: AppTextStyles.bodyMedium),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: ElevatedButton.styleFrom(backgroundColor: AppColors.success),
+            child: Text('Accepter', style: AppTextStyles.button),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true && mounted) {
+      final success = await commandeProvider.accepterCommande(widget.commande.id);
+      if (success && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Commande acceptée'),
+            backgroundColor: AppColors.success,
+          ),
+        );
+        setState(() {}); 
+      }
+    }
+  }
+
   Future<void> _validerDiagnostic() async {
     final commandeProvider = Provider.of<CommandeProvider>(context, listen: false);
     
@@ -461,8 +501,8 @@ class _CommandeDetailScreenState extends State<CommandeDetailScreen> {
 
             const SizedBox(height: 16),
 
-            // Position du client (si partagée ou position par défaut)
-            if (commande.clientPosition != null || commande.position != null) ...[
+            // Position du client (Seul l'artisan voit la position et l'itinéraire)
+            if (!_isClient && (commande.clientPosition != null || commande.position != null)) ...[
               Builder(
                 builder: (context) {
                   final position = commande.clientPosition ?? commande.position!;
@@ -854,7 +894,7 @@ class _CommandeDetailScreenState extends State<CommandeDetailScreen> {
     final statut = commande.statut;
 
     // Action : Payer les frais de déplacement
-    if (statut == 'diagnostic_demande' && commande.fraisDeplacementPayes != true) {
+    if ((statut == 'diagnostic_demande' || statut == 'diagnostic_acceptee') && commande.fraisDeplacementPayes != true) {
       return _buildBottomBar(
         child: CustomButton(
           text: 'Payer les frais de déplacement (${commande.montantDiagnostic?.toInt()} F)',
@@ -903,7 +943,29 @@ class _CommandeDetailScreenState extends State<CommandeDetailScreen> {
       );
     }
 
-    // Actions par défaut (Chat / Appel)
+    // En attente
+    if (statut == 'diagnostic_paye' || statut == 'diagnostic_valide' || statut == 'devis_post_diagnostic_accepte' || statut == 'acceptee' || statut == 'en_cours') {
+      return _buildBottomBar(
+        child: Row(
+          children: [
+            const Icon(Icons.info_outline, color: AppColors.primaryBlue),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                statut == 'diagnostic_paye' ? 'Artisan en route pour le diagnostic' :
+                statut == 'diagnostic_valide' ? 'Diagnostic effectué, en attente du devis' :
+                'Intervention en cours...',
+                style: AppTextStyles.bodyMedium.copyWith(color: AppColors.primaryBlue, fontWeight: FontWeight.bold),
+              ),
+            ),
+            _buildChatButton(),
+            const SizedBox(width: 8),
+            _buildCallButton(),
+          ],
+        ),
+      );
+    }
+
     return _buildCommunicationBottomBar();
   }
 
@@ -944,15 +1006,17 @@ class _CommandeDetailScreenState extends State<CommandeDetailScreen> {
             Expanded(
               flex: 2,
               child: CustomButton(
-                text: 'Envoyer un devis',
-                onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => EnvoyerDevisScreen(commande: widget.commande),
-                    ),
-                  );
-                },
+                text: commande.typeCommande == 'diagnostic_requis' ? 'Accepter le diagnostic' : 'Envoyer un devis',
+                onPressed: commande.typeCommande == 'diagnostic_requis' 
+                    ? _accepterCommande 
+                    : () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => EnvoyerDevisScreen(commande: widget.commande),
+                          ),
+                        );
+                      },
                 backgroundColor: AppColors.primaryBlue,
               ),
             ),
@@ -961,7 +1025,67 @@ class _CommandeDetailScreenState extends State<CommandeDetailScreen> {
       );
     }
 
-    if (statut == 'devis_accepte' || statut == 'acceptee' || statut == 'en_cours') {
+    if (statut == 'diagnostic_acceptee') {
+      return _buildBottomBar(
+        child: Row(
+          children: [
+            const Icon(Icons.schedule, color: AppColors.warning),
+            const SizedBox(width: 12),
+            const Expanded(
+              child: Text(
+                'En attente du paiement des frais de diagnostic par le client',
+                style: TextStyle(color: AppColors.warning, fontWeight: FontWeight.bold),
+              ),
+            ),
+            _buildChatButton(),
+            const SizedBox(width: 8),
+            _buildCallButton(),
+          ],
+        ),
+      );
+    }
+
+    if (statut == 'diagnostic_valide') {
+      return _buildBottomBar(
+        child: Row(
+          children: [
+            const Icon(Icons.info_outline, color: AppColors.primaryBlue),
+            const SizedBox(width: 12),
+            const Expanded(
+              child: Text(
+                'Veuillez remplir le devis ci-dessus pour le client',
+                style: TextStyle(color: AppColors.primaryBlue, fontWeight: FontWeight.bold),
+              ),
+            ),
+            _buildChatButton(),
+            const SizedBox(width: 8),
+            _buildCallButton(),
+          ],
+        ),
+      );
+    }
+
+    if (statut == 'devis_post_diagnostic_envoye' || statut == 'devis_envoye') {
+       return _buildBottomBar(
+        child: Row(
+          children: [
+            const Icon(Icons.schedule, color: AppColors.warning),
+            const SizedBox(width: 12),
+            const Expanded(
+              child: Text(
+                'En attente d\'acceptation du devis par le client',
+                style: TextStyle(color: AppColors.warning, fontWeight: FontWeight.bold),
+              ),
+            ),
+            _buildChatButton(),
+            const SizedBox(width: 8),
+            _buildCallButton(),
+          ],
+        ),
+      );
+    }
+
+    if (statut == 'devis_accepte' || statut == 'acceptee' || statut == 'en_cours' || statut == 'devis_post_diagnostic_accepte') {
       return _buildBottomBar(
         child: Row(
           children: [
