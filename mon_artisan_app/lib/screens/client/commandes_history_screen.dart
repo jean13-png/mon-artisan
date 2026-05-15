@@ -436,19 +436,6 @@ class _CommandesHistoryScreenState extends State<CommandesHistoryScreen> {
             if (commande.paiementStatut == 'bloque')
               Padding(
                 padding: const EdgeInsets.only(top: 8),
-                child: Row(
-                  children: [
-                    Icon(Icons.lock, size: 14, color: AppColors.warning),
-                    const SizedBox(width: 4),
-                    Text(
-                      'Paiement bloqué (escrow)',
-                      style: AppTextStyles.bodySmall.copyWith(
-                        color: AppColors.warning,
-                        fontStyle: FontStyle.italic,
-                      ),
-                    ),
-                  ],
-                ),
               )
             else if (commande.paiementStatut == 'debloque')
               Padding(

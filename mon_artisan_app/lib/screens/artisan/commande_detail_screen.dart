@@ -461,99 +461,105 @@ class _CommandeDetailScreenState extends State<CommandeDetailScreen> {
 
             const SizedBox(height: 16),
 
-            // Position du client (si partagée)
-            if (commande.clientPositionPartagee &&
-                commande.clientPosition != null) ...[
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(24),
-                color: AppColors.white,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
+            // Position du client (si partagée ou position par défaut)
+            if (commande.clientPosition != null || commande.position != null) ...[
+              Builder(
+                builder: (context) {
+                  final position = commande.clientPosition ?? commande.position!;
+                  final adresse = commande.clientAdresseExacte ?? commande.adresse;
+                  
+                  return Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(24),
+                    color: AppColors.white,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Icon(Icons.location_on,
-                            color: AppColors.primaryBlue, size: 24),
-                        const SizedBox(width: 8),
-                        Text('Position du client', style: AppTextStyles.h3),
-                      ],
-                    ),
-                    const SizedBox(height: 16),
-                    ReadOnlyMapWidget(
-                      latitude: commande.clientPosition!.latitude,
-                      longitude: commande.clientPosition!.longitude,
-                      label: 'Position partagée',
-                    ),
-                    const SizedBox(height: 16),
-                    if (commande.clientAdresseExacte != null) ...[
-                      Container(
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          color: AppColors.greyLight,
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Row(
+                        Row(
                           children: [
-                            const Icon(Icons.place,
-                                color: AppColors.greyDark, size: 20),
+                            const Icon(Icons.location_on,
+                                color: AppColors.primaryBlue, size: 24),
                             const SizedBox(width: 8),
-                            Expanded(
-                              child: Text(
-                                commande.clientAdresseExacte!,
-                                style: AppTextStyles.bodyMedium
-                                    .copyWith(fontWeight: FontWeight.w500),
-                              ),
-                            ),
+                            Text('Position du client', style: AppTextStyles.h3),
                           ],
                         ),
-                      ),
-                      const SizedBox(height: 16),
-                    ],
-                    Row(
-                      children: [
-                        Expanded(
-                          child: ElevatedButton.icon(
-                            onPressed: () => _ouvrirGoogleMaps(
-                              commande.clientPosition!.latitude,
-                              commande.clientPosition!.longitude,
+                        const SizedBox(height: 16),
+                        ReadOnlyMapWidget(
+                          latitude: position.latitude,
+                          longitude: position.longitude,
+                          label: commande.clientPositionPartagee ? 'Position partagée (Exacte)' : 'Position d\'intervention',
+                        ),
+                        const SizedBox(height: 16),
+                        if (adresse.isNotEmpty) ...[
+                          Container(
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: AppColors.greyLight,
+                              borderRadius: BorderRadius.circular(8),
                             ),
-                            icon: const Icon(Icons.directions, size: 20),
-                            label: const Text('Itinéraire'),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: AppColors.primaryBlue,
-                              foregroundColor: AppColors.white,
-                              padding:
-                                  const EdgeInsets.symmetric(vertical: 12),
-                              shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(8)),
+                            child: Row(
+                              children: [
+                                const Icon(Icons.place,
+                                    color: AppColors.greyDark, size: 20),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: Text(
+                                    adresse,
+                                    style: AppTextStyles.bodyMedium
+                                        .copyWith(fontWeight: FontWeight.w500),
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
-                        ),
-                        if (commande.clientAdresseExacte != null) ...[
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: OutlinedButton.icon(
-                              onPressed: () =>
-                                  _copierAdresse(commande.clientAdresseExacte!),
-                              icon: const Icon(Icons.copy, size: 20),
-                              label: const Text('Copier'),
-                              style: OutlinedButton.styleFrom(
-                                foregroundColor: AppColors.primaryBlue,
-                                side: const BorderSide(
-                                    color: AppColors.primaryBlue),
-                                padding:
-                                    const EdgeInsets.symmetric(vertical: 12),
-                                shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(8)),
+                          const SizedBox(height: 16),
+                        ],
+                        Row(
+                          children: [
+                            Expanded(
+                              child: ElevatedButton.icon(
+                                onPressed: () => _ouvrirGoogleMaps(
+                                  position.latitude,
+                                  position.longitude,
+                                ),
+                                icon: const Icon(Icons.directions, size: 20),
+                                label: const Text('Itinéraire'),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: AppColors.primaryBlue,
+                                  foregroundColor: AppColors.white,
+                                  padding:
+                                      const EdgeInsets.symmetric(vertical: 12),
+                                  shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(8)),
+                                ),
                               ),
                             ),
-                          ),
-                        ],
+                            if (adresse.isNotEmpty) ...[
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: OutlinedButton.icon(
+                                  onPressed: () =>
+                                      _copierAdresse(adresse),
+                                  icon: const Icon(Icons.copy, size: 20),
+                                  label: const Text('Copier'),
+                                  style: OutlinedButton.styleFrom(
+                                    foregroundColor: AppColors.primaryBlue,
+                                    side: const BorderSide(
+                                        color: AppColors.primaryBlue),
+                                    padding:
+                                        const EdgeInsets.symmetric(vertical: 12),
+                                    shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(8)),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ],
+                        ),
                       ],
                     ),
-                  ],
-                ),
+                  );
+                }
               ),
               const SizedBox(height: 16),
             ],

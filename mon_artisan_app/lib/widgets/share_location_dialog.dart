@@ -15,81 +15,75 @@ class ShareLocationDialog {
     final bool? wantToShare = await showDialog<bool>(
       context: context,
       barrierDismissible: false,
-      builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
-        ),
-        title: Row(
-          children: [
-            Icon(Icons.location_on, color: AppColors.primaryBlue, size: 28),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Text(
-                'Partager votre position',
-                style: AppTextStyles.h3,
-              ),
-            ),
-          ],
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Pour que l\'artisan puisse vous localiser facilement, partagez votre position exacte.',
-              style: AppTextStyles.bodyMedium,
-            ),
-            const SizedBox(height: 16),
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: AppColors.success.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(
-                  color: AppColors.success.withValues(alpha: 0.3),
+      builder: (context) => PopScope(
+        canPop: false,
+        child: AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          title: Row(
+            children: [
+              Icon(Icons.location_on, color: AppColors.primaryBlue, size: 28),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  'Partager votre position',
+                  style: AppTextStyles.h3,
                 ),
               ),
-              child: Row(
-                children: [
-                  Icon(Icons.security, color: AppColors.success, size: 20),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      'Votre position est sécurisée et visible uniquement par cet artisan',
-                      style: AppTextStyles.bodySmall.copyWith(
-                        color: AppColors.greyDark,
+            ],
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Pour que l\'artisan puisse vous localiser facilement, partagez votre position exacte.',
+                style: AppTextStyles.bodyMedium,
+              ),
+              const SizedBox(height: 16),
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: AppColors.success.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(
+                    color: AppColors.success.withValues(alpha: 0.3),
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    Icon(Icons.security, color: AppColors.success, size: 20),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'Votre position est sécurisée et visible uniquement par cet artisan',
+                        style: AppTextStyles.bodySmall.copyWith(
+                          color: AppColors.greyDark,
+                        ),
                       ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            ElevatedButton.icon(
+              onPressed: () => Navigator.pop(context, true),
+              icon: const Icon(Icons.my_location, size: 20),
+              label: const Text('Partager ma position'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primaryBlue,
+                foregroundColor: AppColors.white,
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
               ),
             ),
           ],
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: Text(
-              'Plus tard',
-              style: AppTextStyles.bodyMedium.copyWith(
-                color: AppColors.greyDark,
-              ),
-            ),
-          ),
-          ElevatedButton.icon(
-            onPressed: () => Navigator.pop(context, true),
-            icon: const Icon(Icons.my_location, size: 20),
-            label: const Text('Partager ma position'),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.primaryBlue,
-              foregroundColor: AppColors.white,
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(8),
-              ),
-            ),
-          ),
-        ],
       ),
     );
 
