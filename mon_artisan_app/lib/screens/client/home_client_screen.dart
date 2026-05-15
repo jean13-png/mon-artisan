@@ -453,8 +453,6 @@ class _HomeClientScreenState extends State<HomeClientScreen> {
                 c.statut != 'archivee')
             .toList();
 
-        if (activeCommandes.isEmpty) return const SizedBox.shrink();
-
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -470,29 +468,76 @@ class _HomeClientScreenState extends State<HomeClientScreen> {
                       fontWeight: FontWeight.w800,
                     ),
                   ),
-                  TextButton(
-                    onPressed: () => context.push(AppRouter.commandesHistory),
-                    child: Text('Historique',
-                        style: AppTextStyles.bodyMedium.copyWith(
-                            color: AppColors.primaryBlue,
-                            fontWeight: FontWeight.w600)),
-                  ),
+                  if (activeCommandes.isNotEmpty)
+                    TextButton(
+                      onPressed: () => context.push(AppRouter.commandesHistory),
+                      child: Text('Historique',
+                          style: AppTextStyles.bodyMedium.copyWith(
+                              color: AppColors.primaryBlue,
+                              fontWeight: FontWeight.w600)),
+                    ),
                 ],
               ),
             ),
             const SizedBox(height: 12),
-            SizedBox(
-              height: 160,
-              child: ListView.builder(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                scrollDirection: Axis.horizontal,
-                itemCount: activeCommandes.length,
-                itemBuilder: (context, index) {
-                  final commande = activeCommandes[index];
-                  return _buildOngoingOrderCard(commande);
-                },
+            if (activeCommandes.isEmpty)
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                child: Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(20),
+                  decoration: BoxDecoration(
+                    color: AppColors.white,
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: AppColors.greyMedium.withValues(alpha: 0.5)),
+                  ),
+                  child: Column(
+                    children: [
+                      Icon(Icons.assignment_outlined, size: 48, color: AppColors.greyDark),
+                      const SizedBox(height: 12),
+                      Text(
+                        'Aucune commande pour le moment',
+                        style: AppTextStyles.bodyMedium.copyWith(
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.onSurface,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                      const SizedBox(height: 16),
+                      ElevatedButton(
+                        onPressed: () => context.push(AppRouter.searchArtisan),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.primaryBlue,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                        ),
+                        child: Text(
+                          'Trouver un artisan',
+                          style: AppTextStyles.bodyMedium.copyWith(
+                            color: AppColors.white,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              )
+            else
+              SizedBox(
+                height: 160,
+                child: ListView.builder(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  scrollDirection: Axis.horizontal,
+                  itemCount: activeCommandes.length,
+                  itemBuilder: (context, index) {
+                    final commande = activeCommandes[index];
+                    return _buildOngoingOrderCard(commande);
+                  },
+                ),
               ),
-            ),
           ],
         );
       },
