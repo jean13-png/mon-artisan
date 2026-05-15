@@ -582,6 +582,56 @@ class ArtisanProvider extends ChangeNotifier {
         .replaceAll('ç', 'c');
   }
 
+  // Mettre à jour la position GPS actuelle de l'artisan
+  Future<bool> updateLocation() async {
+    if (_currentArtisan == null) return false;
+    
+    _isLoading = true;
+    _errorMessage = null;
+    notifyListeners();
+
+    try {
+      print('[INFO] Mise à jour de la position pour ${_currentArtisan!.userId}');
+      
+      // 1. Obtenir la position actuelle
+      final position = await GeolocationService.getCurrentPosition();
+      final geoPoint = GeoPoint(position.latitude, position.longitude);
+      
+      // 2. Calculer le nouveau geohash
+      final geohash = _generateGeohash(position.latitude, position.longitude);
+      
+      // 3. Mettre à jour Firestore
+      await FirebaseService.artisansCollection
+          .doc(_currentArtisan!.id)
+          .update({
+        'position': geoPoint,
+        'geohash': geohash,
+        'locationUpdatedAt': Timestamp.now(),
+        'updatedAt': Timestamp.now(),
+      });
+
+      // 4. Mettre à jour localement
+      _currentArtisan = _currentArtisan!.copyWith(
+        position: geoPoint,
+        geohash: geohash,
+        locationUpdatedAt: DateTime.now(),
+        updatedAt: DateTime.now(),
+      );
+
+      print('[SUCCESS] Position mise à jour : ${position.latitude}, ${position.longitude}');
+      
+      _isLoading = false;
+      notifyListeners();
+      return true;
+    } catch (e) {
+      print('[ERROR] Erreur updateLocation: $e');
+      _errorMessage = 'Impossible de mettre à jour votre position. Vérifiez votre GPS.';
+      _isLoading = false;
+      notifyListeners();
+      return false;
+    }
+  }
+
   // Uploader une image vers Cloudinary
   Future<String> uploadImage(String filePath, String storagePath) async {
     try {

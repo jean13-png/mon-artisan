@@ -15,6 +15,7 @@ import '../../widgets/loading_widget.dart';
 import '../../widgets/location_permission_dialog.dart';
 import '../../widgets/badge_icon.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:intl/intl.dart';
 import '../shared/conversations_list_screen.dart';
 
 class HomeArtisanScreen extends StatefulWidget {
@@ -155,6 +156,8 @@ class _HomeArtisanScreenState extends State<HomeArtisanScreen> {
                 _buildHeroHeader(context, artisanProvider, user, artisan),
                 const SizedBox(height: 20),
                 _buildAlerts(context, artisan),
+                _buildLocationCard(context, artisanProvider, artisan),
+                const SizedBox(height: 16),
                 _buildRevenusCard(context, artisan),
                 const SizedBox(height: 20),
                 _buildStatsRow(artisan),
@@ -478,6 +481,118 @@ class _HomeArtisanScreenState extends State<HomeArtisanScreen> {
             ),
           ],
         ],
+      ),
+    );
+  }
+
+  Widget _buildLocationCard(BuildContext context, ArtisanProvider artisanProvider, dynamic artisan) {
+    final lastUpdate = artisan.locationUpdatedAt;
+    final bool isStale = lastUpdate == null || 
+        DateTime.now().difference(lastUpdate).inHours >= 24;
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: AppColors.white,
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(
+              color: AppColors.black.withOpacity(0.05),
+              blurRadius: 10,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Column(
+          children: [
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: (isStale ? AppColors.warning : AppColors.primaryBlue).withOpacity(0.1),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(
+                    Icons.my_location, 
+                    color: isStale ? AppColors.warning : AppColors.primaryBlue, 
+                    size: 20
+                  ),
+                ),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Ma Position GPS',
+                        style: AppTextStyles.bodyLarge.copyWith(fontWeight: FontWeight.bold),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        lastUpdate != null 
+                            ? 'Mis à jour le ${DateFormat('dd/MM à HH:mm').format(lastUpdate)}'
+                            : 'Position non définie',
+                        style: AppTextStyles.bodySmall.copyWith(
+                          color: isStale ? AppColors.error : AppColors.greyDark,
+                          fontWeight: isStale ? FontWeight.bold : FontWeight.normal,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                if (isStale)
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: AppColors.warning.withOpacity(0.2),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Text(
+                      'À actualiser',
+                      style: AppTextStyles.bodySmall.copyWith(
+                        color: AppColors.warning,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 10,
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            SizedBox(
+              width: double.infinity,
+              child: artisanProvider.isLoading
+                ? const Center(child: CircularProgressIndicator(strokeWidth: 2))
+                : ElevatedButton.icon(
+                    onPressed: () async {
+                      final success = await artisanProvider.updateLocation();
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text(success 
+                                ? 'Position mise à jour avec succès !' 
+                                : 'Erreur lors de la mise à jour de la position.'),
+                            backgroundColor: success ? AppColors.success : AppColors.error,
+                          ),
+                        );
+                      }
+                    },
+                    icon: const Icon(Icons.refresh, size: 18),
+                    label: const Text('Mettre à jour ma position'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: isStale ? AppColors.warning : AppColors.primaryBlue,
+                      foregroundColor: AppColors.white,
+                      elevation: 0,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                    ),
+                  ),
+            ),
+          ],
+        ),
       ),
     );
   }

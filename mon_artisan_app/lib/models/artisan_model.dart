@@ -35,6 +35,7 @@ class ArtisanModel {
   final String? raisonIndisponibilite; // 'commande_en_cours', 'conge', 'autre'
   final DateTime? dateDebutIndisponibilite;
   final DateTime? dateFinIndisponibilite;
+  final DateTime? locationUpdatedAt;
   
   final DateTime createdAt;
   final DateTime updatedAt;
@@ -81,6 +82,7 @@ class ArtisanModel {
     this.dateFinIndisponibilite,
     required this.createdAt,
     required this.updatedAt,
+    this.locationUpdatedAt,
     this.nom,
     this.prenom,
     this.photoUrl,
@@ -132,6 +134,9 @@ class ArtisanModel {
       dateFinIndisponibilite: data['dateFinIndisponibilite'] != null 
           ? (data['dateFinIndisponibilite'] as Timestamp).toDate() 
           : null,
+      locationUpdatedAt: data['locationUpdatedAt'] != null 
+          ? (data['locationUpdatedAt'] as Timestamp).toDate() 
+          : null,
       createdAt: (data['createdAt'] as Timestamp).toDate(),
       updatedAt: (data['updatedAt'] as Timestamp).toDate(),
       nom: data['nom'],
@@ -143,6 +148,92 @@ class ArtisanModel {
   }
   
   String get fullName => '${prenom ?? ''} ${nom ?? ''}'.trim();
+  
+  ArtisanModel copyWith({
+    String? id,
+    String? userId,
+    String? metier,
+    String? metierCategorie,
+    String? description,
+    int? experience,
+    Map<String, dynamic>? tarifs,
+    bool? disponibilite,
+    double? rayonAction,
+    GeoPoint? position,
+    String? geohash,
+    String? ville,
+    String? quartier,
+    List<String>? photos,
+    List<String>? certifications,
+    double? noteGlobale,
+    int? nombreAvis,
+    int? nombreCommandes,
+    double? revenusTotal,
+    double? revenusDisponibles,
+    bool? isVerified,
+    String? verificationStatus,
+    bool? isProfileComplete,
+    String? diplome,
+    String? cip,
+    String? cipPhoto,
+    List<String>? atelierPhotos,
+    String? atelierAdresse,
+    String? commandeEnCours,
+    String? raisonIndisponibilite,
+    DateTime? dateDebutIndisponibilite,
+    DateTime? dateFinIndisponibilite,
+    DateTime? createdAt,
+    DateTime? updatedAt,
+    DateTime? locationUpdatedAt,
+    String? nom,
+    String? prenom,
+    String? photoUrl,
+    String? telephone,
+    String? email,
+  }) {
+    return ArtisanModel(
+      id: id ?? this.id,
+      userId: userId ?? this.userId,
+      metier: metier ?? this.metier,
+      metierCategorie: metierCategorie ?? this.metierCategorie,
+      description: description ?? this.description,
+      experience: experience ?? this.experience,
+      tarifs: tarifs ?? this.tarifs,
+      disponibilite: disponibilite ?? this.disponibilite,
+      rayonAction: rayonAction ?? this.rayonAction,
+      position: position ?? this.position,
+      geohash: geohash ?? this.geohash,
+      ville: ville ?? this.ville,
+      quartier: quartier ?? this.quartier,
+      photos: photos ?? this.photos,
+      certifications: certifications ?? this.certifications,
+      noteGlobale: noteGlobale ?? this.noteGlobale,
+      nombreAvis: nombreAvis ?? this.nombreAvis,
+      nombreCommandes: nombreCommandes ?? this.nombreCommandes,
+      revenusTotal: revenusTotal ?? this.revenusTotal,
+      revenusDisponibles: revenusDisponibles ?? this.revenusDisponibles,
+      isVerified: isVerified ?? this.isVerified,
+      verificationStatus: verificationStatus ?? this.verificationStatus,
+      isProfileComplete: isProfileComplete ?? this.isProfileComplete,
+      diplome: diplome ?? this.diplome,
+      cip: cip ?? this.cip,
+      cipPhoto: cipPhoto ?? this.cipPhoto,
+      atelierPhotos: atelierPhotos ?? this.atelierPhotos,
+      atelierAdresse: atelierAdresse ?? this.atelierAdresse,
+      commandeEnCours: commandeEnCours ?? this.commandeEnCours,
+      raisonIndisponibilite: raisonIndisponibilite ?? this.raisonIndisponibilite,
+      dateDebutIndisponibilite: dateDebutIndisponibilite ?? this.dateDebutIndisponibilite,
+      dateFinIndisponibilite: dateFinIndisponibilite ?? this.dateFinIndisponibilite,
+      createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
+      locationUpdatedAt: locationUpdatedAt ?? this.locationUpdatedAt,
+      nom: nom ?? this.nom,
+      prenom: prenom ?? this.prenom,
+      photoUrl: photoUrl ?? this.photoUrl,
+      telephone: telephone ?? this.telephone,
+      email: email ?? this.email,
+    );
+  }
 
   Map<String, dynamic> toFirestore() {
     return {
@@ -183,6 +274,7 @@ class ArtisanModel {
           : null,
       'createdAt': Timestamp.fromDate(createdAt),
       'updatedAt': Timestamp.fromDate(updatedAt),
+      'locationUpdatedAt': locationUpdatedAt != null ? Timestamp.fromDate(locationUpdatedAt!) : null,
       // Mi7 — Inclure les champs dénormalisés depuis UserModel
       'nom': nom,
       'prenom': prenom,
