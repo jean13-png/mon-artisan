@@ -2,12 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../core/constants/colors.dart';
 import '../../core/constants/text_styles.dart';
 import '../../core/constants/villes_benin.dart';
 import '../../core/routes/app_router.dart';
 import '../../core/services/geolocation_service.dart';
 import '../../providers/artisan_provider.dart';
+import '../../providers/auth_provider.dart';
 import '../../widgets/artisan_card.dart';
 import '../../widgets/loading_widget.dart';
 
