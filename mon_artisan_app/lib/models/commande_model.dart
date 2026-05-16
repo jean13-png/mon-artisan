@@ -18,7 +18,7 @@ class CommandeModel {
   final double montant;
   final double? montantDevis; // Montant proposé par l'artisan dans le devis
   final String? messageDevis; // Message de l'artisan avec le devis
-  final double? fraisDeplacement; // Frais de déplacement pour diagnostic (500-1000 FCFA)
+  final double? fraisDeplacement; // Frais de déplacement pour diagnostic (dynamique selon distance)
   final bool? fraisDeplacementPayes; // Si les frais de déplacement ont été payés
   final String? fedapayTransactionIdDeplacement; // ID transaction FedaPay pour frais déplacement
   final double? distanceKm; // Distance calculée entre artisan et client

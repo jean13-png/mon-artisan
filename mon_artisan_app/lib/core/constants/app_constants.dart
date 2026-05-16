@@ -33,18 +33,11 @@ class AppConstants {
   static const double maxSearchRadius = 50.0; // km
 
   // Tarification diagnostic — CONFIDENTIEL (ne pas afficher en UI)
-  static const double _tarifDiagnosticParKm = 150.0;
-  static const double _diagnosticMontantMin = 1000.0;
-
-  /// Calcule les frais de diagnostic selon la distance (formule interne cachée).
-  /// Le résultat est arrondi au multiple de 500 FCFA le plus proche.
+  /// Calcule les frais de diagnostic selon la distance (formule : 200 FCFA/km + 200 FCFA fixe).
   static double calculerFraisDiagnostic(double distanceKm) {
-    final brut = distanceKm * _tarifDiagnosticParKm;
-    final arrondi = (brut / 500).ceil() * 500.0;
-    return arrondi < _diagnosticMontantMin ? _diagnosticMontantMin : arrondi;
+    return (distanceKm * 200) + 200.0;
   }
 
   // Séquestre & paiement
-  static const double diagnosticMontantMin = _diagnosticMontantMin;
   static const int deblocagePaiementDelaiJours = 7; // auto-libération après X jours
 }

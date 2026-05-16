@@ -82,7 +82,7 @@ class _CreateCommandeScreenState extends State<CreateCommandeScreen> {
     try {
       final authProvider = Provider.of<AuthProvider>(context, listen: false);
       final user = authProvider.userModel;
-      if (user == null) { setState(() { _fraisDiagnostic = AppConstants.diagnosticMontantMin; _isCalculatingFrais = false; }); return; }
+      if (user == null) { setState(() { _fraisDiagnostic = 200.0; _isCalculatingFrais = false; }); return; }
 
       // Distance artisan -> client
       final distance = GeolocationService.calculateDistance(
@@ -100,7 +100,7 @@ class _CreateCommandeScreenState extends State<CreateCommandeScreen> {
       });
     } catch (e) {
       setState(() {
-        _fraisDiagnostic = AppConstants.diagnosticMontantMin;
+        _fraisDiagnostic = 200.0;
         _isCalculatingFrais = false;
       });
     }
@@ -198,7 +198,7 @@ class _CreateCommandeScreenState extends State<CreateCommandeScreen> {
             : 'À définir',
         montant: 0,
         fraisDeplacement: _isDiagnosticMode 
-            ? (_fraisDiagnostic ?? AppConstants.diagnosticMontantMin)
+            ? (_fraisDiagnostic ?? 200.0)
             : null,
         photos: [],
       );
@@ -266,7 +266,7 @@ class _CreateCommandeScreenState extends State<CreateCommandeScreen> {
       final user = FirebaseAuth.instance.currentUser;
       if (user == null) throw Exception('Utilisateur non connecté');
 
-      final montant = _fraisDiagnostic ?? AppConstants.diagnosticMontantMin;
+      final montant = _fraisDiagnostic ?? 200.0;
 
       final transactionData = await FedaPayService.createTransaction(
         amount: montant,
@@ -786,7 +786,7 @@ class _CreateCommandeScreenState extends State<CreateCommandeScreen> {
                           ),
                           const SizedBox(height: 12),
                           if (_isDiagnosticMode) ...[
-                            _buildProcessStep('1', 'Vous payez les frais de déplacement (${(_fraisDiagnostic ?? AppConstants.diagnosticMontantMin).toStringAsFixed(0)} FCFA)'),
+                            _buildProcessStep('1', 'Vous payez les frais de déplacement (${(_fraisDiagnostic ?? 200.0).toStringAsFixed(0)} FCFA)'),
                             _buildProcessStep('2', 'L\'artisan se déplace pour le diagnostic'),
                             _buildProcessStep('3', 'Il vous envoie un devis détaillé'),
                             _buildProcessStep('4', 'Vous acceptez ou refusez le devis'),

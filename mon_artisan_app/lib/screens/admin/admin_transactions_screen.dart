@@ -15,6 +15,10 @@ class AdminTransactionsScreen extends StatelessWidget {
       appBar: AppBar(
         backgroundColor: AppColors.primaryBlue,
         elevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back, color: AppColors.white),
+          onPressed: () => context.pop(),
+        ),
         title: Text(
           'Transactions',
           style: AppTextStyles.h3.copyWith(color: AppColors.white),

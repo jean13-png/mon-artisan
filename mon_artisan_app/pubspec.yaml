@@ -68,9 +68,9 @@ dev_dependencies:
 flutter_launcher_icons:
   android: true
   ios: true
-  image_path: "assets/images/logo_mon_artisan.png"
-  adaptive_icon_background: "#1E3A8A"
-  adaptive_icon_foreground: "assets/images/logo_mon_artisan.png"
+  image_path: "assets/images/app_icon.png"
+  adaptive_icon_background: "#1A3C6E"
+  adaptive_icon_foreground: "assets/images/app_icon.png"
   remove_alpha_ios: true
 
 flutter:

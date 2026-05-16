@@ -248,7 +248,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                       Icons.check_circle_outline,
                       AppColors.success,
                       () {
-                        context.go('/admin/validate-artisans');
+                        context.push('/admin/validate-artisans');
                       },
                       badge: _artisansEnAttente > 0 ? _artisansEnAttente.toString() : null,
                     ),
@@ -260,7 +260,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                       Icons.badge,
                       AppColors.primaryBlue,
                       () {
-                        context.go('/admin/manage-agents');
+                        context.push('/admin/manage-agents');
                       },
                     ),
 
@@ -271,7 +271,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                       Icons.people,
                       AppColors.info,
                       () {
-                        context.go('/admin/manage-users');
+                        context.push('/admin/manage-users');
                       },
                     ),
 
@@ -282,7 +282,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                       Icons.report_problem,
                       AppColors.warning,
                       () {
-                        context.go(AppRouter.adminReports);
+                        context.push(AppRouter.adminReports);
                       },
                     ),
 
@@ -293,7 +293,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                       Icons.payment,
                       AppColors.accentRed,
                       () {
-                        context.go(AppRouter.adminTransactions);
+                        context.push(AppRouter.adminTransactions);
                       },
                     ),
 

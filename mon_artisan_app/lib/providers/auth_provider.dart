@@ -69,7 +69,7 @@ class AuthProvider extends ChangeNotifier {
       return false;
     } catch (e) {
       _isLoading = false;
-      _errorMessage = 'Une erreur est survenue';
+      _errorMessage = 'Connexion impossible pour le moment';
       notifyListeners();
       return false;
     }
@@ -157,7 +157,7 @@ class AuthProvider extends ChangeNotifier {
       return false;
     } catch (e) {
       _isLoading = false;
-      _errorMessage = 'Une erreur est survenue';
+      _errorMessage = 'L\'inscription a échoué. Veuillez réessayer.';
       notifyListeners();
       return false;
     }
@@ -181,7 +181,7 @@ class AuthProvider extends ChangeNotifier {
       return true;
     } catch (e) {
       _isLoading = false;
-      _errorMessage = 'Erreur lors de la réinitialisation du mot de passe';
+      _errorMessage = 'Impossible d\'envoyer l\'email de récupération';
       notifyListeners();
       return false;
     }
@@ -190,19 +190,23 @@ class AuthProvider extends ChangeNotifier {
   String _getErrorMessage(String code) {
     switch (code) {
       case 'user-not-found':
-        return 'Aucun utilisateur trouvé avec cet email';
       case 'wrong-password':
-        return 'Mot de passe incorrect';
+      case 'invalid-credential':
+        return 'Email ou mot de passe incorrect';
       case 'email-already-in-use':
-        return 'Cet email est déjà utilisé';
+        return 'Cet email est déjà associé à un compte';
       case 'invalid-email':
-        return 'Email invalide';
+        return 'Format d\'email invalide';
       case 'weak-password':
-        return 'Le mot de passe est trop faible';
+        return 'Le mot de passe choisi est trop simple';
       case 'network-request-failed':
-        return 'Erreur de connexion réseau';
+        return 'Problème de connexion internet';
+      case 'too-many-requests':
+        return 'Trop de tentatives échouées. Réessayez plus tard.';
+      case 'user-disabled':
+        return 'Ce compte a été désactivé';
       default:
-        return 'Une erreur est survenue';
+        return 'Une erreur s\'est produite lors de l\'authentification';
     }
   }
 

@@ -14,6 +14,10 @@ class AdminReportsScreen extends StatelessWidget {
       appBar: AppBar(
         backgroundColor: AppColors.primaryBlue,
         elevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back, color: AppColors.white),
+          onPressed: () => Navigator.pop(context),
+        ),
         title: Text(
           'Signalements et litiges',
           style: AppTextStyles.h3.copyWith(color: AppColors.white),

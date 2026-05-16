@@ -57,7 +57,7 @@ class _LoginScreenState extends State<LoginScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(authProvider.errorMessage ?? 'Erreur de connexion'),
-            backgroundColor: AppColors.primaryBlue,
+            backgroundColor: AppColors.error,
           ),
         );
       }
