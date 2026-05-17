@@ -1,0 +1,147 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    function isOwner(userId) {
+      return request.auth != null && request.auth.uid == userId;
+    }
+    
+    function isAdmin() {
+      return isAuthenticated() && 
+             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.roles.hasAny(['admin']);
+    }
+    
+    function isParticipant(chatData) {
+      return request.auth.uid in chatData.participants;
+    }
+    
+    // Collection: users
+    match /users/{userId} {
+      allow read: if isAuthenticated();
+      
+      // Création: l'ID du document doit être l'UID de l'auth
+      allow create: if isAuthenticated() && request.auth.uid == userId;
+      
+      allow update: if isOwner(userId) || isAdmin();
+      allow delete: if isAdmin();
+    }
+    
+    // Collection: artisans
+    match /artisans/{artisanId} {
+      allow read: if true;
+      
+      // Création: l'ID du document doit être l'UID de l'auth
+      allow create: if isAuthenticated() && artisanId == request.auth.uid;
+      
+      allow update: if isAuthenticated() && 
+                       (artisanId == request.auth.uid || 
+                        isAdmin() ||
+                        // Permettre mise à jour de disponibilité et revenus lors de commandes
+                        request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+                          'disponibilite', 'commandeEnCours', 'raisonIndisponibilite',
+                          'dateDebutIndisponibilite', 'dateFinIndisponibilite', 'updatedAt',
+                          'revenusDisponibles', 'revenusTotal', 'nombreCommandes',
+                          'noteGlobale', 'nombreAvis'
+                        ]));
+      
+      allow delete: if isAdmin();
+    }
+    
+    // Collection: commandes
+    match /commandes/{commandeId} {
+      // Lecture: seulement le client, l'artisan concerné ou admin
+      allow read: if isAuthenticated() && 
+                     (resource.data.clientId == request.auth.uid ||
+                      resource.data.artisanId == request.auth.uid ||
+                      isAdmin());
+      
+      // Création: seulement si on est le client
+      allow create: if isAuthenticated() && 
+                       request.resource.data.clientId == request.auth.uid;
+      
+      // Mise à jour: seulement le client, l'artisan concerné ou admin
+      allow update: if isAuthenticated() && 
+                       (resource.data.clientId == request.auth.uid ||
+                        resource.data.artisanId == request.auth.uid ||
+                        isAdmin());
+      
+      // Suppression: admin seulement
+      allow delete: if isAdmin();
+    }
+    
+    // Collection: agents
+    match /agents/{agentId} {
+      allow read, write: if isAdmin();
+    }
+    
+    // Collection: chats - SÉCURITÉ RENFORCÉE
+    match /chats/{chatId} {
+      // Lecture: seulement si on est participant du chat (ou si le chat n'existe pas encore pour permettre le check)
+      allow read: if isAuthenticated() && 
+                     (resource == null || request.auth.uid in resource.data.participants);
+      
+      // Création: seulement si on est dans les participants
+      allow create: if isAuthenticated() && 
+                       request.auth.uid in request.resource.data.participants;
+      
+      // Mise à jour: seulement si on est participant
+      allow update: if isAuthenticated() && 
+                       request.auth.uid in resource.data.participants;
+      
+      // Suppression: seulement si on est participant
+      allow delete: if isAuthenticated() && 
+                       request.auth.uid in resource.data.participants;
+      
+      // Messages dans un chat
+      match /messages/{messageId} {
+        // Lecture: seulement si on est participant du chat parent
+        allow read: if isAuthenticated() && 
+                       request.auth.uid in get(/databases/$(database)/documents/chats/$(chatId)).data.participants;
+        
+        // Création: seulement si on est l'expéditeur (simplifié - pas de get() supplémentaire)
+        allow create: if isAuthenticated() && 
+                         request.resource.data.senderId == request.auth.uid;
+        
+        // Mise à jour: seulement pour marquer comme lu (isRead)
+        allow update: if isAuthenticated() && 
+                         resource.data.receiverId == request.auth.uid;
+        
+        // Suppression: seulement si on est l'expéditeur
+        allow delete: if isAuthenticated() && 
+                         resource.data.senderId == request.auth.uid;
+      }
+    }
+    
+    // Collection: notifications
+    match /notifications/{notificationId} {
+      // Lecture: seulement ses propres notifications
+      allow read: if isAuthenticated() && 
+                     resource.data.userId == request.auth.uid;
+      
+      // Création: 
+      // - Admin
+      // - Système (lors de création de commande, message, etc.)
+      // - Tout utilisateur authentifié peut créer une notification pour un autre
+      allow create: if isAuthenticated();
+      
+      // Mise à jour: seulement ses propres notifications (pour marquer comme lu)
+      allow update: if isAuthenticated() && 
+                       resource.data.userId == request.auth.uid;
+      
+      // Suppression: seulement ses propres notifications
+      allow delete: if isAuthenticated() && 
+                       resource.data.userId == request.auth.uid;
+    }
+    
+    // Collection: avis
+    match /avis/{avisId} {
+      allow read: if true;
+      allow create: if isAuthenticated();
+      allow update, delete: if isAdmin();
+    }
+  }
+}

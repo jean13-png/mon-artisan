@@ -1,0 +1,96 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Fonctions helper
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    function isOwner(userId) {
+      return request.auth != null && request.auth.uid == userId;
+    }
+    
+    function isAdmin() {
+      return isAuthenticated() && 
+             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.roles.hasAny(['admin']);
+    }
+    
+    function isClient() {
+      return isAuthenticated() && 
+             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.roles.hasAny(['client']);
+    }
+    
+    function isArtisan() {
+      return isAuthenticated() && 
+             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.roles.hasAny(['artisan']);
+    }
+    
+    // Collection: users
+    match /users/{userId} {
+      // Lecture: authentifié OU lecture publique limitée (pour inscription)
+      allow read: if isAuthenticated() || 
+                     (request.query.limit <= 1 && 
+                      resource == null);
+      
+      // Création: pour l'inscription (pas encore authentifié)
+      allow create: if true;
+      
+      // Mise à jour: propriétaire ou admin
+      allow update: if isOwner(userId) || isAdmin();
+      
+      // Suppression: admin seulement
+      allow delete: if isAdmin();
+    }
+    
+    // Collection: artisans
+    match /artisans/{artisanId} {
+      allow read: if true; // Public pour recherche
+      allow create: if isAuthenticated();
+      allow update: if isAuthenticated() && 
+                       (resource.data.userId == request.auth.uid || isAdmin());
+      allow delete: if isAdmin();
+    }
+    
+    // Collection: commandes
+    match /commandes/{commandeId} {
+      allow read: if isAuthenticated() && 
+                     (resource.data.clientId == request.auth.uid ||
+                      resource.data.artisanId == request.auth.uid ||
+                      isAdmin());
+      allow create: if isAuthenticated();
+      allow update: if isAuthenticated() && 
+                       (resource.data.clientId == request.auth.uid ||
+                        resource.data.artisanId == request.auth.uid ||
+                        isAdmin());
+      allow delete: if isAdmin();
+    }
+    
+    // Collection: agents
+    match /agents/{agentId} {
+      allow read, write: if isAdmin();
+    }
+    
+    // Collection: chats
+    match /chats/{chatId} {
+      allow read, write: if isAuthenticated() && 
+                            request.auth.uid in resource.data.participants;
+      
+      match /messages/{messageId} {
+        allow read: if isAuthenticated() && 
+                       request.auth.uid in get(/databases/$(database)/documents/chats/$(chatId)).data.participants;
+        allow create: if isAuthenticated() && 
+                         request.auth.uid in get(/databases/$(database)/documents/chats/$(chatId)).data.participants;
+      }
+    }
+    
+    // Collection: notifications
+    match /notifications/{notificationId} {
+      allow read: if isAuthenticated() && 
+                     resource.data.userId == request.auth.uid;
+      allow create: if isAuthenticated();
+      allow update, delete: if isAuthenticated() && 
+                               resource.data.userId == request.auth.uid;
+    }
+  }
+}
