@@ -103,7 +103,7 @@ class ChatService {
     try {
       print('[INFO] getUserChats - Recherche des chats pour userId: $userId (limit: $limit)');
       
-      Query query = _firestore
+      Query<Map<String, dynamic>> query = _firestore
           .collection('chats')
           .where('participants', arrayContains: userId)
           .orderBy('lastMessageAt', descending: true)
@@ -113,7 +113,7 @@ class ChatService {
         query = query.startAfterDocument(startAfter);
       }
 
-      final QuerySnapshot<Map<String, dynamic>> chatsSnapshot = await query.get() as QuerySnapshot<Map<String, dynamic>>;
+      final QuerySnapshot<Map<String, dynamic>> chatsSnapshot = await query.get();
 
       print('[INFO] getUserChats - ${chatsSnapshot.docs.length} chat(s) trouvé(s) dans Firestore');
 
@@ -122,7 +122,7 @@ class ChatService {
       for (var chatDoc in chatsSnapshot.docs) {
         print('[INFO] getUserChats - Traitement du chat: ${chatDoc.id}');
         
-        final chatData = chatDoc.data() as Map<String, dynamic>;
+        final chatData = chatDoc.data();
         final participants = List<String>.from(chatData['participants'] ?? []);
         final participantNames = Map<String, dynamic>.from(chatData['participantNames'] ?? {});
 
