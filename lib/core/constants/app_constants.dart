@@ -33,6 +33,8 @@ class AppConstants {
   static const double maxSearchRadius = 50.0; // km
 
   // Tarification diagnostic — CONFIDENTIEL (ne pas afficher en UI)
+  static const double diagnosticMontantMin = 200.0;
+  
   /// Calcule les frais de diagnostic selon la distance (formule : 200 FCFA/km + 200 FCFA fixe).
   static double calculerFraisDiagnostic(double distanceKm) {
     return (distanceKm * 200) + 200.0;

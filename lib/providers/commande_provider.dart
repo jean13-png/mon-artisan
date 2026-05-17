@@ -426,34 +426,6 @@ class CommandeProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  // M5 — Créditer le portefeuille de l'artisan de façon atomique
-  Future<void> _crediterArtisan(String artisanId, double montant) async {
-    try {
-      final artisanQuery = await FirebaseService.firestore
-          .collection('artisans')
-          .where('userId', isEqualTo: artisanId)
-          .limit(1)
-          .get();
-
-      if (artisanQuery.docs.isNotEmpty) {
-        // FieldValue.increment() est atomique — pas de race condition financière
-        await FirebaseService.firestore
-            .collection('artisans')
-            .doc(artisanQuery.docs.first.id)
-            .update({
-          'revenusDisponibles': FieldValue.increment(montant),
-          'revenusTotal': FieldValue.increment(montant),
-          'nombreCommandes': FieldValue.increment(1),
-          'updatedAt': Timestamp.now(),
-        });
-
-        debugPrint('[SUCCESS] Artisan crédité: +${montant.toStringAsFixed(0)} FCFA (atomique)');
-      }
-    } catch (e) {
-      debugPrint('[ERROR] Erreur lors du crédit artisan: $e');
-    }
-  }
-
   // Rembourser le client (si artisan n'honore pas)
   Future<bool> rembourserClient(String commandeId, String raison) async {
     try {
@@ -693,8 +665,8 @@ class CommandeProvider extends ChangeNotifier {
 
       // Calculer le nouveau total (Diagnostic déjà payé + Devis final)
       final nouveauMontantTotal = (commande.montantDiagnostic ?? 0.0) + montantDevis;
-      final nouvelleCommissionTotale = (commande.commission ?? 0.0) + commissionDevis;
-      final nouveauMontantArtisanTotal = (commande.montantArtisan ?? 0.0) + montantArtisanDevis;
+      final nouvelleCommissionTotale = commande.commission + commissionDevis;
+      final nouveauMontantArtisanTotal = commande.montantArtisan + montantArtisanDevis;
 
       await FirebaseService.firestore.collection('commandes').doc(commandeId).update({
         'montantDevis': montantDevis,
@@ -892,17 +864,15 @@ class CommandeProvider extends ChangeNotifier {
         'updatedAt': Timestamp.now(),
       });
       
-      if (commande.artisanId != null) {
-        await FirestoreService.createNotification({
-          'userId': commande.artisanId,
-          'type': 'commande_annulee',
-          'titre': 'Commande annulée',
-          'message': 'Le client a annulé la commande',
-          'data': {
-            'commandeId': commandeId,
-          },
-        });
-      }
+      await FirestoreService.createNotification({
+        'userId': commande.artisanId,
+        'type': 'commande_annulee',
+        'titre': 'Commande annulée',
+        'message': 'Le client a annulé la commande',
+        'data': {
+          'commandeId': commandeId,
+        },
+      });
       
       return true;
     } catch (e) {

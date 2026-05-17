@@ -233,7 +233,7 @@ class ArtisanProvider extends ChangeNotifier {
           final fallback2 = await rawCollection.get();
           for (var doc in fallback2.docs) {
             try {
-              final data = doc.data() as Map<String, dynamic>;
+              final data = doc.data();
               if (categorie != null && categorie.isNotEmpty) {
                 final cat = _normalizeString(data['metierCategorie'] ?? '');
                 if (!cat.contains(_normalizeString(categorie))) continue;
@@ -275,7 +275,7 @@ class ArtisanProvider extends ChangeNotifier {
 
         for (var doc in querySnapshot.docs) {
           try {
-            final data = doc.data() as Map<String, dynamic>;
+            final data = doc.data();
 
             // Filtre catégorie en mémoire (insensible aux accents)
             if (categorie != null && categorie.isNotEmpty) {
@@ -433,11 +433,6 @@ class ArtisanProvider extends ChangeNotifier {
       notifyListeners();
       return false;
     }
-  }
-
-  // M1 — Déléguer à GeolocationService (source unique de vérité)
-  double _calculateDistance(double lat1, double lon1, double lat2, double lon2) {
-    return GeolocationService.calculateDistance(lat1, lon1, lat2, lon2);
   }
 
   // Nettoyer les erreurs

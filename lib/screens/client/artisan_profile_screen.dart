@@ -16,6 +16,8 @@ class ArtisanProfileScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final bool disponible = artisan.estRealementDisponible;
+
     return Scaffold(
       backgroundColor: AppColors.greyLight,
       body: CustomScrollView(
@@ -30,30 +32,56 @@ class ArtisanProfileScreen extends StatelessWidget {
               onPressed: () => Navigator.pop(context),
             ),
             flexibleSpace: FlexibleSpaceBar(
-              background: artisan.photoUrl != null && artisan.photoUrl!.isNotEmpty
-                  ? CachedNetworkImage(
-                      imageUrl: artisan.photoUrl!,
-                      fit: BoxFit.cover,
-                      placeholder: (context, url) => const Center(
-                        child: CircularProgressIndicator(color: AppColors.white),
-                      ),
-                      errorWidget: (context, url, error) => Container(
-                        color: AppColors.primaryBlue,
-                        child: const Icon(
-                          Icons.person,
-                          size: 80,
-                          color: AppColors.white,
+              background: Stack(
+                fit: StackFit.expand,
+                children: [
+                  artisan.photoUrl != null && artisan.photoUrl!.isNotEmpty
+                      ? CachedNetworkImage(
+                          imageUrl: artisan.photoUrl!,
+                          fit: BoxFit.cover,
+                          placeholder: (context, url) => const Center(
+                            child: CircularProgressIndicator(color: AppColors.white),
+                          ),
+                          errorWidget: (context, url, error) => Container(
+                            color: AppColors.primaryBlue,
+                            child: const Icon(
+                              Icons.person,
+                              size: 80,
+                              color: AppColors.white,
+                            ),
+                          ),
+                        )
+                      : Container(
+                          color: AppColors.primaryBlue,
+                          child: const Icon(
+                            Icons.person,
+                            size: 80,
+                            color: AppColors.white,
+                          ),
+                        ),
+                  if (!disponible)
+                    Container(
+                      color: AppColors.black.withValues(alpha: 0.3),
+                      child: Center(
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                          decoration: BoxDecoration(
+                            color: AppColors.error.withValues(alpha: 0.9),
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          child: Text(
+                            'INDISPONIBLE ACTUELLEMENT',
+                            style: AppTextStyles.bodySmall.copyWith(
+                              color: AppColors.white,
+                              fontWeight: FontWeight.bold,
+                              letterSpacing: 1.1,
+                            ),
+                          ),
                         ),
                       ),
-                    )
-                  : Container(
-                      color: AppColors.primaryBlue,
-                      child: const Icon(
-                        Icons.person,
-                        size: 80,
-                        color: AppColors.white,
-                      ),
                     ),
+                ],
+              ),
             ),
           ),
 
@@ -436,7 +464,7 @@ class ArtisanProfileScreen extends StatelessWidget {
           child: Row(
             children: [
               IconButton(
-                onPressed: () async {
+                onPressed: !disponible ? null : () async {
                   // Appeler l'artisan si le numéro est disponible
                   final tel = artisan.telephone;
                   if (tel == null || tel.isEmpty) {
@@ -453,18 +481,18 @@ class ArtisanProfileScreen extends StatelessWidget {
                     await launchUrl(uri);
                   }
                 },
-                icon: const Icon(
+                icon: Icon(
                   Icons.phone,
-                  color: AppColors.primaryBlue,
+                  color: disponible ? AppColors.primaryBlue : AppColors.greyMedium,
                 ),
                 style: IconButton.styleFrom(
-                  backgroundColor: AppColors.primaryBlue.withOpacity(0.1),
+                  backgroundColor: (disponible ? AppColors.primaryBlue : AppColors.greyMedium).withOpacity(0.1),
                   padding: const EdgeInsets.all(12),
                 ),
               ),
               const SizedBox(width: 8),
               IconButton(
-                onPressed: () {
+                onPressed: !disponible ? null : () {
                   // Ouvrir le chat avec l'artisan
                   Navigator.push(
                     context,
@@ -476,26 +504,26 @@ class ArtisanProfileScreen extends StatelessWidget {
                     ),
                   );
                 },
-                icon: const Icon(
+                icon: Icon(
                   Icons.chat_bubble_outline,
-                  color: AppColors.success,
+                  color: disponible ? AppColors.success : AppColors.greyMedium,
                 ),
                 style: IconButton.styleFrom(
-                  backgroundColor: AppColors.success.withOpacity(0.1),
+                  backgroundColor: (disponible ? AppColors.success : AppColors.greyMedium).withOpacity(0.1),
                   padding: const EdgeInsets.all(12),
                 ),
               ),
               const SizedBox(width: 12),
               Expanded(
                 child: CustomButton(
-                  text: 'Commander',
-                  onPressed: () {
+                  text: disponible ? 'Commander' : 'Indisponible',
+                  onPressed: !disponible ? null : () {
                     context.push(
                       AppRouter.selectCommandeType,
                       extra: artisan,
                     );
                   },
-                  backgroundColor: AppColors.primaryBlue,
+                  backgroundColor: disponible ? AppColors.primaryBlue : AppColors.greyMedium,
                 ),
               ),
             ],
