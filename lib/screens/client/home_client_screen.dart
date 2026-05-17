@@ -31,6 +31,7 @@ class _HomeClientScreenState extends State<HomeClientScreen> {
   String? _selectedQuartier;
   int _unreadNotificationsCount = 0;
   int _unreadMessagesCount = 0;
+  bool _showDailyCTA = false;
   
   // Carousel
   int _currentBannerIndex = 0;
@@ -60,6 +61,7 @@ class _HomeClientScreenState extends State<HomeClientScreen> {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _checkLocationPermission();
+      _checkDailyCTA();
       _loadUnreadCounts();
       
       // Charger les commandes du client
@@ -92,6 +94,33 @@ class _HomeClientScreenState extends State<HomeClientScreen> {
     _bannerController.dispose();
     _searchController.dispose();
     super.dispose();
+  }
+
+  Future<void> _checkDailyCTA() async {
+    final prefs = await SharedPreferences.getInstance();
+    final now = DateTime.now();
+    final lastShown = prefs.getString('last_daily_cta_date');
+    final today = '${now.year}-${now.month}-${now.day}';
+
+    if (lastShown != today) {
+      if (mounted) {
+        setState(() {
+          _showDailyCTA = true;
+        });
+      }
+    }
+  }
+
+  Future<void> _dismissDailyCTA() async {
+    final prefs = await SharedPreferences.getInstance();
+    final now = DateTime.now();
+    final today = '${now.year}-${now.month}-${now.day}';
+    await prefs.setString('last_daily_cta_date', today);
+    if (mounted) {
+      setState(() {
+        _showDailyCTA = false;
+      });
+    }
   }
 
   Future<void> _loadUnreadCounts() async {
@@ -288,6 +317,75 @@ class _HomeClientScreenState extends State<HomeClientScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              // ── CTA Quotidien ─────────────────────────────────────────
+              if (_showDailyCTA)
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  decoration: BoxDecoration(
+                    color: AppColors.accentRed.withOpacity(0.9),
+                    boxShadow: [
+                      BoxShadow(
+                        color: AppColors.black.withOpacity(0.1),
+                        blurRadius: 4,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.star, color: AppColors.white, size: 20),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Prêt pour votre projet ?',
+                              style: AppTextStyles.bodyMedium.copyWith(
+                                color: AppColors.white,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            Text(
+                              'Trouvez l\'artisan idéal aujourd\'hui !',
+                              style: AppTextStyles.bodySmall.copyWith(
+                                color: AppColors.white.withOpacity(0.9),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      TextButton(
+                        onPressed: () {
+                          _dismissDailyCTA();
+                          context.push(AppRouter.searchArtisan);
+                        },
+                        style: TextButton.styleFrom(
+                          backgroundColor: AppColors.white,
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                          minimumSize: Size.zero,
+                          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                        ),
+                        child: Text(
+                          'Chercher',
+                          style: AppTextStyles.bodySmall.copyWith(
+                            color: AppColors.accentRed,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.close, color: AppColors.white, size: 18),
+                        onPressed: _dismissDailyCTA,
+                        padding: EdgeInsets.zero,
+                        constraints: const BoxConstraints(),
+                        visualDensity: VisualDensity.compact,
+                      ),
+                    ],
+                  ),
+                ),
+
               // ── Header + barre de recherche ──────────────────────────
               Container(
                 width: double.infinity,

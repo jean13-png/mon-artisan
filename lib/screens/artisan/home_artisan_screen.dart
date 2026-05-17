@@ -29,6 +29,7 @@ class _HomeArtisanScreenState extends State<HomeArtisanScreen> {
   int _unreadNotificationsCount = 0;
   int _unreadMessagesCount = 0;
   bool _autoRefreshActive = true;
+  bool _showDailyCTA = false;
 
   @override
   void initState() {
@@ -38,6 +39,7 @@ class _HomeArtisanScreenState extends State<HomeArtisanScreen> {
       if (authProvider.userModel != null && authProvider.userModel!.isArtisan) {
         _loadArtisanData();
         _checkLocationPermission();
+        _checkDailyCTA();
         _loadUnreadCounts();
         _startAutoRefresh();
       }
@@ -60,6 +62,33 @@ class _HomeArtisanScreenState extends State<HomeArtisanScreen> {
         _startAutoRefresh();
       }
     });
+  }
+
+  Future<void> _checkDailyCTA() async {
+    final prefs = await SharedPreferences.getInstance();
+    final now = DateTime.now();
+    final lastShown = prefs.getString('last_daily_cta_artisan_date');
+    final today = '${now.year}-${now.month}-${now.day}';
+
+    if (lastShown != today) {
+      if (mounted) {
+        setState(() {
+          _showDailyCTA = true;
+        });
+      }
+    }
+  }
+
+  Future<void> _dismissDailyCTA() async {
+    final prefs = await SharedPreferences.getInstance();
+    final now = DateTime.now();
+    final today = '${now.year}-${now.month}-${now.day}';
+    await prefs.setString('last_daily_cta_artisan_date', today);
+    if (mounted) {
+      setState(() {
+        _showDailyCTA = false;
+      });
+    }
   }
 
   Future<void> _loadUnreadCounts() async {
@@ -153,6 +182,74 @@ class _HomeArtisanScreenState extends State<HomeArtisanScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                // ── CTA Quotidien ─────────────────────────────────────────
+                if (_showDailyCTA)
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    decoration: BoxDecoration(
+                      color: AppColors.primaryBlue.withOpacity(0.9),
+                      boxShadow: [
+                        BoxShadow(
+                          color: AppColors.black.withOpacity(0.1),
+                          blurRadius: 4,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.flash_on, color: AppColors.white, size: 20),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Boostez votre activité !',
+                                style: AppTextStyles.bodyMedium.copyWith(
+                                  color: AppColors.white,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              Text(
+                                'Mettez à jour vos tarifs ou vos photos.',
+                                style: AppTextStyles.bodySmall.copyWith(
+                                  color: AppColors.white.withOpacity(0.9),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        TextButton(
+                          onPressed: () {
+                            _dismissDailyCTA();
+                            context.push(AppRouter.editProfile);
+                          },
+                          style: TextButton.styleFrom(
+                            backgroundColor: AppColors.white,
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                            minimumSize: Size.zero,
+                            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                          ),
+                          child: Text(
+                            'Profil',
+                            style: AppTextStyles.bodySmall.copyWith(
+                              color: AppColors.primaryBlue,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.close, color: AppColors.white, size: 18),
+                          onPressed: _dismissDailyCTA,
+                          padding: EdgeInsets.zero,
+                          constraints: const BoxConstraints(),
+                          visualDensity: VisualDensity.compact,
+                        ),
+                      ],
+                    ),
+                  ),
                 _buildHeroHeader(context, artisanProvider, user, artisan),
                 const SizedBox(height: 20),
                 _buildAlerts(context, artisan),
