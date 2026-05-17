@@ -387,7 +387,9 @@ class ArtisanProfileScreen extends StatelessWidget {
                           ),
                           TextButton(
                             onPressed: () {
-                              // TODO: Navigate to all reviews
+                              context.push(
+                                '${AppRouter.artisanReviews}?artisanId=${artisan.id}',
+                              );
                             },
                             child: Text(
                               'Voir tout',

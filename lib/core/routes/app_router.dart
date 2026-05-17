@@ -24,6 +24,7 @@ import '../../screens/artisan/revenus_screen.dart';
 import '../../screens/artisan/complete_profile_screen.dart';
 import '../../screens/client/commandes_history_screen.dart';
 import '../../screens/client/rate_artisan_screen.dart';
+import '../../screens/client/artisan_reviews_screen.dart'; // Import for ArtisanReviewsScreen
 import '../../screens/shared/notifications_screen.dart';
 import '../../screens/shared/edit_profile_screen.dart';
 import '../../screens/shared/settings_screen.dart';
@@ -51,6 +52,7 @@ class AppRouter {
   static const String payment = '/payment';
   static const String commandesHistory = '/commandes-history';
   static const String rateArtisan = '/rate-artisan';
+  static const String artisanReviews = '/artisan-reviews'; // New route for all artisan reviews
   static const String locationPicker = '/location-picker';
 
 
@@ -81,7 +83,7 @@ class AppRouter {
   };
   static const _clientRoutes = {
     homeClient, categoryMetiers, searchArtisan, artisanProfile, selectCommandeType,
-    createCommande, payment, commandesHistory, rateArtisan, locationPicker,
+    createCommande, payment, commandesHistory, rateArtisan, artisanReviews, locationPicker,
   };
   static const _artisanRoutes = {
     homeArtisan, commandeDetail, revenus, completeProfile,
@@ -262,6 +264,14 @@ class AppRouter {
             artisanId: extra['artisanId'] as String,
             artisanName: extra['artisanName'] as String,
           );
+        },
+      ),
+      GoRoute(
+        path: artisanReviews,
+        builder: (context, state) {
+          final artisanId = state.uri.queryParameters['artisanId'] ?? '';
+          if (artisanId.isEmpty) return const _ErrorScreen(message: 'ID Artisan manquant');
+          return ArtisanReviewsScreen(artisanId: artisanId);
         },
       ),
       GoRoute(
