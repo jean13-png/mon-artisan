@@ -67,8 +67,17 @@ class _HomeClientScreenState extends State<HomeClientScreen> {
       // Charger les commandes du client
       final authProvider = Provider.of<AuthProvider>(context, listen: false);
       if (authProvider.userModel != null) {
-        Provider.of<CommandeProvider>(context, listen: false)
-            .loadClientCommandes(authProvider.userModel!.id);
+        final commandeProvider = Provider.of<CommandeProvider>(context, listen: false);
+        commandeProvider.loadClientCommandes(authProvider.userModel!.id);
+        
+        // M1 — Rafraîchissement automatique des commandes toutes les 15s pour mettre à jour les cartes
+        Timer.periodic(const Duration(seconds: 15), (timer) {
+          if (!mounted) {
+            timer.cancel();
+            return;
+          }
+          commandeProvider.loadClientCommandes(authProvider.userModel!.id);
+        });
       }
 
       // Lancer le timer pour le carousel
@@ -250,6 +259,17 @@ class _HomeClientScreenState extends State<HomeClientScreen> {
                   case 'history':
                     context.push(AppRouter.commandesHistory);
                     break;
+                  case 'agent':
+                    if (user.isAgent) {
+                      context.push(AppRouter.agentDashboard);
+                    } else if (user.agentStatus == 'pending') {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Votre demande d\'agent est en cours de validation.')),
+                      );
+                    } else {
+                      context.push(AppRouter.becomeAgent);
+                    }
+                    break;
                   case 'switch_artisan':
                     context.go(AppRouter.homeArtisan);
                     break;
@@ -278,6 +298,15 @@ class _HomeClientScreenState extends State<HomeClientScreen> {
                       Icon(Icons.history, color: AppColors.primaryBlue),
                       const SizedBox(width: 8),
                       Text('Mes commandes',
+                          style:
+                              TextStyle(color: AppColors.onSurface, fontWeight: FontWeight.w500)),
+                    ])),
+                PopupMenuItem(
+                    value: 'agent',
+                    child: Row(children: [
+                      Icon(user.isAgent ? Icons.dashboard_customize : Icons.business_center, color: AppColors.primaryBlue),
+                      const SizedBox(width: 8),
+                      Text(user.isAgent ? 'Espace Agent' : 'Devenir Agent',
                           style:
                               TextStyle(color: AppColors.onSurface, fontWeight: FontWeight.w500)),
                     ])),

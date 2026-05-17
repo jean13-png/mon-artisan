@@ -28,6 +28,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final _telephoneController = TextEditingController();
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
+  final _promoCodeController = TextEditingController();
 
   String? _selectedVille;
   String? _selectedQuartier;
@@ -45,6 +46,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
     _telephoneController.dispose();
     _passwordController.dispose();
     _confirmPasswordController.dispose();
+    _promoCodeController.dispose();
     super.dispose();
   }
 
@@ -82,6 +84,20 @@ class _RegisterScreenState extends State<RegisterScreen> {
       metier: widget.role == 'artisan' ? _selectedMetier : null,
       metierCategorie: widget.role == 'artisan' ? _selectedCategorie : null,
     );
+
+    // M1 — Enregistrement du code promo si artisan
+    if (success && widget.role == 'artisan' && _promoCodeController.text.trim().isNotEmpty) {
+      try {
+        final userId = authProvider.userModel?.id;
+        if (userId != null) {
+          await FirebaseFirestore.instance.collection('artisans').doc(userId).update({
+            'codePromoUtilise': _promoCodeController.text.trim().toUpperCase(),
+          });
+        }
+      } catch (e) {
+        print('[ERROR] Erreur enregistrement code promo: $e');
+      }
+    }
 
     if (!mounted) return;
 
@@ -330,6 +346,18 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     return null;
                   },
                 ),
+                const SizedBox(height: 16),
+
+                // ── Code Promo (artisan uniquement) ──────────────────────
+                 if (isArtisan) ...[
+                   CustomTextField(
+                     label: 'Code Promo (Optionnel)',
+                     hint: 'Entrez un code promo si vous en avez un',
+                     controller: _promoCodeController,
+                     prefixIcon: const Icon(Icons.card_giftcard),
+                   ),
+                   const SizedBox(height: 16),
+                 ],
                 const SizedBox(height: 32),
 
                 // ── Bouton inscription ───────────────────────────────────

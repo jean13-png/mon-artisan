@@ -643,7 +643,7 @@ class _DevisDetailScreenState extends State<DevisDetailScreen> {
       ),
 
       // Boutons d'action
-      bottomNavigationBar: ['devis_envoye', 'devis_post_diagnostic_envoye'].contains(widget.commande.statut) ? Container(
+      bottomNavigationBar: (['devis_envoye', 'devis_post_diagnostic_envoye'].contains(widget.commande.statut) && widget.commande.paiementStatut != 'bloque') ? Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
           color: AppColors.white,
@@ -661,7 +661,7 @@ class _DevisDetailScreenState extends State<DevisDetailScreen> {
               Expanded(
                 child: CustomButton(
                   text: 'Refuser',
-                  onPressed: _refuserDevis,
+                  onPressed: _isLoading ? null : _refuserDevis,
                   isLoading: _isLoading,
                   backgroundColor: AppColors.white,
                   textColor: AppColors.error,
@@ -673,7 +673,7 @@ class _DevisDetailScreenState extends State<DevisDetailScreen> {
                 flex: 2,
                 child: CustomButton(
                   text: 'Accepter et payer',
-                  onPressed: _accepterDevis,
+                  onPressed: _isLoading ? null : _accepterDevis,
                   isLoading: _isLoading,
                   backgroundColor: AppColors.success,
                 ),

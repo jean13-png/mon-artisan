@@ -22,6 +22,9 @@ class UserModel {
   final DateTime? datePaiementInscription;
   final bool? isBanned; // Si l'utilisateur est banni
   final DateTime? bannedAt; // Date du bannissement
+  final bool isAgent; // Si l'utilisateur est un agent validé
+  final String? codePromoAgent; // Son propre code promo s'il est agent
+  final String? agentStatus; // 'pending', 'approved', 'rejected'
 
   UserModel({
     required this.id,
@@ -45,6 +48,9 @@ class UserModel {
     this.datePaiementInscription,
     this.isBanned,
     this.bannedAt,
+    this.isAgent = false,
+    this.codePromoAgent,
+    this.agentStatus,
   });
 
   // Getter pour compatibilité avec l'ancien code (retourne le premier rôle)
@@ -103,6 +109,9 @@ class UserModel {
       bannedAt: data['bannedAt'] != null 
           ? (data['bannedAt'] as Timestamp).toDate() 
           : null,
+      isAgent: data['isAgent'] ?? false,
+      codePromoAgent: data['codePromoAgent'],
+      agentStatus: data['agentStatus'],
     );
   }
 
@@ -134,6 +143,9 @@ class UserModel {
       'bannedAt': bannedAt != null 
           ? Timestamp.fromDate(bannedAt!) 
           : null,
+      'isAgent': isAgent,
+      'codePromoAgent': codePromoAgent,
+      'agentStatus': agentStatus,
     };
   }
 
@@ -165,6 +177,9 @@ class UserModel {
       datePaiementInscription: datePaiementInscription,
       isBanned: isBanned,
       bannedAt: bannedAt,
+      isAgent: isAgent,
+      codePromoAgent: codePromoAgent,
+      agentStatus: agentStatus,
     );
   }
 }

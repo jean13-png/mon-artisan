@@ -33,8 +33,8 @@ class _ArtisanPaymentScreenState extends State<ArtisanPaymentScreen> {
   String? _errorMessage;
   String? _transactionId;
 
-  static const double fraisInscription = 958.0;
-  static const double commissionAgent = 200.0;
+  static const double fraisInscription = 952.0;
+  static const double commissionAgent = 300.0;
 
   @override
   void initState() {
@@ -68,7 +68,7 @@ class _ArtisanPaymentScreenState extends State<ArtisanPaymentScreen> {
     });
 
     try {
-      // Rechercher l'agent par code de parrainage
+      // 1. Chercher si c'est un agent enregistré (nouvelle collection agents)
       final agentQuery = await FirebaseService.firestore
           .collection('agents')
           .where('codeParrainage', isEqualTo: code)
@@ -76,23 +76,36 @@ class _ArtisanPaymentScreenState extends State<ArtisanPaymentScreen> {
           .limit(1)
           .get();
 
-      if (agentQuery.docs.isEmpty) {
+      if (agentQuery.docs.isNotEmpty) {
+        final data = agentQuery.docs.first.data();
         setState(() {
-          _errorMessage = 'Code agent invalide ou inactif';
-          _agentName = null;
-          _agentId = null;
+          _agentId = agentQuery.docs.first.id;
+          _agentName = '${data['prenom']} ${data['nom']}';
           _isValidatingCode = false;
         });
         return;
       }
 
-      final agentDoc = agentQuery.docs.first;
-      final agentData = agentDoc.data();
+      // 2. Fallback: Chercher dans la collection users (si c'est un client devenu agent)
+      final userQuery = await FirebaseService.firestore
+          .collection('users')
+          .where('codePromoAgent', isEqualTo: code)
+          .where('isAgent', isEqualTo: true)
+          .limit(1)
+          .get();
+
+      if (userQuery.docs.isNotEmpty) {
+        final data = userQuery.docs.first.data();
+        setState(() {
+          _agentId = userQuery.docs.first.id;
+          _agentName = '${data['prenom']} ${data['nom']}';
+          _isValidatingCode = false;
+        });
+        return;
+      }
 
       setState(() {
-        _agentName = '${agentData['prenom']} ${agentData['nom']}';
-        _agentId = agentDoc.id;
-        _errorMessage = null;
+        _errorMessage = 'Code agent invalide ou inactif';
         _isValidatingCode = false;
       });
     } catch (e) {
@@ -411,25 +424,43 @@ class _ArtisanPaymentScreenState extends State<ArtisanPaymentScreen> {
 
   Future<void> _crediterAgent(String agentId, double montant) async {
     try {
+      // 1. Essayer de créditer dans la collection 'agents'
       final agentDoc = await FirebaseService.firestore
           .collection('agents')
           .doc(agentId)
           .get();
 
       if (agentDoc.exists) {
-        final currentRevenus = (agentDoc.data()?['revenusDisponibles'] ?? 0.0).toDouble();
-        final currentTotal = (agentDoc.data()?['revenusTotal'] ?? 0.0).toDouble();
-        final currentInscriptions = (agentDoc.data()?['nombreInscriptions'] ?? 0);
-
         await FirebaseService.firestore
             .collection('agents')
             .doc(agentId)
             .update({
-          'revenusDisponibles': currentRevenus + montant,
-          'revenusTotal': currentTotal + montant,
-          'nombreInscriptions': currentInscriptions + 1,
+          'revenusDisponibles': FieldValue.increment(montant),
+          'revenusTotal': FieldValue.increment(montant),
+          'nombreInscriptions': FieldValue.increment(1),
           'updatedAt': Timestamp.now(),
         });
+        print('[SUCCESS] Agent crédité dans collection agents');
+        return;
+      }
+
+      // 2. Fallback: Créditer dans la collection 'users' (pour les clients devenus agents)
+      final userDoc = await FirebaseService.firestore
+          .collection('users')
+          .doc(agentId)
+          .get();
+      
+      if (userDoc.exists) {
+        await FirebaseService.firestore
+            .collection('users')
+            .doc(agentId)
+            .update({
+          'agentRevenusDisponibles': FieldValue.increment(montant),
+          'agentRevenusTotal': FieldValue.increment(montant),
+          'agentNombreInscriptions': FieldValue.increment(1),
+          'updatedAt': Timestamp.now(),
+        });
+        print('[SUCCESS] Agent crédité dans collection users');
       }
     } catch (e) {
       print('Erreur lors du crédit agent: $e');

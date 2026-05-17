@@ -321,32 +321,18 @@ class ArtisanProvider extends ChangeNotifier {
   Future<void> updateDisponibilite(bool disponible) async {
     if (_currentArtisan == null) return;
 
+    // ✅ PROTECTION: Ne pas permettre le changement si une commande est en cours (mission)
+    if (_currentArtisan!.commandeEnCours != null) {
+      _errorMessage = 'Impossible de changer la disponibilité pendant une mission';
+      notifyListeners();
+      return;
+    }
+
     try {
       await FirestoreService.updateArtisan(_currentArtisan!.id, {'disponibilite': disponible});
 
-      _currentArtisan = ArtisanModel(
-        id: _currentArtisan!.id,
-        userId: _currentArtisan!.userId,
-        metier: _currentArtisan!.metier,
-        metierCategorie: _currentArtisan!.metierCategorie,
-        description: _currentArtisan!.description,
-        experience: _currentArtisan!.experience,
-        tarifs: _currentArtisan!.tarifs,
+      _currentArtisan = _currentArtisan!.copyWith(
         disponibilite: disponible,
-        rayonAction: _currentArtisan!.rayonAction,
-        position: _currentArtisan!.position,
-        geohash: _currentArtisan!.geohash,
-        ville: _currentArtisan!.ville,
-        quartier: _currentArtisan!.quartier,
-        photos: _currentArtisan!.photos,
-        certifications: _currentArtisan!.certifications,
-        noteGlobale: _currentArtisan!.noteGlobale,
-        nombreAvis: _currentArtisan!.nombreAvis,
-        nombreCommandes: _currentArtisan!.nombreCommandes,
-        revenusTotal: _currentArtisan!.revenusTotal,
-        revenusDisponibles: _currentArtisan!.revenusDisponibles,
-        isVerified: _currentArtisan!.isVerified,
-        createdAt: _currentArtisan!.createdAt,
         updatedAt: DateTime.now(),
       );
 

@@ -912,6 +912,12 @@ class CommandeProvider extends ChangeNotifier {
       
       final commande = CommandeModel.fromFirestore(commandeDoc);
       
+      // ✅ PROTECTION STRICTE: Ne pas repayer si déjà bloqué (escrow) ou déjà payé
+      if (commande.paiementStatut == 'bloque' || commande.paiementStatut == 'paye' || commande.paiementStatut == 'debloque') {
+        print('[INFO] Commande $commandeId déjà payée ou en escrow. Opération ignorée.');
+        return true;
+      }
+      
       // ✅ IDEMPOTENCE & FLUX: Vérifier si déjà payé pour ce flux
       if (commande.statut == 'diagnostic_demande' && commande.fraisDeplacementPayes == true) {
         print('[INFO] Frais de diagnostic déjà payés pour $commandeId');

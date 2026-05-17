@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../../providers/auth_provider.dart';
+import '../../screens/client/become_agent_screen.dart';
+import '../../screens/client/agent_dashboard_screen.dart';
 import '../../screens/shared/splash_screen.dart';
 import '../../screens/auth/role_selection_screen.dart';
 import '../../screens/auth/login_screen.dart';
@@ -22,6 +24,7 @@ import '../../screens/admin/users_management_screen.dart';
 import '../../screens/artisan/commande_detail_screen.dart';
 import '../../screens/artisan/revenus_screen.dart';
 import '../../screens/artisan/complete_profile_screen.dart';
+import '../../screens/artisan/envoyer_devis_screen.dart';
 import '../../screens/client/commandes_history_screen.dart';
 import '../../screens/client/rate_artisan_screen.dart';
 import '../../screens/client/artisan_reviews_screen.dart'; // Import for ArtisanReviewsScreen
@@ -56,9 +59,13 @@ class AppRouter {
   static const String locationPicker = '/location-picker';
 
 
+  static const String becomeAgent = '/become-agent';
+  static const String agentDashboard = '/agent-dashboard';
+
   // ── Routes protégées : artisan ─────────────────────────────────────────────
   static const String homeArtisan = '/home-artisan';
   static const String commandeDetail = '/commande-detail';
+  static const String envoyerDevis = '/envoyer-devis';
   static const String revenus = '/revenus';
   static const String completeProfile = '/complete-profile';
 
@@ -84,9 +91,10 @@ class AppRouter {
   static const _clientRoutes = {
     homeClient, categoryMetiers, searchArtisan, artisanProfile, selectCommandeType,
     createCommande, payment, commandesHistory, rateArtisan, artisanReviews, locationPicker,
+    becomeAgent, agentDashboard,
   };
   static const _artisanRoutes = {
-    homeArtisan, commandeDetail, revenus, completeProfile,
+    homeArtisan, commandeDetail, envoyerDevis, revenus, completeProfile,
   };
 
   // ── Factory ───────────────────────────────────────────────────────────────
@@ -217,6 +225,15 @@ class AppRouter {
         },
       ),
       GoRoute(
+        path: envoyerDevis,
+        builder: (context, state) {
+          final commande = state.extra as CommandeModel?;
+          // Fallback si l'extra est null (par exemple deep link ou refresh)
+          if (commande == null) return const _ErrorScreen(message: 'Commande introuvable pour le devis');
+          return EnvoyerDevisScreen(commande: commande);
+        },
+      ),
+      GoRoute(
         path: commandesHistory,
         builder: (context, state) {
           final isArtisan = state.uri.queryParameters['role'] == 'artisan';
@@ -277,6 +294,14 @@ class AppRouter {
       GoRoute(
         path: locationPicker,
         builder: (context, state) => const LocationPickerScreen(),
+      ),
+      GoRoute(
+        path: becomeAgent,
+        builder: (context, state) => const BecomeAgentScreen(),
+      ),
+      GoRoute(
+        path: agentDashboard,
+        builder: (context, state) => const AgentDashboardScreen(),
       ),
     ],
   );

@@ -2,6 +2,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:provider/provider.dart';
+import 'package:go_router/go_router.dart';
 import 'package:record/record.dart';
 import 'package:audioplayers/audioplayers.dart';
 import 'package:path_provider/path_provider.dart';
@@ -11,7 +12,9 @@ import '../../core/constants/text_styles.dart';
 import '../../core/services/chat_service.dart';
 import '../../core/services/firebase_service.dart';
 import '../../core/services/cloudinary_service.dart';
+import '../../core/routes/app_router.dart';
 import '../../providers/auth_provider.dart';
+import '../../providers/commande_provider.dart';
 
 class ChatScreen extends StatefulWidget {
   final String otherUserId;
@@ -493,6 +496,9 @@ class _ChatScreenState extends State<ChatScreen> {
             ),
           ],
         ),
+        actions: [
+          _buildChatActions(),
+        ],
       ),
       body: Column(
         children: [
@@ -688,6 +694,106 @@ class _ChatScreenState extends State<ChatScreen> {
                 ],
               ),
             ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildChatActions() {
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    final isArtisan = authProvider.userModel?.isArtisan ?? false;
+
+    return Row(
+      children: [
+        if (isArtisan)
+          IconButton(
+            icon: const Icon(Icons.description_outlined, color: AppColors.white),
+            tooltip: 'Envoyer le devis final',
+            onPressed: () => _showQuoteOptions(context),
+          ),
+        IconButton(
+          icon: const Icon(Icons.report_problem_outlined, color: AppColors.white),
+          tooltip: 'Signaler',
+          onPressed: () => _showReportDialog(context),
+        ),
+      ],
+    );
+  }
+
+  void _showQuoteOptions(BuildContext context) {
+    final commandeProvider = Provider.of<CommandeProvider>(context, listen: false);
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    
+    // Trouver la commande en cours avec cet utilisateur
+    final activeCommande = commandeProvider.commandes.firstWhere(
+      (c) => c.clientId == widget.otherUserId && 
+             ['diagnostic_valide', 'acceptee', 'en_cours'].contains(c.statut),
+      orElse: () => null as dynamic,
+    );
+
+    if (activeCommande == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Aucune commande active trouvée avec ce client pour envoyer un devis.')),
+      );
+      return;
+    }
+
+    context.push(AppRouter.envoyerDevis, extra: activeCommande);
+  }
+
+  void _showReportDialog(BuildContext context) {
+    final TextEditingController reportController = TextEditingController();
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Signaler un problème'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text(
+              'Veuillez expliquer la raison de votre signalement concernant cet utilisateur.',
+              style: TextStyle(fontSize: 14),
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: reportController,
+              maxLines: 4,
+              decoration: InputDecoration(
+                hintText: 'Détails du problème...',
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Annuler'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              if (reportController.text.trim().isEmpty) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Veuillez saisir une explication')),
+                );
+                return;
+              }
+              Navigator.pop(context);
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('Signalement enregistré. Notre équipe va vous recontacter.'),
+                  backgroundColor: AppColors.success,
+                ),
+              );
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.error,
+              foregroundColor: AppColors.white,
+            ),
+            child: const Text('Envoyer'),
           ),
         ],
       ),

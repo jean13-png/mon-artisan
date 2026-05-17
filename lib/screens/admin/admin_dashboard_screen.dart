@@ -7,6 +7,8 @@ import '../../core/routes/app_router.dart';
 import '../../core/services/firebase_service.dart';
 import '../../providers/auth_provider.dart';
 import '../../widgets/double_tap_to_exit.dart';
+import 'admin_reports_screen.dart';
+import 'admin_transactions_screen.dart';
 
 class AdminDashboardScreen extends StatefulWidget {
   const AdminDashboardScreen({super.key});
@@ -20,6 +22,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   int _artisansEnAttente = 0;
   int _totalClients = 0;
   int _totalCommandes = 0;
+  int _signalementsEnAttente = 0;
+  int _agentsEnAttente = 0;
   double _revenusTotal = 0.0;
   bool _isLoading = true;
 
@@ -80,6 +84,20 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
         revenus += (data['commission'] ?? 0.0).toDouble();
       }
       _revenusTotal = revenus;
+
+      // Compter les signalements en attente
+      final signalementsSnapshot = await FirebaseService.firestore
+          .collection('signalements')
+          .where('status', isEqualTo: 'pending')
+          .get();
+      _signalementsEnAttente = signalementsSnapshot.docs.length;
+
+      // Compter les agents en attente
+      final agentsSnapshot = await FirebaseService.firestore
+          .collection('users')
+          .where('agentStatus', isEqualTo: 'pending')
+          .get();
+      _agentsEnAttente = agentsSnapshot.docs.length;
 
       setState(() => _isLoading = false);
     } catch (e) {
@@ -262,6 +280,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                       () {
                         context.go('/admin/manage-agents');
                       },
+                      badge: _agentsEnAttente > 0 ? _agentsEnAttente.toString() : null,
                     ),
 
                     const SizedBox(height: 12),
@@ -282,11 +301,12 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                       Icons.report_problem,
                       AppColors.warning,
                       () {
-                        // TODO: Navigation vers signalements
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('Fonctionnalité en cours de développement')),
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (_) => const AdminReportsScreen()),
                         );
                       },
+                      badge: _signalementsEnAttente > 0 ? _signalementsEnAttente.toString() : null,
                     ),
 
                     const SizedBox(height: 12),
@@ -296,9 +316,9 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                       Icons.payment,
                       AppColors.accentRed,
                       () {
-                        // TODO: Navigation vers transactions
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('Fonctionnalité en cours de développement')),
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (_) => const AdminTransactionsScreen()),
                         );
                       },
                     ),

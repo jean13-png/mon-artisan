@@ -491,6 +491,15 @@ class _ArtisansValidationScreenState extends State<ArtisansValidationScreen> {
         'updatedAt': Timestamp.now(),
       });
 
+      // Mettre à jour aussi le champ isVerified dans la collection users pour cohérence
+      await FirebaseService.firestore
+          .collection('users')
+          .doc(userId)
+          .update({
+        'isVerified': true,
+        'updatedAt': Timestamp.now(),
+      });
+
       // Créer une notification pour l'artisan
       await FirebaseService.firestore
           .collection('notifications')
@@ -498,156 +507,95 @@ class _ArtisansValidationScreenState extends State<ArtisansValidationScreen> {
         'userId': userId,
         'titre': 'Profil approuvé ! 🎉',
         'message': 'Félicitations ! Votre profil artisan a été approuvé. Vous pouvez maintenant recevoir des commandes.',
-        'type': 'validation',
+        'type': 'verification_approved',
         'isRead': false,
         'createdAt': Timestamp.now(),
       });
 
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Row(
-              children: [
-                Icon(Icons.check_circle, color: AppColors.white),
-                SizedBox(width: 8),
-                Text('Artisan approuvé et notifié'),
-              ],
-            ),
-            backgroundColor: AppColors.success,
-          ),
-        );
-      }
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Artisan approuvé avec succès'), backgroundColor: AppColors.success),
+      );
     } catch (e) {
-      print('[ERROR] Erreur approbation: $e');
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Erreur: $e'),
-            backgroundColor: AppColors.error,
-          ),
-        );
-      }
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Erreur: $e'), backgroundColor: AppColors.error),
+      );
     }
   }
 
   Future<void> _rejectArtisan(String artisanId) async {
-    // Dialogue de confirmation avec raison
-    String? raison;
-    final confirmed = await showDialog<bool>(
+    final TextEditingController reasonController = TextEditingController();
+    final reason = await showDialog<String>(
       context: context,
-      builder: (context) {
-        final raisonController = TextEditingController();
-        return AlertDialog(
-          title: Text('Rejeter l\'artisan', style: AppTextStyles.h3),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                'Êtes-vous sûr de vouloir rejeter cet artisan ?',
-                style: AppTextStyles.bodyMedium,
-              ),
-              const SizedBox(height: 16),
-              TextField(
-                controller: raisonController,
-                decoration: const InputDecoration(
-                  labelText: 'Raison du rejet (optionnel)',
-                  border: OutlineInputBorder(),
-                ),
-                maxLines: 3,
-              ),
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context, false),
-              child: const Text('Annuler'),
-            ),
-            ElevatedButton(
-              onPressed: () {
-                raison = raisonController.text.trim();
-                Navigator.pop(context, true);
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.error,
-              ),
-              child: const Text('Rejeter'),
+      builder: (context) => AlertDialog(
+        title: const Text('Rejeter l\'artisan'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text('Veuillez indiquer la raison du rejet :'),
+            const SizedBox(height: 16),
+            TextField(
+              controller: reasonController,
+              decoration: const InputDecoration(hintText: 'Ex: Diplôme invalide, photos floues...'),
+              maxLines: 3,
             ),
           ],
-        );
-      },
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Annuler')),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, reasonController.text),
+            style: ElevatedButton.styleFrom(backgroundColor: AppColors.error),
+            child: const Text('Rejeter'),
+          ),
+        ],
+      ),
     );
 
-    if (confirmed != true) return;
+    if (reason == null || reason.trim().isEmpty) return;
 
     try {
-      // Récupérer les infos de l'artisan
       final artisanDoc = await FirebaseService.firestore
           .collection('artisans')
           .doc(artisanId)
           .get();
       
       if (!artisanDoc.exists) return;
-      
-      final artisanData = artisanDoc.data()!;
-      final userId = artisanData['userId'] as String?;
+      final userId = artisanDoc.data()!['userId'] as String?;
 
-      if (userId == null || userId.isEmpty) {
-        print('[ERROR] userId introuvable pour artisan $artisanId');
-        return;
-      }
-      
-      // Mettre à jour le statut
       await FirebaseService.firestore
           .collection('artisans')
           .doc(artisanId)
           .update({
         'verificationStatus': 'rejected',
         'isVerified': false,
-        'disponibilite': false,
-        'rejectionReason': raison ?? '',
+        'rejectionReason': reason,
         'updatedAt': Timestamp.now(),
       });
 
-      // Créer une notification pour l'artisan
-      final message = raison != null && raison!.isNotEmpty
-          ? 'Votre profil a été rejeté. Raison : $raison. Corrigez et soumettez à nouveau.'
-          : 'Votre profil a été rejeté. Veuillez corriger les informations et soumettre à nouveau.';
-      
-      await FirebaseService.firestore
-          .collection('notifications')
-          .add({
-        'userId': userId,
-        'titre': 'Profil rejeté',
-        'message': message,
-        'type': 'validation',
-        'isRead': false,
-        'createdAt': Timestamp.now(),
-      });
+      if (userId != null) {
+        await FirebaseService.firestore
+            .collection('notifications')
+            .add({
+          'userId': userId,
+          'titre': 'Profil rejeté ❌',
+          'message': 'Votre profil artisan a été rejeté pour la raison suivante : $reason. Veuillez corriger vos informations.',
+          'type': 'verification_rejected',
+          'isRead': false,
+          'createdAt': Timestamp.now(),
+        });
+      }
 
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Row(
-              children: [
-                Icon(Icons.info_outline, color: AppColors.white),
-                SizedBox(width: 8),
-                Text('Artisan rejeté et notifié'),
-              ],
-            ),
-            backgroundColor: AppColors.error,
-          ),
-        );
-      }
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Artisan rejeté'), backgroundColor: AppColors.error),
+      );
     } catch (e) {
-      print('[ERROR] Erreur rejet: $e');
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Erreur: $e'),
-            backgroundColor: AppColors.error,
-          ),
-        );
-      }
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Erreur: $e'), backgroundColor: AppColors.error),
+      );
     }
   }
 }

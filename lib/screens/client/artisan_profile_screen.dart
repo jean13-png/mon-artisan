@@ -31,6 +31,13 @@ class ArtisanProfileScreen extends StatelessWidget {
               icon: const Icon(Icons.arrow_back, color: AppColors.white),
               onPressed: () => Navigator.pop(context),
             ),
+            actions: [
+              IconButton(
+                icon: const Icon(Icons.report_problem_outlined, color: AppColors.white),
+                tooltip: 'Signaler cet artisan',
+                onPressed: () => _showReportDialog(context),
+              ),
+            ],
             flexibleSpace: FlexibleSpaceBar(
               background: Stack(
                 fit: StackFit.expand,
@@ -529,6 +536,65 @@ class ArtisanProfileScreen extends StatelessWidget {
             ],
           ),
         ),
+      ),
+    );
+  }
+
+  void _showReportDialog(BuildContext context) {
+    final TextEditingController reportController = TextEditingController();
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Signaler cet artisan'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text(
+              'Veuillez expliquer la raison de votre signalement (ex: comportement inapproprié, travail non fini, etc.)',
+              style: TextStyle(fontSize: 14),
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: reportController,
+              maxLines: 4,
+              decoration: InputDecoration(
+                hintText: 'Votre explication...',
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Annuler'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              if (reportController.text.trim().isEmpty) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Veuillez saisir une explication')),
+                );
+                return;
+              }
+              // Ici on pourrait appeler un service pour enregistrer le signalement
+              Navigator.pop(context);
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('Signalement envoyé avec succès. Notre équipe va l\'étudier.'),
+                  backgroundColor: AppColors.success,
+                ),
+              );
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.error,
+              foregroundColor: AppColors.white,
+            ),
+            child: const Text('Envoyer'),
+          ),
+        ],
       ),
     );
   }

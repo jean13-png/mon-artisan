@@ -429,43 +429,57 @@ class _HomeArtisanScreenState extends State<HomeArtisanScreen> {
             ),
             const SizedBox(height: 20),
             // Statut disponibilité
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-              decoration: BoxDecoration(
-                color: AppColors.white.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(14),
-                border: Border.all(color: AppColors.white.withOpacity(0.15)),
-              ),
-              child: Row(
-                children: [
-                  Container(
-                    width: 10,
-                    height: 10,
-                    decoration: BoxDecoration(
-                      color: artisan.disponibilite ? AppColors.success : AppColors.greyMedium,
-                      shape: BoxShape.circle,
+            GestureDetector(
+              onTap: artisan.commandeEnCours != null 
+                ? () {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Vous ne pouvez pas changer votre disponibilité tant que vous avez une mission en cours.'),
+                        backgroundColor: AppColors.warning,
+                      ),
+                    );
+                  }
+                : null,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                decoration: BoxDecoration(
+                  color: AppColors.white.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(color: AppColors.white.withOpacity(0.15)),
+                ),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 10,
+                      height: 10,
+                      decoration: BoxDecoration(
+                        color: artisan.disponibilite ? AppColors.success : AppColors.greyMedium,
+                        shape: BoxShape.circle,
+                      ),
                     ),
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: Text(
-                      artisan.disponibilite ? 'Disponible' : 'Non disponible',
-                      style: AppTextStyles.bodyMedium.copyWith(
-                          color: AppColors.white, fontWeight: FontWeight.w600),
-                      overflow: TextOverflow.ellipsis,
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Text(
+                        artisan.disponibilite ? 'Disponible' : 'Non disponible',
+                        style: AppTextStyles.bodyMedium.copyWith(
+                            color: AppColors.white, fontWeight: FontWeight.w600),
+                        overflow: TextOverflow.ellipsis,
+                      ),
                     ),
-                  ),
-                  Transform.scale(
-                    scale: 0.85,
-                    child: Switch(
-                      value: artisan.disponibilite,
-                      onChanged: (v) => artisanProvider.updateDisponibilite(v),
-                      activeColor: AppColors.success,
-                      inactiveThumbColor: AppColors.greyMedium,
-                      activeTrackColor: AppColors.success.withOpacity(0.3),
+                    Transform.scale(
+                      scale: 0.85,
+                      child: Switch(
+                        value: artisan.disponibilite,
+                        onChanged: artisan.commandeEnCours != null 
+                          ? null 
+                          : (v) => artisanProvider.updateDisponibilite(v),
+                        activeColor: AppColors.success,
+                        inactiveThumbColor: AppColors.greyMedium,
+                        activeTrackColor: AppColors.success.withOpacity(0.3),
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
             if (!artisan.estRealementDisponible && artisan.commandeEnCours != null) ...[

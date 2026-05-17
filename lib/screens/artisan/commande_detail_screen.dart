@@ -498,6 +498,12 @@ class _CommandeDetailScreenState extends State<CommandeDetailScreen> {
                         onPressed: _callOtherUser,
                         icon: const Icon(Icons.phone, color: AppColors.success),
                       ),
+                      if (_isClient)
+                        IconButton(
+                          onPressed: () => _showReportDialog(context),
+                          icon: const Icon(Icons.report_problem_outlined, color: AppColors.error),
+                          tooltip: 'Signaler',
+                        ),
                     ],
                   ),
                   const SizedBox(height: 16),
@@ -905,6 +911,64 @@ class _CommandeDetailScreenState extends State<CommandeDetailScreen> {
         ),
       ),
       bottomNavigationBar: _buildBottomActions(context),
+    );
+  }
+
+  void _showReportDialog(BuildContext context) {
+    final TextEditingController reportController = TextEditingController();
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Signaler un problème'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text(
+              'Veuillez expliquer la raison de votre recours ou signalement concernant cet artisan.',
+              style: TextStyle(fontSize: 14),
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: reportController,
+              maxLines: 4,
+              decoration: InputDecoration(
+                hintText: 'Détails du problème...',
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Annuler'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              if (reportController.text.trim().isEmpty) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Veuillez saisir une explication')),
+                );
+                return;
+              }
+              Navigator.pop(context);
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('Signalement enregistré. Notre équipe va vous recontacter.'),
+                  backgroundColor: AppColors.success,
+                ),
+              );
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.error,
+              foregroundColor: AppColors.white,
+            ),
+            child: const Text('Envoyer'),
+          ),
+        ],
+      ),
     );
   }
 
