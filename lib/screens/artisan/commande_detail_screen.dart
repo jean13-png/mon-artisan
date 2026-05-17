@@ -934,7 +934,6 @@ class _CommandeDetailScreenState extends State<CommandeDetailScreen> {
 
   Widget? _buildBottomActions(BuildContext context) {
     final commande = widget.commande;
-    final statut = commande.statut;
 
     if (_isClient) {
       return _buildClientActions(context, commande);
@@ -1212,7 +1211,7 @@ class _CommandeDetailScreenState extends State<CommandeDetailScreen> {
           MaterialPageRoute(
             builder: (context) => ChatScreen(
               otherUserId: _isClient ? widget.commande.artisanId : widget.commande.clientId,
-              otherUserName: _otherUserNom ?? (_isClient ? 'Artisan' : 'Client'),
+              otherUserName: _otherUserNom ?? '${_isClient ? 'Artisan' : 'Client'} #${(_isClient ? widget.commande.artisanId : widget.commande.clientId).substring(0, 8)}',
             ),
           ),
         );
