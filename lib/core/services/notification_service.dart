@@ -1,6 +1,13 @@
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'dart:io';
+
+/// Fonction globale obligatoire pour gérer les messages en arrière-plan
+@pragma('vm:entry-point')
+Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
+  print("Message reçu en arrière-plan : ${message.messageId}");
+}
 
 class NotificationService {
   static final FirebaseMessaging _firebaseMessaging = FirebaseMessaging.instance;
@@ -14,8 +21,11 @@ class NotificationService {
     if (_isInitialized) return;
 
     try {
+      // Configurer le handler de fond avant toute chose
+      FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
+
       // Demander la permission
-      await _firebaseMessaging.requestPermission(
+      NotificationSettings settings = await _firebaseMessaging.requestPermission(
         alert: true,
         announcement: false,
         badge: true,
@@ -24,22 +34,48 @@ class NotificationService {
         sound: true,
       );
 
+      print('Statut des permissions : ${settings.authorizationStatus}');
+
       // Initialiser les notifications locales
       await _initializeLocalNotifications();
 
       // Écouter les messages en avant-plan
       FirebaseMessaging.onMessage.listen(_handleForegroundMessage);
 
-      // Écouter les messages en arrière-plan
+      // Écouter les messages en arrière-plan (quand on clique sur la notification)
       FirebaseMessaging.onMessageOpenedApp.listen(_handleBackgroundMessage);
 
-      // Obtenir le token FCM
-      final token = await _firebaseMessaging.getToken();
-      print('FCM Token: $token');
+      // Gérer le cas où l'app est lancée via une notification
+      RemoteMessage? initialMessage = await _firebaseMessaging.getInitialMessage();
+      if (initialMessage != null) {
+        _handleBackgroundMessage(initialMessage);
+      }
+
+      // Écouter le rafraîchissement du token
+      _firebaseMessaging.onTokenRefresh.listen((newToken) {
+        print('FCM Token rafraîchi : $newToken');
+        // On ne peut pas mettre à jour ici car on n'a pas forcément l'ID utilisateur
+      });
 
       _isInitialized = true;
     } catch (e) {
       print('Erreur lors de l\'initialisation des notifications: $e');
+    }
+  }
+
+  /// Associer le token FCM actuel à un utilisateur dans Firestore
+  static Future<void> updateUserToken(String userId) async {
+    try {
+      String? token = await _firebaseMessaging.getToken();
+      if (token != null) {
+        await FirebaseFirestore.instance.collection('users').doc(userId).update({
+          'fcmToken': token,
+          'updatedAt': FieldValue.serverTimestamp(),
+        });
+        print('FCM Token mis à jour pour l\'utilisateur $userId');
+      }
+    } catch (e) {
+      print('Erreur lors de la mise à jour du token FCM : $e');
     }
   }
 

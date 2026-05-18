@@ -25,17 +25,41 @@ class RoleSelectionScreen extends StatelessWidget {
           children: [
             const SizedBox(height: 25),
             
-            // Bannière en haut
-            Container(
-              width: double.infinity,
-              height: 280,
-              decoration: const BoxDecoration(
-                image: DecorationImage(
-                  image: AssetImage('assets/images/banner.png'),
-                  fit: BoxFit.cover,
-                  alignment: Alignment.topCenter,
+            // Bannière en haut avec dégradé vers le bas
+            Stack(
+              children: [
+                Container(
+                  width: double.infinity,
+                  height: 280,
+                  decoration: const BoxDecoration(
+                    image: DecorationImage(
+                      image: AssetImage('assets/images/banner.png'),
+                      fit: BoxFit.cover,
+                      alignment: Alignment.topCenter,
+                    ),
+                  ),
                 ),
-              ),
+                // Dégradé pour fondre l'image dans le fond blanc
+                Positioned(
+                  bottom: 0,
+                  left: 0,
+                  right: 0,
+                  height: 100,
+                  child: Container(
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                        colors: [
+                          AppColors.surface.withOpacity(0.0),
+                          AppColors.surface.withOpacity(0.8),
+                          AppColors.surface,
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ],
             ),
             
             // Contenu principal

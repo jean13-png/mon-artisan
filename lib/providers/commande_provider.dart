@@ -141,13 +141,17 @@ class CommandeProvider extends ChangeNotifier {
   }
 
   // Récupérer les commandes d'un client (paginé)
-  Future<void> loadClientCommandes(String clientId) async {
-    resetPagination();
+  Future<void> loadClientCommandes(String clientId,
+      {bool forceRefresh = true}) async {
+    if (forceRefresh || _commandes.isEmpty) {
+      resetPagination();
+    }
     await _fetchCommandes(
       FirebaseService.firestore
           .collection('commandes')
           .where('clientId', isEqualTo: clientId)
           .orderBy('createdAt', descending: true),
+      isSilent: !forceRefresh && _commandes.isNotEmpty,
     );
   }
 
@@ -164,13 +168,17 @@ class CommandeProvider extends ChangeNotifier {
   }
 
   // Récupérer les commandes d'un artisan (paginé)
-  Future<void> loadArtisanCommandes(String artisanId) async {
-    resetPagination();
+  Future<void> loadArtisanCommandes(String artisanId,
+      {bool forceRefresh = true}) async {
+    if (forceRefresh || _commandes.isEmpty) {
+      resetPagination();
+    }
     await _fetchCommandes(
       FirebaseService.firestore
           .collection('commandes')
           .where('artisanId', isEqualTo: artisanId)
           .orderBy('createdAt', descending: true),
+      isSilent: !forceRefresh && _commandes.isNotEmpty,
     );
   }
 
@@ -187,10 +195,13 @@ class CommandeProvider extends ChangeNotifier {
   }
 
   // Méthode générique de récupération paginée
-  Future<void> _fetchCommandes(Query query, {bool isLoadMore = false}) async {
-    _isLoading = true;
-    _errorMessage = null;
-    notifyListeners();
+  Future<void> _fetchCommandes(Query query,
+      {bool isLoadMore = false, bool isSilent = false}) async {
+    if (!isSilent) {
+      _isLoading = true;
+      _errorMessage = null;
+      notifyListeners();
+    }
 
     try {
       Query paginatedQuery = query.limit(_limit);
@@ -222,13 +233,17 @@ class CommandeProvider extends ChangeNotifier {
         _hasMore = false;
       }
 
-      _isLoading = false;
-      notifyListeners();
+      if (!isSilent || _isLoading) {
+        _isLoading = false;
+        notifyListeners();
+      }
     } catch (e) {
       print('[ERROR] Erreur _fetchCommandes: $e');
-      _isLoading = false;
-      _errorMessage = 'Erreur lors du chargement des commandes. Vérifiez vos index Firestore.';
-      notifyListeners();
+      if (!isSilent) {
+        _isLoading = false;
+        _errorMessage = 'Erreur lors du chargement des commandes. Vérifiez vos index Firestore.';
+        notifyListeners();
+      }
     }
   }
 
@@ -593,6 +608,50 @@ class CommandeProvider extends ChangeNotifier {
     }
   }
 
+  // Modifier un devis (artisan)
+  Future<bool> modifierDevis({
+    required String commandeId,
+    required double montantDevis,
+    required String messageDevis,
+  }) async {
+    try {
+      // Calculer la commission (10%)
+      final commission = montantDevis * 0.10;
+      final montantArtisan = montantDevis - commission;
+
+      await FirebaseService.firestore
+          .collection('commandes')
+          .doc(commandeId)
+          .update({
+        'montantDevis': montantDevis,
+        'messageDevis': messageDevis,
+        'commission': commission,
+        'montantArtisan': montantArtisan,
+        'updatedAt': Timestamp.now(),
+      });
+
+      // Notification pour le client
+      final commandeDoc = await FirebaseService.firestore.collection('commandes').doc(commandeId).get();
+      if (commandeDoc.exists) {
+        final commande = CommandeModel.fromFirestore(commandeDoc);
+        await FirestoreService.createNotification({
+          'userId': commande.clientId,
+          'type': 'devis_modifie',
+          'titre': 'Devis modifié',
+          'message': 'L\'artisan a modifié son devis. Nouveau montant : ${montantDevis.toStringAsFixed(0)} FCFA',
+          'data': {'commandeId': commandeId},
+        });
+      }
+
+      return true;
+    } catch (e) {
+      print('[ERROR] Erreur modification devis: $e');
+      _errorMessage = 'Erreur lors de la modification du devis';
+      notifyListeners();
+      return false;
+    }
+  }
+
   // ─── DIAGNOSTIC : Artisan confirme être sur place ─────────────────────────
   Future<bool> validerDiagnosticArtisan(String commandeId) async {
     final operationKey = 'valider_diag_$commandeId';
@@ -694,11 +753,67 @@ class CommandeProvider extends ChangeNotifier {
 
       return true;
     } catch (e) {
+      print('[ERROR] Erreur envoi devis post-diagnostic: $e');
       _errorMessage = 'Erreur lors de l\'envoi du devis post-diagnostic: $e';
       notifyListeners();
       return false;
     } finally {
       _unlockOperation(operationKey);
+    }
+  }
+
+  // Modifier un devis post-diagnostic (artisan)
+  Future<bool> modifierDevisPostDiagnostic({
+    required String commandeId,
+    required double montantDevis,
+    required String descriptionProbleme,
+    String? justificationMontant,
+  }) async {
+    try {
+      final commandeDoc = await FirebaseService.firestore
+          .collection('commandes').doc(commandeId).get();
+      if (!commandeDoc.exists) return false;
+      final commande = CommandeModel.fromFirestore(commandeDoc);
+
+      final commissionDevis = montantDevis * AppConstants.commissionRate;
+      final montantArtisanDevis = montantDevis - commissionDevis;
+
+      // Recalculer les totaux (Diagnostic déjà payé + Nouveau devis)
+      final nouveauMontantTotal = (commande.montantDiagnostic ?? 0.0) + montantDevis;
+      
+      // On repart de la commission de base (diagnostic) et on ajoute la nouvelle commission sur le devis
+      // Note: On suppose que commande.commission contient déjà la commission sur le diagnostic
+      // mais attention au cumul si on modifie plusieurs fois.
+      // Idéalement, on recalcule tout proprement :
+      final commissionDiagnostic = (commande.montantDiagnostic ?? 0.0) * AppConstants.commissionRate;
+      final nouvelleCommissionTotale = commissionDiagnostic + commissionDevis;
+      final nouveauMontantArtisanTotal = nouveauMontantTotal - nouvelleCommissionTotale;
+
+      await FirebaseService.firestore.collection('commandes').doc(commandeId).update({
+        'montantDevis': montantDevis,
+        'descriptionProbleme': descriptionProbleme,
+        'justificationMontant': justificationMontant,
+        'montant': nouveauMontantTotal,
+        'commission': nouvelleCommissionTotale,
+        'montantArtisan': nouveauMontantArtisanTotal,
+        'updatedAt': Timestamp.now(),
+      });
+
+      // Notification pour le client
+      await FirestoreService.createNotification({
+        'userId': commande.clientId,
+        'type': 'devis_modifie',
+        'titre': 'Devis post-diagnostic modifié',
+        'message': 'L\'artisan a mis à jour le devis après diagnostic.',
+        'data': {'commandeId': commandeId},
+      });
+
+      return true;
+    } catch (e) {
+      print('[ERROR] Erreur modification devis post-diagnostic: $e');
+      _errorMessage = 'Erreur lors de la modification du devis';
+      notifyListeners();
+      return false;
     }
   }
 

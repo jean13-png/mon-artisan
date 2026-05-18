@@ -316,7 +316,24 @@ class AppRouter {
   static String? _guard(AuthProvider auth, String location) {
     final path = Uri.parse(location).path;
 
-    // 1. Routes publiques → toujours autorisées
+    // 0. Si l'initialisation n'est pas faite, on reste/va sur splash
+    if (!auth.isInitialCheckDone) {
+      return path == splash ? null : splash;
+    }
+
+    // 1. Si on est sur splash et que l'auth est prête, on redirige
+    if (path == splash) {
+      if (auth.isAuthenticated) {
+        if (auth.userModel != null) {
+          return _defaultRouteForUser(auth.userModel!);
+        }
+        return null; // On attend que le userModel soit chargé
+      } else {
+        return roleSelection;
+      }
+    }
+
+    // 2. Routes publiques → toujours autorisées
     if (_publicRoutes.contains(path)) return null;
 
     // 3. Non authentifié → sélection de rôle

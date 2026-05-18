@@ -723,21 +723,22 @@ class _ChatScreenState extends State<ChatScreen> {
 
   void _showQuoteOptions(BuildContext context) {
     final commandeProvider = Provider.of<CommandeProvider>(context, listen: false);
-    final authProvider = Provider.of<AuthProvider>(context, listen: false);
     
-    // Trouver la commande en cours avec cet utilisateur
-    final activeCommande = commandeProvider.commandes.firstWhere(
+    // Trouver la commande la plus récente avec cet utilisateur qui n'est pas encore terminée/validée/annulée
+    final activeCommandes = commandeProvider.commandes.where(
       (c) => c.clientId == widget.otherUserId && 
-             ['diagnostic_valide', 'acceptee', 'en_cours'].contains(c.statut),
-      orElse: () => null as dynamic,
-    );
+             !['validee', 'terminee', 'annulee', 'refusee', 'archivee'].contains(c.statut),
+    ).toList();
 
-    if (activeCommande == null) {
+    if (activeCommandes.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Aucune commande active trouvée avec ce client pour envoyer un devis.')),
+        const SnackBar(content: Text('Aucune commande active trouvée avec ce client.')),
       );
       return;
     }
+
+    // Si plusieurs commandes, on prend la plus récente
+    final activeCommande = activeCommandes.first;
 
     context.push(AppRouter.envoyerDevis, extra: activeCommande);
   }

@@ -480,36 +480,31 @@ class _ArtisansValidationScreenState extends State<ArtisansValidationScreen> {
         return;
       }
       
-      // Mettre à jour le statut
-      await FirebaseService.firestore
-          .collection('artisans')
-          .doc(artisanId)
-          .update({
-        'verificationStatus': 'approved',
-        'isVerified': true,
-        'disponibilite': true,
-        'updatedAt': Timestamp.now(),
-      });
+      // Mettre à jour le statut dans une transaction
+      await FirebaseService.firestore.runTransaction((transaction) async {
+        transaction.update(FirebaseService.firestore.collection('artisans').doc(artisanId), {
+          'verificationStatus': 'approved',
+          'isVerified': true,
+          'disponibilite': true,
+          'updatedAt': Timestamp.now(),
+        });
 
-      // Mettre à jour aussi le champ isVerified dans la collection users pour cohérence
-      await FirebaseService.firestore
-          .collection('users')
-          .doc(userId)
-          .update({
-        'isVerified': true,
-        'updatedAt': Timestamp.now(),
-      });
+        // Mettre à jour aussi le champ isVerified dans la collection users pour cohérence
+        transaction.update(FirebaseService.firestore.collection('users').doc(userId), {
+          'isVerified': true,
+          'updatedAt': Timestamp.now(),
+        });
 
-      // Créer une notification pour l'artisan
-      await FirebaseService.firestore
-          .collection('notifications')
-          .add({
-        'userId': userId,
-        'titre': 'Profil approuvé ! 🎉',
-        'message': 'Félicitations ! Votre profil artisan a été approuvé. Vous pouvez maintenant recevoir des commandes.',
-        'type': 'verification_approved',
-        'isRead': false,
-        'createdAt': Timestamp.now(),
+        // Créer une notification pour l'artisan
+        final notificationRef = FirebaseService.firestore.collection('notifications').doc();
+        transaction.set(notificationRef, {
+          'userId': userId,
+          'titre': 'Profil approuvé ! 🎉',
+          'message': 'Félicitations ! Votre profil artisan a été approuvé. Vous pouvez maintenant recevoir des commandes.',
+          'type': 'verification_approved',
+          'isRead': false,
+          'createdAt': Timestamp.now(),
+        });
       });
 
       if (!mounted) return;

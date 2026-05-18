@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:go_router/go_router.dart';
@@ -366,165 +367,547 @@ class _CommandeDetailScreenState extends State<CommandeDetailScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final commande = widget.commande;
+    return StreamBuilder<DocumentSnapshot>(
+      stream: FirebaseService.firestore.collection('commandes').doc(widget.commande.id).snapshots(),
+      builder: (context, snapshot) {
+        if (snapshot.hasError) {
+          return Scaffold(body: Center(child: Text('Erreur: ${snapshot.error}')));
+        }
 
-    return Scaffold(
-      backgroundColor: AppColors.greyLight,
-      appBar: AppBar(
-        backgroundColor: AppColors.primaryBlue,
-        elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: AppColors.white),
-          onPressed: () => Navigator.pop(context),
-        ),
-        title: Text(
-          'Détails de la commande',
-          style: AppTextStyles.h3.copyWith(color: AppColors.white),
-        ),
-      ),
-      body: SingleChildScrollView(
-        child: Column(
-          children: [
-            // Badge DIAGNOSTIC
-            if (commande.typeCommande == 'diagnostic_requis')
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                color: AppColors.primaryBlue,
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    const Icon(Icons.search, color: AppColors.white, size: 18),
-                    const SizedBox(width: 8),
-                    Flexible(
-                      child: Text(
-                        'DIAGNOSTIC',
-                        style: AppTextStyles.bodyMedium.copyWith(
-                          color: AppColors.white,
-                          fontWeight: FontWeight.bold,
-                          letterSpacing: 1.2,
-                        ),
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                    if (commande.montantDiagnostic != null) ...[
-                      const SizedBox(width: 12),
-                      Flexible(
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                          decoration: BoxDecoration(
-                            color: AppColors.white.withOpacity(0.25),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
+        if (!snapshot.hasData) {
+          return const Scaffold(body: Center(child: CircularProgressIndicator()));
+        }
+
+        if (!snapshot.data!.exists) {
+          return Scaffold(
+            appBar: AppBar(title: const Text('Commande introuvable')),
+            body: const Center(child: Text('Cette commande n\'existe plus.')),
+          );
+        }
+
+        final commande = CommandeModel.fromFirestore(snapshot.data!);
+
+        return Scaffold(
+          backgroundColor: AppColors.greyLight,
+          appBar: AppBar(
+            backgroundColor: AppColors.primaryBlue,
+            elevation: 0,
+            leading: IconButton(
+              icon: const Icon(Icons.arrow_back, color: AppColors.white),
+              onPressed: () => Navigator.pop(context),
+            ),
+            title: Text(
+              'Détails de la commande',
+              style: AppTextStyles.h3.copyWith(color: AppColors.white),
+            ),
+          ),
+          body: SingleChildScrollView(
+            child: Column(
+              children: [
+                // Badge DIAGNOSTIC
+                if (commande.typeCommande == 'diagnostic_requis')
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                    color: AppColors.primaryBlue,
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Icon(Icons.search, color: AppColors.white, size: 18),
+                        const SizedBox(width: 8),
+                        Flexible(
                           child: Text(
-                            '${commande.montantDiagnostic!.toStringAsFixed(0)} F',
-                            style: AppTextStyles.bodySmall.copyWith(color: AppColors.white),
+                            'DIAGNOSTIC',
+                            style: AppTextStyles.bodyMedium.copyWith(
+                              color: AppColors.white,
+                              fontWeight: FontWeight.bold,
+                              letterSpacing: 1.2,
+                            ),
                             overflow: TextOverflow.ellipsis,
                           ),
                         ),
-                      ),
-                    ],
-                  ],
-                ),
-              ),
-
-            // Statut
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(16),
-              color: _getStatutColor(commande.statut).withOpacity(0.1),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(
-                    _getStatutIcon(commande.statut),
-                    color: _getStatutColor(commande.statut),
-                    size: 24,
-                  ),
-                  const SizedBox(width: 8),
-                  Flexible(
-                    child: Text(
-                      _getStatutText(commande.statut, _isClient),
-                      style: AppTextStyles.bodyLarge.copyWith(
-                        color: _getStatutColor(commande.statut),
-                        fontWeight: FontWeight.w600,
-                      ),
-                      textAlign: TextAlign.center,
-                      overflow: TextOverflow.ellipsis,
-                      maxLines: 2,
+                        if (commande.montantDiagnostic != null) ...[
+                          const SizedBox(width: 12),
+                          Flexible(
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                              decoration: BoxDecoration(
+                                color: AppColors.white.withOpacity(0.25),
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: Text(
+                                '${commande.montantDiagnostic!.toStringAsFixed(0)} F',
+                                style: AppTextStyles.bodySmall.copyWith(color: AppColors.white),
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ],
                     ),
                   ),
-                ],
-              ),
-            ),
 
-            const SizedBox(height: 16),
-
-            // Informations de l'autre partie
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(24),
-              color: AppColors.white,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(_isClient ? 'Votre artisan' : 'Informations client', style: AppTextStyles.h3),
-                  const SizedBox(height: 16),
-                  Row(
+                // Statut
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(16),
+                  color: _getStatutColor(commande.statut).withOpacity(0.1),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      CircleAvatar(
-                        radius: 25,
-                        backgroundColor: AppColors.greyLight,
-                        backgroundImage: _otherUserPhoto != null ? NetworkImage(_otherUserPhoto!) : null,
-                        child: _otherUserPhoto == null ? Icon(_isClient ? Icons.person : Icons.person_outline, color: AppColors.greyDark) : null,
+                      Icon(
+                        _getStatutIcon(commande.statut),
+                        color: _getStatutColor(commande.statut),
+                        size: 24,
                       ),
-                      const SizedBox(width: 16),
-                      Expanded(
+                      const SizedBox(width: 8),
+                      Flexible(
+                        child: Text(
+                          _getStatutText(commande.statut, _isClient),
+                          style: AppTextStyles.bodyLarge.copyWith(
+                            color: _getStatutColor(commande.statut),
+                            fontWeight: FontWeight.w600,
+                          ),
+                          textAlign: TextAlign.center,
+                          overflow: TextOverflow.ellipsis,
+                          maxLines: 2,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+
+                const SizedBox(height: 16),
+
+                // Informations de l'autre partie
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(24),
+                  color: AppColors.white,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(_isClient ? 'Votre artisan' : 'Informations client', style: AppTextStyles.h3),
+                      const SizedBox(height: 16),
+                      Row(
+                        children: [
+                          CircleAvatar(
+                            radius: 25,
+                            backgroundColor: AppColors.greyLight,
+                            backgroundImage: _otherUserPhoto != null ? NetworkImage(_otherUserPhoto!) : null,
+                            child: _otherUserPhoto == null ? Icon(_isClient ? Icons.person : Icons.person_outline, color: AppColors.greyDark) : null,
+                          ),
+                          const SizedBox(width: 16),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  _otherUserNom?.isNotEmpty == true
+                                      ? _otherUserNom!
+                                      : (_isClient ? 'Artisan' : 'Client') + ' #${(_isClient ? commande.artisanId : commande.clientId).substring(0, 8)}',
+                                  style: AppTextStyles.bodyLarge.copyWith(fontWeight: FontWeight.bold),
+                                ),
+                                if (_isClient)
+                                  Text(commande.metier, style: AppTextStyles.bodySmall.copyWith(color: AppColors.greyDark)),
+                              ],
+                            ),
+                          ),
+                          IconButton(
+                            onPressed: _callOtherUser,
+                            icon: const Icon(Icons.phone, color: AppColors.success),
+                          ),
+                          if (_isClient)
+                            IconButton(
+                              onPressed: () => _showReportDialog(context),
+                              icon: const Icon(Icons.report_problem_outlined, color: AppColors.error),
+                              tooltip: 'Signaler',
+                            ),
+                        ],
+                      ),
+                      const SizedBox(height: 16),
+                      _buildInfoRow(
+                          Icons.location_on_outlined, 'Adresse', commande.adresse),
+                      const SizedBox(height: 12),
+                      _buildInfoRow(Icons.location_city, 'Ville',
+                          '${commande.ville} - ${commande.quartier}'),
+                    ],
+                  ),
+                ),
+
+                // Position du client (Seul l'artisan voit la position et l'itinéraire)
+                if (!_isClient && (commande.clientPosition != null || commande.position != null)) ...[
+                  const SizedBox(height: 16),
+                  Builder(
+                    builder: (context) {
+                      final position = commande.clientPosition ?? commande.position!;
+                      final adresse = commande.clientAdresseExacte ?? commande.adresse;
+                      
+                      return Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(24),
+                        color: AppColors.white,
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(
-                              _otherUserNom?.isNotEmpty == true
-                                  ? _otherUserNom!
-                                  : (_isClient ? 'Artisan' : 'Client') + ' #${(_isClient ? widget.commande.artisanId : widget.commande.clientId).substring(0, 8)}',
-                              style: AppTextStyles.bodyLarge.copyWith(fontWeight: FontWeight.bold),
+                            Row(
+                              children: [
+                                const Icon(Icons.location_on,
+                                    color: AppColors.primaryBlue, size: 24),
+                                const SizedBox(width: 8),
+                                Text('Position du client', style: AppTextStyles.h3),
+                              ],
                             ),
-                            if (_isClient)
-                              Text(widget.commande.metier, style: AppTextStyles.bodySmall.copyWith(color: AppColors.greyDark)),
+                            const SizedBox(height: 16),
+                            ReadOnlyMapWidget(
+                              latitude: position.latitude,
+                              longitude: position.longitude,
+                              label: commande.clientPositionPartagee ? 'Position partagée (Exacte)' : 'Position d\'intervention',
+                            ),
+                            const SizedBox(height: 16),
+                            if (adresse.isNotEmpty) ...[
+                              Container(
+                                padding: const EdgeInsets.all(12),
+                                decoration: BoxDecoration(
+                                  color: AppColors.greyLight,
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: Row(
+                                  children: [
+                                    const Icon(Icons.place,
+                                        color: AppColors.greyDark, size: 20),
+                                    const SizedBox(width: 8),
+                                    Expanded(
+                                      child: Text(
+                                        adresse,
+                                        style: AppTextStyles.bodyMedium
+                                            .copyWith(fontWeight: FontWeight.w500),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              const SizedBox(height: 16),
+                            ],
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: ElevatedButton.icon(
+                                    onPressed: () => _ouvrirGoogleMaps(
+                                      position.latitude,
+                                      position.longitude,
+                                    ),
+                                    icon: const Icon(Icons.directions, size: 20),
+                                    label: const Text('Itinéraire'),
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: AppColors.primaryBlue,
+                                      foregroundColor: AppColors.white,
+                                      padding:
+                                          const EdgeInsets.symmetric(vertical: 12),
+                                      shape: RoundedRectangleBorder(
+                                          borderRadius: BorderRadius.circular(8)),
+                                    ),
+                                  ),
+                                ),
+                                if (adresse.isNotEmpty) ...[
+                                  const SizedBox(width: 12),
+                                  Expanded(
+                                    child: OutlinedButton.icon(
+                                      onPressed: () =>
+                                          _copierAdresse(adresse),
+                                      icon: const Icon(Icons.copy, size: 20),
+                                      label: const Text('Copier'),
+                                      style: OutlinedButton.styleFrom(
+                                        foregroundColor: AppColors.primaryBlue,
+                                        side: const BorderSide(
+                                            color: AppColors.primaryBlue),
+                                        padding:
+                                            const EdgeInsets.symmetric(vertical: 12),
+                                        shape: RoundedRectangleBorder(
+                                            borderRadius: BorderRadius.circular(8)),
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ],
+                            ),
                           ],
                         ),
-                      ),
-                      IconButton(
-                        onPressed: _callOtherUser,
-                        icon: const Icon(Icons.phone, color: AppColors.success),
-                      ),
-                      if (_isClient)
-                        IconButton(
-                          onPressed: () => _showReportDialog(context),
-                          icon: const Icon(Icons.report_problem_outlined, color: AppColors.error),
-                          tooltip: 'Signaler',
-                        ),
-                    ],
+                      );
+                    }
                   ),
                   const SizedBox(height: 16),
-                  _buildInfoRow(
-                      Icons.location_on_outlined, 'Adresse', commande.adresse),
-                  const SizedBox(height: 12),
-                  _buildInfoRow(Icons.location_city, 'Ville',
-                      '${commande.ville} - ${commande.quartier}'),
                 ],
-              ),
-            ),
 
-            // Position du client (Seul l'artisan voit la position et l'itinéraire)
-            if (!_isClient && (commande.clientPosition != null || commande.position != null)) ...[
-              const SizedBox(height: 16),
-              Builder(
-                builder: (context) {
-                  final position = commande.clientPosition ?? commande.position!;
-                  final adresse = commande.clientAdresseExacte ?? commande.adresse;
-                  
-                  return Container(
+                // Détails de la prestation
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(24),
+                  color: AppColors.white,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('Détails de la prestation', style: AppTextStyles.h3),
+                      const SizedBox(height: 16),
+                      _buildInfoRow(Icons.work_outline, 'Métier', commande.metier),
+                      const SizedBox(height: 12),
+                      _buildInfoRow(
+                        Icons.calendar_today,
+                        'Date',
+                        '${commande.dateIntervention.day}/${commande.dateIntervention.month}/${commande.dateIntervention.year}',
+                      ),
+                      const SizedBox(height: 12),
+                      _buildInfoRow(
+                          Icons.access_time, 'Heure', commande.heureIntervention),
+                      if (commande.distanceKm != null) ...[
+                        const SizedBox(height: 12),
+                        _buildInfoRow(Icons.route, 'Distance',
+                            '${commande.distanceKm!.toStringAsFixed(2)} km'),
+                      ],
+                      const SizedBox(height: 16),
+                      Text(
+                        'Description',
+                        style: AppTextStyles.bodyMedium
+                            .copyWith(fontWeight: FontWeight.w600),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        commande.description,
+                        style: AppTextStyles.bodyMedium.copyWith(
+                            color: AppColors.greyDark, height: 1.5),
+                      ),
+                    ],
+                  ),
+                ),
+
+                const SizedBox(height: 16),
+
+                // Photos
+                if (commande.photos.isNotEmpty) ...[
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(24),
+                    color: AppColors.white,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('Photos du problème', style: AppTextStyles.h3),
+                        const SizedBox(height: 16),
+                        SizedBox(
+                          height: 100,
+                          child: ListView.builder(
+                            scrollDirection: Axis.horizontal,
+                            itemCount: commande.photos.length,
+                            itemBuilder: (context, index) {
+                              return Container(
+                                width: 100,
+                                height: 100,
+                                margin: const EdgeInsets.only(right: 12),
+                                decoration: BoxDecoration(
+                                  borderRadius: BorderRadius.circular(8),
+                                  image: DecorationImage(
+                                    image: NetworkImage(commande.photos[index]),
+                                    fit: BoxFit.cover,
+                                  ),
+                                ),
+                              );
+                            },
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                ],
+
+                // Montant / Récapitulatif financier
+                if (commande.montant > 0 || commande.montantDevis != null || (commande.typeCommande == 'diagnostic_requis' && commande.montantDiagnostic != null)) ...[
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(24),
+                    color: AppColors.white,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(_isClient ? 'Récapitulatif financier' : 'Rémunération', style: AppTextStyles.h3),
+                        const SizedBox(height: 16),
+                        
+                        // Frais de diagnostic (si applicable)
+                        if (commande.typeCommande == 'diagnostic_requis' && commande.montantDiagnostic != null) ...[
+                          Row(
+                            children: [
+                              Expanded(
+                                child: Text('Frais de diagnostic (déplacement)',
+                                    style: AppTextStyles.bodyMedium
+                                        .copyWith(color: AppColors.greyDark)),
+                              ),
+                              const SizedBox(width: 8),
+                              Text(
+                                  '${commande.montantDiagnostic!.toStringAsFixed(0)} FCFA',
+                                  style: AppTextStyles.bodyMedium.copyWith(
+                                    fontWeight: commande.fraisDeplacementPayes == true ? FontWeight.bold : FontWeight.normal,
+                                    color: commande.fraisDeplacementPayes == true ? AppColors.success : AppColors.onSurface,
+                                  )),
+                            ],
+                          ),
+                          if (commande.fraisDeplacementPayes == true)
+                            Align(
+                              alignment: Alignment.centerRight,
+                              child: Text('Payé', style: AppTextStyles.bodySmall.copyWith(color: AppColors.success, fontWeight: FontWeight.bold)),
+                            ),
+                          const SizedBox(height: 12),
+                        ],
+
+                        if (commande.montantDevis != null) ...[
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Expanded(
+                                child: Text('Montant des travaux',
+                                    style: AppTextStyles.bodyMedium
+                                        .copyWith(color: AppColors.greyDark)),
+                              ),
+                              const SizedBox(width: 8),
+                              Text(
+                                  '${commande.montantDevis!.toStringAsFixed(0)} FCFA',
+                                  style: AppTextStyles.bodyMedium),
+                            ],
+                          ),
+                          const SizedBox(height: 8),
+                        ],
+
+                        if (commande.montant > 0 && commande.typeCommande != 'diagnostic_requis') ...[
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Expanded(
+                                child: Text('Montant total',
+                                    style: AppTextStyles.bodyMedium
+                                        .copyWith(color: AppColors.greyDark)),
+                              ),
+                              const SizedBox(width: 8),
+                              Text('${commande.montant.toStringAsFixed(0)} FCFA',
+                                  style: AppTextStyles.bodyMedium),
+                            ],
+                          ),
+                        ],
+
+                        if (!_isClient && (commande.montant > 0 || commande.montantDevis != null)) ...[
+                          const SizedBox(height: 8),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Expanded(
+                                child: Text('Commission (10%)',
+                                    style: AppTextStyles.bodyMedium
+                                        .copyWith(color: AppColors.greyDark)),
+                              ),
+                              const SizedBox(width: 8),
+                              Text(
+                                  '- ${commande.commission.toStringAsFixed(0)} FCFA',
+                                  style: AppTextStyles.bodyMedium
+                                      .copyWith(color: AppColors.error)),
+                            ],
+                          ),
+                          const Divider(height: 24),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Expanded(
+                                child: Text('Vous recevrez', style: AppTextStyles.h3),
+                              ),
+                              const SizedBox(width: 8),
+                              Text(
+                                '${commande.montantArtisan.toStringAsFixed(0)} FCFA',
+                                style: AppTextStyles.h2
+                                    .copyWith(color: AppColors.success),
+                              ),
+                            ],
+                          ),
+                        ] else if (_isClient && (commande.montant > 0 || commande.montantDevis != null)) ...[
+                          const Divider(height: 24),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Expanded(
+                                child: Text('Total des travaux', style: AppTextStyles.h3),
+                              ),
+                              const SizedBox(width: 8),
+                              Text(
+                                '${(commande.montantDevis ?? commande.montant).toStringAsFixed(0)} FCFA',
+                                style: AppTextStyles.h2
+                                    .copyWith(color: AppColors.primaryBlue),
+                              ),
+                            ],
+                          ),
+                          if (commande.paiementStatut == 'bloque')
+                            Padding(
+                              padding: const EdgeInsets.only(top: 8),
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.end,
+                                children: [
+                                  const Icon(Icons.security, size: 16, color: AppColors.success),
+                                  const SizedBox(width: 4),
+                                  Text('Paiement sécurisé en escrow', style: AppTextStyles.bodySmall.copyWith(color: AppColors.success, fontWeight: FontWeight.bold)),
+                                ],
+                              ),
+                            ),
+                        ],
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                ],
+
+                // Section devis post-diagnostic (Seul l'artisan peut soumettre le devis final)
+                if (!_isClient && 
+                    commande.statut == 'diagnostic_valide') ...[
+                  const SizedBox(height: 16),
+                  _buildDevisPostDiagnosticSection(context, commande),
+                ],
+
+                // Info en attente client (pour l'artisan)
+                if (!_isClient && (commande.statut == 'devis_envoye' || commande.statut == 'devis_post_diagnostic_envoye')) ...[
+                  const SizedBox(height: 16),
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(24),
+                    color: AppColors.warning.withOpacity(0.1),
+                    child: Column(
+                      children: [
+                        Row(
+                          children: [
+                            const Icon(Icons.hourglass_empty, color: AppColors.warning),
+                            const SizedBox(width: 16),
+                            Expanded(
+                              child: Text(
+                                'Devis envoyé au client. En attente de son acceptation et du paiement.',
+                                style: AppTextStyles.bodyMedium.copyWith(
+                                  color: AppColors.warning,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 16),
+                        CustomButton(
+                          text: 'Modifier le devis',
+                          onPressed: () => _showModifyDevisDialog(context, commande),
+                          backgroundColor: AppColors.white,
+                          textColor: AppColors.primaryBlue,
+                          borderColor: AppColors.primaryBlue,
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+
+                // Description du problème (si rempli par l'artisan)
+                if (commande.descriptionProbleme != null &&
+                    commande.descriptionProbleme!.isNotEmpty) ...[
+                  const SizedBox(height: 16),
+                  Container(
                     width: double.infinity,
                     padding: const EdgeInsets.all(24),
                     color: AppColors.white,
@@ -533,384 +916,98 @@ class _CommandeDetailScreenState extends State<CommandeDetailScreen> {
                       children: [
                         Row(
                           children: [
-                            const Icon(Icons.location_on,
-                                color: AppColors.primaryBlue, size: 24),
+                            const Icon(Icons.assignment_outlined, color: AppColors.primaryBlue, size: 24),
                             const SizedBox(width: 8),
-                            Text('Position du client', style: AppTextStyles.h3),
+                            Text('Rapport de diagnostic', style: AppTextStyles.h3),
                           ],
                         ),
-                        const SizedBox(height: 16),
-                        ReadOnlyMapWidget(
-                          latitude: position.latitude,
-                          longitude: position.longitude,
-                          label: commande.clientPositionPartagee ? 'Position partagée (Exacte)' : 'Position d\'intervention',
-                        ),
-                        const SizedBox(height: 16),
-                        if (adresse.isNotEmpty) ...[
-                          Container(
-                            padding: const EdgeInsets.all(12),
-                            decoration: BoxDecoration(
-                              color: AppColors.greyLight,
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: Row(
-                              children: [
-                                const Icon(Icons.place,
-                                    color: AppColors.greyDark, size: 20),
-                                const SizedBox(width: 8),
-                                Expanded(
-                                  child: Text(
-                                    adresse,
-                                    style: AppTextStyles.bodyMedium
-                                        .copyWith(fontWeight: FontWeight.w500),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          const SizedBox(height: 16),
+                        const SizedBox(height: 12),
+                        Text(commande.descriptionProbleme!, style: AppTextStyles.bodyMedium.copyWith(height: 1.5)),
+                        if (commande.justificationMontant != null && commande.justificationMontant!.isNotEmpty) ...[
+                          const SizedBox(height: 12),
+                          const Divider(),
+                          const SizedBox(height: 8),
+                          Text('Justification du montant', style: AppTextStyles.bodyMedium.copyWith(fontWeight: FontWeight.w600)),
+                          const SizedBox(height: 4),
+                          Text(commande.justificationMontant!, style: AppTextStyles.bodyMedium.copyWith(color: AppColors.greyDark)),
                         ],
-                        Row(
-                          children: [
-                            Expanded(
-                              child: ElevatedButton.icon(
-                                onPressed: () => _ouvrirGoogleMaps(
-                                  position.latitude,
-                                  position.longitude,
-                                ),
-                                icon: const Icon(Icons.directions, size: 20),
-                                label: const Text('Itinéraire'),
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: AppColors.primaryBlue,
-                                  foregroundColor: AppColors.white,
-                                  padding:
-                                      const EdgeInsets.symmetric(vertical: 12),
-                                  shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(8)),
-                                ),
-                              ),
-                            ),
-                            if (adresse.isNotEmpty) ...[
-                              const SizedBox(width: 12),
-                              Expanded(
-                                child: OutlinedButton.icon(
-                                  onPressed: () =>
-                                      _copierAdresse(adresse),
-                                  icon: const Icon(Icons.copy, size: 20),
-                                  label: const Text('Copier'),
-                                  style: OutlinedButton.styleFrom(
-                                    foregroundColor: AppColors.primaryBlue,
-                                    side: const BorderSide(
-                                        color: AppColors.primaryBlue),
-                                    padding:
-                                        const EdgeInsets.symmetric(vertical: 12),
-                                    shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.circular(8)),
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ],
-                        ),
                       ],
                     ),
-                  );
-                }
-              ),
-              const SizedBox(height: 16),
-            ],
-
-            // Détails de la prestation
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(24),
-              color: AppColors.white,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('Détails de la prestation', style: AppTextStyles.h3),
-                  const SizedBox(height: 16),
-                  _buildInfoRow(Icons.work_outline, 'Métier', commande.metier),
-                  const SizedBox(height: 12),
-                  _buildInfoRow(
-                    Icons.calendar_today,
-                    'Date',
-                    '${commande.dateIntervention.day}/${commande.dateIntervention.month}/${commande.dateIntervention.year}',
-                  ),
-                  const SizedBox(height: 12),
-                  _buildInfoRow(
-                      Icons.access_time, 'Heure', commande.heureIntervention),
-                  if (commande.distanceKm != null) ...[
-                    const SizedBox(height: 12),
-                    _buildInfoRow(Icons.route, 'Distance',
-                        '${commande.distanceKm!.toStringAsFixed(2)} km'),
-                  ],
-                  const SizedBox(height: 16),
-                  Text(
-                    'Description',
-                    style: AppTextStyles.bodyMedium
-                        .copyWith(fontWeight: FontWeight.w600),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    commande.description,
-                    style: AppTextStyles.bodyMedium.copyWith(
-                        color: AppColors.greyDark, height: 1.5),
                   ),
                 ],
-              ),
+
+                const SizedBox(height: 80),
+              ],
             ),
+          ),
+          bottomNavigationBar: _buildBottomActions(context, commande),
+        );
+      }
+    );
+  }
 
-            const SizedBox(height: 16),
+  void _showModifyDevisDialog(BuildContext context, CommandeModel commande) {
+    final TextEditingController montantController = TextEditingController(text: commande.montantDevis?.toStringAsFixed(0));
+    final TextEditingController messageController = TextEditingController(text: commande.messageDevis ?? commande.descriptionProbleme);
+    final formKey = GlobalKey<FormState>();
 
-            // Photos
-            if (commande.photos.isNotEmpty) ...[
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(24),
-                color: AppColors.white,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text('Photos du problème', style: AppTextStyles.h3),
-                    const SizedBox(height: 16),
-                    SizedBox(
-                      height: 100,
-                      child: ListView.builder(
-                        scrollDirection: Axis.horizontal,
-                        itemCount: commande.photos.length,
-                        itemBuilder: (context, index) {
-                          return Container(
-                            width: 100,
-                            height: 100,
-                            margin: const EdgeInsets.only(right: 12),
-                            decoration: BoxDecoration(
-                              borderRadius: BorderRadius.circular(8),
-                              image: DecorationImage(
-                                image: NetworkImage(commande.photos[index]),
-                                fit: BoxFit.cover,
-                              ),
-                            ),
-                          );
-                        },
-                      ),
-                    ),
-                  ],
-                ),
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('Modifier le devis', style: AppTextStyles.h3),
+        content: Form(
+          key: formKey,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              CustomTextField(
+                label: 'Nouveau montant (FCFA)',
+                controller: montantController,
+                keyboardType: TextInputType.number,
+                validator: (v) => (v == null || v.isEmpty) ? 'Requis' : null,
               ),
               const SizedBox(height: 16),
-            ],
-
-            // Montant / Récapitulatif financier
-            if (commande.montant > 0 || commande.montantDevis != null || (commande.typeCommande == 'diagnostic_requis' && commande.montantDiagnostic != null)) ...[
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(24),
-                color: AppColors.white,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(_isClient ? 'Récapitulatif financier' : 'Rémunération', style: AppTextStyles.h3),
-                    const SizedBox(height: 16),
-                    
-                    // Frais de diagnostic (si applicable)
-                    if (commande.typeCommande == 'diagnostic_requis' && commande.montantDiagnostic != null) ...[
-                      Row(
-                        children: [
-                          Expanded(
-                            child: Text('Frais de diagnostic (déplacement)',
-                                style: AppTextStyles.bodyMedium
-                                    .copyWith(color: AppColors.greyDark)),
-                          ),
-                          const SizedBox(width: 8),
-                          Text(
-                              '${commande.montantDiagnostic!.toStringAsFixed(0)} FCFA',
-                              style: AppTextStyles.bodyMedium.copyWith(
-                                fontWeight: commande.fraisDeplacementPayes == true ? FontWeight.bold : FontWeight.normal,
-                                color: commande.fraisDeplacementPayes == true ? AppColors.success : AppColors.onSurface,
-                              )),
-                        ],
-                      ),
-                      if (commande.fraisDeplacementPayes == true)
-                        Align(
-                          alignment: Alignment.centerRight,
-                          child: Text('Payé', style: AppTextStyles.bodySmall.copyWith(color: AppColors.success, fontWeight: FontWeight.bold)),
-                        ),
-                      const SizedBox(height: 12),
-                    ],
-
-                    if (commande.montantDevis != null) ...[
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Expanded(
-                            child: Text('Montant des travaux',
-                                style: AppTextStyles.bodyMedium
-                                    .copyWith(color: AppColors.greyDark)),
-                          ),
-                          const SizedBox(width: 8),
-                          Text(
-                              '${commande.montantDevis!.toStringAsFixed(0)} FCFA',
-                              style: AppTextStyles.bodyMedium),
-                        ],
-                      ),
-                      const SizedBox(height: 8),
-                    ],
-
-                    if (commande.montant > 0 && commande.typeCommande != 'diagnostic_requis') ...[
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Expanded(
-                            child: Text('Montant total',
-                                style: AppTextStyles.bodyMedium
-                                    .copyWith(color: AppColors.greyDark)),
-                          ),
-                          const SizedBox(width: 8),
-                          Text('${commande.montant.toStringAsFixed(0)} FCFA',
-                              style: AppTextStyles.bodyMedium),
-                        ],
-                      ),
-                    ],
-
-                    if (!_isClient && (commande.montant > 0 || commande.montantDevis != null)) ...[
-                      const SizedBox(height: 8),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Expanded(
-                            child: Text('Commission (10%)',
-                                style: AppTextStyles.bodyMedium
-                                    .copyWith(color: AppColors.greyDark)),
-                          ),
-                          const SizedBox(width: 8),
-                          Text(
-                              '- ${commande.commission.toStringAsFixed(0)} FCFA',
-                              style: AppTextStyles.bodyMedium
-                                  .copyWith(color: AppColors.error)),
-                        ],
-                      ),
-                      const Divider(height: 24),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Expanded(
-                            child: Text('Vous recevrez', style: AppTextStyles.h3),
-                          ),
-                          const SizedBox(width: 8),
-                          Text(
-                            '${commande.montantArtisan.toStringAsFixed(0)} FCFA',
-                            style: AppTextStyles.h2
-                                .copyWith(color: AppColors.success),
-                          ),
-                        ],
-                      ),
-                    ] else if (_isClient && (commande.montant > 0 || commande.montantDevis != null)) ...[
-                      const Divider(height: 24),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Expanded(
-                            child: Text('Total des travaux', style: AppTextStyles.h3),
-                          ),
-                          const SizedBox(width: 8),
-                          Text(
-                            '${(commande.montantDevis ?? commande.montant).toStringAsFixed(0)} FCFA',
-                            style: AppTextStyles.h2
-                                .copyWith(color: AppColors.primaryBlue),
-                          ),
-                        ],
-                      ),
-                      if (commande.paiementStatut == 'bloque')
-                        Padding(
-                          padding: const EdgeInsets.only(top: 8),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.end,
-                            children: [
-                              const Icon(Icons.security, size: 16, color: AppColors.success),
-                              const SizedBox(width: 4),
-                              Text('Paiement sécurisé en escrow', style: AppTextStyles.bodySmall.copyWith(color: AppColors.success, fontWeight: FontWeight.bold)),
-                            ],
-                          ),
-                        ),
-                    ],
-                  ],
-                ),
-              ),
-              const SizedBox(height: 16),
-            ],
-
-            // Section devis post-diagnostic (Seul l'artisan peut soumettre le devis final)
-            if (!_isClient && 
-                commande.typeCommande == 'diagnostic_requis' &&
-                commande.statut == 'diagnostic_valide') ...[
-              const SizedBox(height: 16),
-              _buildDevisPostDiagnosticSection(context, commande),
-            ],
-
-            // Info en attente client (pour l'artisan)
-            if (!_isClient && (commande.statut == 'devis_envoye' || commande.statut == 'devis_post_diagnostic_envoye')) ...[
-              const SizedBox(height: 16),
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(24),
-                color: AppColors.warning.withOpacity(0.1),
-                child: Row(
-                  children: [
-                    const Icon(Icons.hourglass_empty, color: AppColors.warning),
-                    const SizedBox(width: 16),
-                    Expanded(
-                      child: Text(
-                        'Devis envoyé au client. En attente de son acceptation et du paiement.',
-                        style: AppTextStyles.bodyMedium.copyWith(
-                          color: AppColors.warning,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
+              CustomTextField(
+                label: commande.typeCommande == 'diagnostic_requis' ? 'Rapport / Message' : 'Message au client',
+                controller: messageController,
+                maxLines: 3,
+                validator: (v) => (v == null || v.isEmpty) ? 'Requis' : null,
               ),
             ],
-
-            // Description du problème (si rempli par l'artisan)
-            if (commande.descriptionProbleme != null &&
-                commande.descriptionProbleme!.isNotEmpty) ...[
-              const SizedBox(height: 16),
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(24),
-                color: AppColors.white,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        const Icon(Icons.assignment_outlined, color: AppColors.primaryBlue, size: 24),
-                        const SizedBox(width: 8),
-                        Text('Rapport de diagnostic', style: AppTextStyles.h3),
-                      ],
-                    ),
-                    const SizedBox(height: 12),
-                    Text(commande.descriptionProbleme!, style: AppTextStyles.bodyMedium.copyWith(height: 1.5)),
-                    if (commande.justificationMontant != null && commande.justificationMontant!.isNotEmpty) ...[
-                      const SizedBox(height: 12),
-                      const Divider(),
-                      const SizedBox(height: 8),
-                      Text('Justification du montant', style: AppTextStyles.bodyMedium.copyWith(fontWeight: FontWeight.w600)),
-                      const SizedBox(height: 4),
-                      Text(commande.justificationMontant!, style: AppTextStyles.bodyMedium.copyWith(color: AppColors.greyDark)),
-                    ],
-                  ],
-                ),
-              ),
-            ],
-
-            const SizedBox(height: 80),
-          ],
+          ),
         ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Annuler')),
+          ElevatedButton(
+            onPressed: () async {
+              if (formKey.currentState!.validate()) {
+                bool success;
+                if (commande.typeCommande == 'diagnostic_requis') {
+                  success = await Provider.of<CommandeProvider>(context, listen: false).modifierDevisPostDiagnostic(
+                    commandeId: commande.id,
+                    montantDevis: double.parse(montantController.text),
+                    descriptionProbleme: messageController.text,
+                  );
+                } else {
+                  success = await Provider.of<CommandeProvider>(context, listen: false).modifierDevis(
+                    commandeId: commande.id,
+                    montantDevis: double.parse(montantController.text),
+                    messageDevis: messageController.text,
+                  );
+                }
+                
+                if (success && mounted) {
+                  Navigator.pop(context);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Devis modifié avec succès'), backgroundColor: AppColors.success),
+                  );
+                }
+              }
+            },
+            child: const Text('Modifier'),
+          ),
+        ],
       ),
-      bottomNavigationBar: _buildBottomActions(context),
     );
   }
 
@@ -996,9 +1093,7 @@ class _CommandeDetailScreenState extends State<CommandeDetailScreen> {
     );
   }
 
-  Widget? _buildBottomActions(BuildContext context) {
-    final commande = widget.commande;
-
+  Widget? _buildBottomActions(BuildContext context, CommandeModel commande) {
     if (_isClient) {
       return _buildClientActions(context, commande);
     } else {
@@ -1035,6 +1130,8 @@ class _CommandeDetailScreenState extends State<CommandeDetailScreen> {
               ),
             ),
             const SizedBox(width: 12),
+            _buildChatButton(commande), // Passer la commande actuelle
+            const SizedBox(width: 8),
             Expanded(
               flex: 2,
               child: CustomButton(
@@ -1072,7 +1169,7 @@ class _CommandeDetailScreenState extends State<CommandeDetailScreen> {
               ),
             ),
             const SizedBox(width: 12),
-            _buildChatButton(),
+            _buildChatButton(commande),
             const SizedBox(width: 8),
             _buildCallButton(),
           ],
@@ -1094,7 +1191,7 @@ class _CommandeDetailScreenState extends State<CommandeDetailScreen> {
                 style: AppTextStyles.bodyMedium.copyWith(color: AppColors.primaryBlue, fontWeight: FontWeight.bold),
               ),
             ),
-            _buildChatButton(),
+            _buildChatButton(commande),
             const SizedBox(width: 8),
             _buildCallButton(),
           ],
@@ -1102,7 +1199,7 @@ class _CommandeDetailScreenState extends State<CommandeDetailScreen> {
       );
     }
 
-    return _buildCommunicationBottomBar();
+    return _buildCommunicationBottomBar(commande);
   }
 
   Widget? _buildArtisanActions(BuildContext context, CommandeModel commande) {
@@ -1149,7 +1246,7 @@ class _CommandeDetailScreenState extends State<CommandeDetailScreen> {
                         Navigator.push(
                           context,
                           MaterialPageRoute(
-                            builder: (context) => EnvoyerDevisScreen(commande: widget.commande),
+                            builder: (context) => EnvoyerDevisScreen(commande: commande),
                           ),
                         );
                       },
@@ -1173,7 +1270,7 @@ class _CommandeDetailScreenState extends State<CommandeDetailScreen> {
                 style: TextStyle(color: AppColors.warning, fontWeight: FontWeight.bold),
               ),
             ),
-            _buildChatButton(),
+            _buildChatButton(commande),
             const SizedBox(width: 8),
             _buildCallButton(),
           ],
@@ -1193,7 +1290,7 @@ class _CommandeDetailScreenState extends State<CommandeDetailScreen> {
                 style: TextStyle(color: AppColors.primaryBlue, fontWeight: FontWeight.bold),
               ),
             ),
-            _buildChatButton(),
+            _buildChatButton(commande),
             const SizedBox(width: 8),
             _buildCallButton(),
           ],
@@ -1213,7 +1310,7 @@ class _CommandeDetailScreenState extends State<CommandeDetailScreen> {
                 style: TextStyle(color: AppColors.warning, fontWeight: FontWeight.bold),
               ),
             ),
-            _buildChatButton(),
+            _buildChatButton(commande),
             const SizedBox(width: 8),
             _buildCallButton(),
           ],
@@ -1225,7 +1322,7 @@ class _CommandeDetailScreenState extends State<CommandeDetailScreen> {
       return _buildBottomBar(
         child: Row(
           children: [
-            _buildChatButton(),
+            _buildChatButton(commande),
             const SizedBox(width: 8),
             _buildCallButton(),
             const SizedBox(width: 12),
@@ -1255,11 +1352,11 @@ class _CommandeDetailScreenState extends State<CommandeDetailScreen> {
     );
   }
 
-  Widget _buildCommunicationBottomBar() {
+  Widget _buildCommunicationBottomBar(CommandeModel commande) {
     return _buildBottomBar(
       child: Row(
         children: [
-          Expanded(child: _buildChatButton()),
+          Expanded(child: _buildChatButton(commande)),
           const SizedBox(width: 12),
           Expanded(child: _buildCallButton()),
         ],
@@ -1267,15 +1364,15 @@ class _CommandeDetailScreenState extends State<CommandeDetailScreen> {
     );
   }
 
-  Widget _buildChatButton() {
+  Widget _buildChatButton(CommandeModel commande) {
     return IconButton(
       onPressed: () {
         Navigator.push(
           context,
           MaterialPageRoute(
             builder: (context) => ChatScreen(
-              otherUserId: _isClient ? widget.commande.artisanId : widget.commande.clientId,
-              otherUserName: _otherUserNom ?? '${_isClient ? 'Artisan' : 'Client'} #${(_isClient ? widget.commande.artisanId : widget.commande.clientId).substring(0, 8)}',
+              otherUserId: _isClient ? commande.artisanId : commande.clientId,
+              otherUserName: _otherUserNom ?? '${_isClient ? 'Artisan' : 'Client'} #${(_isClient ? commande.artisanId : commande.clientId).substring(0, 8)}',
             ),
           ),
         );

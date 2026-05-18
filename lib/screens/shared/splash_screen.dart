@@ -33,11 +33,23 @@ class _SplashScreenState extends State<SplashScreen> {
 
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
     
-    // Vérification de l'état de connexion (si Firebase n'a pas encore fini, on attend un peu ou on check userModel)
+    // Attendre que l'initialisation de l'auth soit terminée si elle est encore en cours
+    if (!authProvider.isInitialCheckDone) {
+      debugPrint('[SPLASH] Attente de l\'initialisation de l\'auth...');
+      // On peut soit attendre ici, soit laisser le redirect de GoRouter s'en charger
+      // puisque AuthProvider notifiera quand isInitialCheckDone changera.
+      // Mais pour la sécurité du timer, on va attendre un peu.
+      int attempts = 0;
+      while (!authProvider.isInitialCheckDone && attempts < 30) { // Max 3 secondes de plus
+        await Future.delayed(const Duration(milliseconds: 100));
+        attempts++;
+      }
+    }
+
     if (authProvider.isAuthenticated && authProvider.userModel != null) {
       final user = authProvider.userModel!;
+      debugPrint('[SPLASH] Authentifié, redirection vers le compte');
       
-      // Redirection fluide selon le rôle vers le bon Dashboard
       if (user.hasRole('admin')) {
         context.go(AppRouter.adminDashboard);
       } else if (user.hasRole('artisan')) {
@@ -46,7 +58,7 @@ class _SplashScreenState extends State<SplashScreen> {
         context.go(AppRouter.homeClient);
       }
     } else {
-      // Non connecté -> Sélection de profil / Login
+      debugPrint('[SPLASH] Non authentifié ou userModel manquant, redirection vers roleSelection');
       context.go(AppRouter.roleSelection);
     }
   }

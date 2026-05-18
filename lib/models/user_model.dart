@@ -25,6 +25,7 @@ class UserModel {
   final bool isAgent; // Si l'utilisateur est un agent validé
   final String? codePromoAgent; // Son propre code promo s'il est agent
   final String? agentStatus; // 'pending', 'approved', 'rejected'
+  final String? fcmToken; // Token pour les notifications push
 
   UserModel({
     required this.id,
@@ -51,6 +52,7 @@ class UserModel {
     this.isAgent = false,
     this.codePromoAgent,
     this.agentStatus,
+    this.fcmToken,
   });
 
   // Getter pour compatibilité avec l'ancien code (retourne le premier rôle)
@@ -112,6 +114,7 @@ class UserModel {
       isAgent: data['isAgent'] ?? false,
       codePromoAgent: data['codePromoAgent'],
       agentStatus: data['agentStatus'],
+      fcmToken: data['fcmToken'],
     );
   }
 
@@ -146,6 +149,7 @@ class UserModel {
       'isAgent': isAgent,
       'codePromoAgent': codePromoAgent,
       'agentStatus': agentStatus,
+      'fcmToken': fcmToken,
     };
   }
 

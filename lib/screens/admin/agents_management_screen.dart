@@ -235,6 +235,17 @@ class _AgentsManagementScreenState extends State<AgentsManagementScreen> with Si
           'updatedAt': Timestamp.now(),
         });
 
+        // 3. Envoyer une notification à l'utilisateur
+        await FirebaseService.firestore.collection('notifications').add({
+          'userId': user.id,
+          'type': 'agent_approved',
+          'titre': 'Félicitations !',
+          'message':
+              'Votre demande pour devenir agent a été approuvée. Votre code promo est : $code',
+          'createdAt': Timestamp.now(),
+          'isRead': false,
+        });
+
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(SnackBar(
               content: Text('Agent approuvé ! Code auto-généré: $code'),
@@ -246,13 +257,24 @@ class _AgentsManagementScreenState extends State<AgentsManagementScreen> with Si
               content: Text('Erreur: $e'), backgroundColor: AppColors.error));
         }
       }
-    } else {
-      // Rejeter la demande
+    } else // Rejeter la demande
       await FirebaseService.firestore.collection('users').doc(user.id).update({
         'agentStatus': 'rejected',
         'isAgent': false,
       });
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Demande rejetée'), backgroundColor: AppColors.error));
+
+      // Envoyer une notification de refus
+      await FirebaseService.firestore.collection('notifications').add({
+        'userId': user.id,
+        'type': 'agent_rejected',
+        'titre': 'Demande refusée',
+        'message':
+            'Votre demande pour devenir agent a été refusée par l\'administration.',
+        'createdAt': Timestamp.now(),
+        'isRead': false,
+      });
+
+      if (mounted) {ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Demande rejetée'), backgroundColor: AppColors.error));
     }
   }
 

@@ -31,9 +31,12 @@ class ArtisanProvider extends ChangeNotifier {
 
   // Charger le profil artisan
   Future<void> loadArtisanProfile(String userId) async {
-    _isLoading = true;
-    _errorMessage = null;
-    notifyListeners();
+    // Si on a déjà les données, on charge en arrière-plan sans bloquer l'UI
+    if (_currentArtisan == null) {
+      _isLoading = true;
+      _errorMessage = null;
+      notifyListeners();
+    }
 
     try {
       final querySnapshot = await FirebaseService.artisansCollection
@@ -45,8 +48,8 @@ class ArtisanProvider extends ChangeNotifier {
         _currentArtisan = ArtisanModel.fromFirestore(querySnapshot.docs.first);
         // M2 — Charger les commandes maintenant que l'index est géré en mémoire
         await _loadCommandes();
-      } else {
-        // Profil artisan non trouvé - créer un profil minimal en mémoire
+      } else if (_currentArtisan == null) {
+        // Profil artisan non trouvé - créer un profil minimal en mémoire (seulement si vide)
         _currentArtisan = ArtisanModel(
           id: '',
           userId: userId,
@@ -71,7 +74,9 @@ class ArtisanProvider extends ChangeNotifier {
       }
     } catch (e) {
       print('Erreur chargement profil: $e');
-      _errorMessage = 'Erreur lors du chargement du profil';
+      if (_currentArtisan == null) {
+        _errorMessage = 'Erreur lors du chargement du profil';
+      }
     }
 
     _isLoading = false;
@@ -149,6 +154,7 @@ class ArtisanProvider extends ChangeNotifier {
 
         List<DocumentSnapshot<Map<String, dynamic>>> docs = [];
         try {
+          // Limiter à 100 résultats pour la performance
           docs = await geoCollection.fetchWithin(
             center: center,
             radiusInKm: radiusKm,
@@ -173,8 +179,8 @@ class ArtisanProvider extends ChangeNotifier {
         // Si la recherche géo retourne 0 (geohash vides ou absents),
         // fallback sur query classique qui filtre par distance en mémoire
         if (docs.isEmpty) {
-          print('[SEARCH] Géo vide → fallback query classique + filtre distance mémoire');
-          final fallback = await rawCollection.get();
+          print('[SEARCH] Géo vide → fallback query classique (limite 100)');
+          final fallback = await rawCollection.limit(100).get();
           docs = fallback.docs;
         }
 
@@ -270,7 +276,8 @@ class ArtisanProvider extends ChangeNotifier {
           query = query.where('ville', isEqualTo: ville);
         }
 
-        final querySnapshot = await query.get();
+        // On limite à 100 pour éviter de charger toute la base
+        final querySnapshot = await query.limit(100).get();
         print('[SEARCH] Classique: ${querySnapshot.docs.length} docs Firestore');
 
         for (var doc in querySnapshot.docs) {

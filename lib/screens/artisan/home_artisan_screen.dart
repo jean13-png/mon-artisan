@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -7,6 +8,7 @@ import '../../core/constants/text_styles.dart';
 import '../../core/routes/app_router.dart';
 import '../../core/services/firebase_service.dart';
 import '../../core/services/chat_service.dart';
+import '../../models/commande_model.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/artisan_provider.dart';
 import '../../providers/commande_provider.dart';
@@ -137,12 +139,14 @@ class _HomeArtisanScreenState extends State<HomeArtisanScreen> {
 
   Future<void> _loadArtisanData() async {
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
-    final artisanProvider = Provider.of<ArtisanProvider>(context, listen: false);
+    final artisanProvider =
+        Provider.of<ArtisanProvider>(context, listen: false);
     await artisanProvider.loadArtisanProfile(authProvider.userModel!.id);
     if (!mounted) return;
     if (artisanProvider.currentArtisan != null) {
-      Provider.of<CommandeProvider>(context, listen: false)
-          .loadArtisanCommandes(authProvider.userModel!.id);
+      Provider.of<CommandeProvider>(context, listen: false).loadArtisanCommandes(
+          authProvider.userModel!.id,
+          forceRefresh: false);
     }
   }
 
@@ -157,14 +161,6 @@ class _HomeArtisanScreenState extends State<HomeArtisanScreen> {
     if (user == null || artisan == null) {
       return const LoadingWidget(message: 'Chargement de votre profil...');
     }
-
-    final activeInterventions = commandeProvider.commandes
-        .where((c) => 
-            c.statut != 'validee' && 
-            c.statut != 'refusee' && 
-            c.statut != 'annulee' &&
-            c.statut != 'archivee')
-        .toList();
 
     return DoubleTapToExit(
       child: Scaffold(
@@ -259,7 +255,35 @@ class _HomeArtisanScreenState extends State<HomeArtisanScreen> {
                 const SizedBox(height: 20),
                 _buildStatsRow(artisan),
                 const SizedBox(height: 24),
-                _buildCommandesSection(context, activeInterventions),
+                StreamBuilder<QuerySnapshot>(
+                  stream: FirebaseService.firestore
+                      .collection('commandes')
+                      .where('artisanId', isEqualTo: user.id)
+                      .where('statut', whereNotIn: ['validee', 'refusee', 'annulee', 'archivee'])
+                      .snapshots(),
+                  builder: (context, snapshot) {
+                    if (snapshot.hasError) {
+                      return const Padding(
+                        padding: EdgeInsets.all(20),
+                        child: Text('Erreur lors du chargement des interventions'),
+                      );
+                    }
+                    
+                    if (!snapshot.hasData) {
+                      return const Center(child: CircularProgressIndicator());
+                    }
+
+                    final activeInterventions = snapshot.data!.docs
+                        .map((doc) => CommandeModel.fromFirestore(doc))
+                        .toList();
+                    
+                    // Trier par date de création (décroissant) car Firestore ne permet pas 
+                    // facilement le tri avec whereNotIn sans index composite complexe
+                    activeInterventions.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+
+                    return _buildCommandesSection(context, activeInterventions);
+                  },
+                ),
                 const SizedBox(height: 32),
               ],
             ),

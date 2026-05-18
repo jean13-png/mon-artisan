@@ -67,16 +67,19 @@ class _HomeClientScreenState extends State<HomeClientScreen> {
       // Charger les commandes du client
       final authProvider = Provider.of<AuthProvider>(context, listen: false);
       if (authProvider.userModel != null) {
-        final commandeProvider = Provider.of<CommandeProvider>(context, listen: false);
-        commandeProvider.loadClientCommandes(authProvider.userModel!.id);
-        
+        final commandeProvider =
+            Provider.of<CommandeProvider>(context, listen: false);
+        commandeProvider.loadClientCommandes(authProvider.userModel!.id,
+            forceRefresh: false);
+
         // M1 — Rafraîchissement automatique des commandes toutes les 15s pour mettre à jour les cartes
         Timer.periodic(const Duration(seconds: 15), (timer) {
           if (!mounted) {
             timer.cancel();
             return;
           }
-          commandeProvider.loadClientCommandes(authProvider.userModel!.id);
+          commandeProvider.loadClientCommandes(authProvider.userModel!.id,
+              forceRefresh: false);
         });
       }
 

@@ -3,17 +3,20 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/user_model.dart';
 import '../core/services/firebase_service.dart';
+import '../core/services/notification_service.dart';
 import '../core/constants/metiers_data.dart';
 
 class AuthProvider extends ChangeNotifier {
   User? _firebaseUser;
   UserModel? _userModel;
   bool _isLoading = false;
+  bool _isInitialCheckDone = false;
   String? _errorMessage;
 
   User? get firebaseUser => _firebaseUser;
   UserModel? get userModel => _userModel;
   bool get isLoading => _isLoading;
+  bool get isInitialCheckDone => _isInitialCheckDone;
   String? get errorMessage => _errorMessage;
   bool get isAuthenticated => _firebaseUser != null;
 
@@ -22,13 +25,14 @@ class AuthProvider extends ChangeNotifier {
   }
 
   void _initAuthListener() {
-    FirebaseService.auth.authStateChanges().listen((User? user) {
+    FirebaseService.auth.authStateChanges().listen((User? user) async {
       _firebaseUser = user;
       if (user != null) {
-        _loadUserData(user.uid);
+        await _loadUserData(user.uid);
       } else {
         _userModel = null;
       }
+      _isInitialCheckDone = true;
       notifyListeners();
     });
   }
@@ -41,6 +45,10 @@ class AuthProvider extends ChangeNotifier {
         print('[INFO] Document exists, data: ${doc.data()}');
         _userModel = UserModel.fromFirestore(doc);
         print('[SUCCESS] UserModel created: roles=${_userModel?.roles}, hasAdmin=${_userModel?.hasRole('admin')}');
+        
+        // Mettre à jour le token FCM pour les notifications push
+        NotificationService.updateUserToken(userId);
+        
         notifyListeners();
       } else {
         print('[ERROR] Document does not exist');
