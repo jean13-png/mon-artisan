@@ -527,7 +527,7 @@ class _HomeClientScreenState extends State<HomeClientScreen> {
                       ),
                     ),
                     TextButton(
-                      onPressed: () => context.push(AppRouter.categoryMetiers),
+                      onPressed: () => context.push(AppRouter.allCategories),
                       child: Text('Voir tout',
                           style: AppTextStyles.bodyMedium.copyWith(
                               color: AppColors.primaryBlue,

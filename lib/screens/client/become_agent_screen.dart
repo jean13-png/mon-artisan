@@ -62,6 +62,10 @@ class _BecomeAgentScreenState extends State<BecomeAgentScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final authProvider = Provider.of<AuthProvider>(context);
+    final user = authProvider.userModel;
+    final isPending = user?.agentStatus == 'pending';
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Devenir Agent Commercial'),
@@ -73,58 +77,98 @@ class _BecomeAgentScreenState extends State<BecomeAgentScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Icon(Icons.business_center, size: 64, color: AppColors.primaryBlue),
+            const Icon(Icons.business_center,
+                size: 64, color: AppColors.primaryBlue),
             const SizedBox(height: 24),
-            Text('Rejoignez notre équipe de prospection !', style: AppTextStyles.h2),
+            Text('Rejoignez notre équipe de prospection !',
+                style: AppTextStyles.h2),
             const SizedBox(height: 16),
             const Text(
               'En tant qu\'agent commercial, votre mission est de prospecter et d\'inscrire de nouveaux artisans sur la plateforme.',
               style: TextStyle(fontSize: 16, height: 1.5),
             ),
-            const SizedBox(height: 24),
-            _buildConditionItem(Icons.check_circle_outline, 'Gagnez 300 FCFA sur chaque inscription d\'artisan payée.'),
-            _buildConditionItem(Icons.check_circle_outline, 'Bénéficiez d\'un code promo personnalisé à partager.'),
-            _buildConditionItem(Icons.check_circle_outline, 'Suivez vos revenus et vos performances en temps réel.'),
             const SizedBox(height: 32),
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: AppColors.greyLight,
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Column(
-                children: [
-                  Row(
-                    children: [
-                      Checkbox(
-                        value: _acceptedConditions,
-                        onChanged: (v) => setState(() => _acceptedConditions = v ?? false),
-                        activeColor: AppColors.primaryBlue,
-                      ),
-                      const Expanded(
-                        child: Text('J\'accepte les conditions de partenariat agent commercial.'),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 32),
-            SizedBox(
-              width: double.infinity,
-              height: 54,
-              child: ElevatedButton(
-                onPressed: _acceptedConditions && !_isLoading ? _submitRequest : null,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.primaryBlue,
-                  foregroundColor: AppColors.white,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            if (isPending)
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  color: AppColors.warning.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: AppColors.warning.withOpacity(0.3)),
                 ),
-                child: _isLoading 
-                  ? const CircularProgressIndicator(color: AppColors.white)
-                  : const Text('Envoyer ma demande', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                child: Column(
+                  children: [
+                    const Icon(Icons.hourglass_empty,
+                        size: 48, color: AppColors.warning),
+                    const SizedBox(height: 16),
+                    Text(
+                      'Demande en attente',
+                      style: AppTextStyles.h3.copyWith(color: AppColors.warning),
+                    ),
+                    const SizedBox(height: 8),
+                    const Text(
+                      'Votre demande est en cours de traitement par l\'administrateur. Vous recevrez une notification dès qu\'elle sera validée.',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(fontSize: 14),
+                    ),
+                  ],
+                ),
+              )
+            else ...[
+              _buildConditionItem(Icons.check_circle_outline,
+                  'Gagnez 300 FCFA sur chaque inscription d\'artisan payée.'),
+              _buildConditionItem(Icons.check_circle_outline,
+                  'Bénéficiez d\'un code promo personnalisé à partager.'),
+              _buildConditionItem(Icons.check_circle_outline,
+                  'Suivez vos revenus et vos performances en temps réel.'),
+              const SizedBox(height: 32),
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: AppColors.greyLight,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Column(
+                  children: [
+                    Row(
+                      children: [
+                        Checkbox(
+                          value: _acceptedConditions,
+                          onChanged: (v) =>
+                              setState(() => _acceptedConditions = v ?? false),
+                          activeColor: AppColors.primaryBlue,
+                        ),
+                        const Expanded(
+                          child: Text(
+                              'J\'accepte les conditions de partenariat agent commercial.'),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
               ),
-            ),
+              const SizedBox(height: 32),
+              SizedBox(
+                width: double.infinity,
+                height: 54,
+                child: ElevatedButton(
+                  onPressed:
+                      _acceptedConditions && !_isLoading ? _submitRequest : null,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.primaryBlue,
+                    foregroundColor: AppColors.white,
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12)),
+                  ),
+                  child: _isLoading
+                      ? const CircularProgressIndicator(color: AppColors.white)
+                      : const Text('Envoyer ma demande',
+                          style: TextStyle(
+                              fontSize: 18, fontWeight: FontWeight.bold)),
+                ),
+              ),
+            ],
           ],
         ),
       ),

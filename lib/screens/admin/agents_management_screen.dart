@@ -201,27 +201,12 @@ class _AgentsManagementScreenState extends State<AgentsManagementScreen> with Si
   }
 
   Future<void> _handleAgentRequest(UserModel user, bool approved) async {
-    final TextEditingController codeController = TextEditingController();
-    
     if (approved) {
-      // Demander à l'admin de saisir le code promo pour cet agent
-      final code = await showDialog<String>(
-        context: context,
-        builder: (context) => AlertDialog(
-          title: const Text('Attribuer un code promo'),
-          content: TextField(
-            controller: codeController,
-            decoration: const InputDecoration(hintText: 'Ex: AGENT007', border: OutlineInputBorder()),
-            textCapitalization: TextCapitalization.characters,
-          ),
-          actions: [
-            TextButton(onPressed: () => Navigator.pop(context), child: const Text('Annuler')),
-            ElevatedButton(onPressed: () => Navigator.pop(context, codeController.text.trim().toUpperCase()), child: const Text('Valider')),
-          ],
-        ),
-      );
-
-      if (code == null || code.isEmpty) return;
+      // Générer automatiquement un code promo (ex: AGENT_PRENOM_RANDOM)
+      final String randomStr =
+          (1000 + (DateTime.now().millisecondsSinceEpoch % 9000)).toString();
+      final String code =
+          'AGENT_${user.prenom.toUpperCase()}_$randomStr'.replaceAll(' ', '');
 
       try {
         // 1. Mettre à jour l'utilisateur
@@ -250,9 +235,16 @@ class _AgentsManagementScreenState extends State<AgentsManagementScreen> with Si
           'updatedAt': Timestamp.now(),
         });
 
-        if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Agent approuvé !'), backgroundColor: AppColors.success));
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+              content: Text('Agent approuvé ! Code auto-généré: $code'),
+              backgroundColor: AppColors.success));
+        }
       } catch (e) {
-        if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Erreur: $e'), backgroundColor: AppColors.error));
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+              content: Text('Erreur: $e'), backgroundColor: AppColors.error));
+        }
       }
     } else {
       // Rejeter la demande

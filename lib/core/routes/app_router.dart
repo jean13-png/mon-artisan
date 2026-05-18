@@ -11,6 +11,7 @@ import '../../screens/auth/contrat_engagement_screen.dart';
 import '../../screens/auth/artisan_payment_screen.dart';
 import '../../screens/client/home_client_screen.dart';
 import '../../screens/client/category_metiers_screen.dart';
+import '../../screens/client/all_categories_screen.dart';
 import '../../screens/client/search_artisan_screen.dart';
 import '../../screens/client/artisan_profile_screen.dart';
 import '../../screens/client/select_commande_type_screen.dart';
@@ -56,6 +57,7 @@ class AppRouter {
   static const String commandesHistory = '/commandes-history';
   static const String rateArtisan = '/rate-artisan';
   static const String artisanReviews = '/artisan-reviews'; // New route for all artisan reviews
+  static const String allCategories = '/all-categories';
   static const String locationPicker = '/location-picker';
 
 
@@ -89,7 +91,7 @@ class AppRouter {
     adminDashboard, adminValidateArtisans, adminManageAgents, adminManageUsers,
   };
   static const _clientRoutes = {
-    homeClient, categoryMetiers, searchArtisan, artisanProfile, selectCommandeType,
+    homeClient, categoryMetiers, allCategories, searchArtisan, artisanProfile, selectCommandeType,
     createCommande, payment, commandesHistory, rateArtisan, artisanReviews, locationPicker,
     becomeAgent, agentDashboard,
   };
@@ -294,6 +296,10 @@ class AppRouter {
       GoRoute(
         path: locationPicker,
         builder: (context, state) => const LocationPickerScreen(),
+      ),
+      GoRoute(
+        path: allCategories,
+        builder: (context, state) => const AllCategoriesScreen(),
       ),
       GoRoute(
         path: becomeAgent,

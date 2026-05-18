@@ -17,7 +17,6 @@ class _AgentDashboardScreenState extends State<AgentDashboardScreen> {
   double _revenuJournalier = 0;
   double _revenuMensuel = 0;
   double _revenuTotal = 0;
-  double _revenuDisponibles = 0;
   int _totalProspects = 0;
   List<Map<String, dynamic>> _recentProspects = [];
 
@@ -34,7 +33,7 @@ class _AgentDashboardScreenState extends State<AgentDashboardScreen> {
       final user = authProvider.userModel;
       if (user == null) return;
 
-      // 1. Chercher les parrainages dans collection 'users'
+      // Récupérer tous les artisans parrainés par cet agent qui ont payé
       final prospectsSnapshot = await FirebaseFirestore.instance
           .collection('users')
           .where('roles', arrayContains: 'artisan')
@@ -44,14 +43,8 @@ class _AgentDashboardScreenState extends State<AgentDashboardScreen> {
 
       _totalProspects = prospectsSnapshot.docs.length;
       
-      // 2. Récupérer les revenus directement depuis l'utilisateur (source de vérité créditée)
-      final userDoc = await FirebaseFirestore.instance.collection('users').doc(user.id).get();
-      final userData = userDoc.data();
-      
-      if (userData != null) {
-        _revenuTotal = (userData['agentRevenusTotal'] ?? 0.0).toDouble();
-        _revenuDisponibles = (userData['agentRevenusDisponibles'] ?? 0.0).toDouble();
-      }
+      // Calculer les revenus (300F par prospect)
+      _revenuTotal = _totalProspects * 300.0;
 
       // Statistiques journalières et mensuelles
       final now = DateTime.now();
@@ -125,8 +118,8 @@ class _AgentDashboardScreenState extends State<AgentDashboardScreen> {
                     children: [
                       _buildStatCard('Aujourd\'hui', '${_revenuJournalier.toStringAsFixed(0)} F', Icons.today, AppColors.success),
                       _buildStatCard('Ce mois', '${_revenuMensuel.toStringAsFixed(0)} F', Icons.calendar_month, AppColors.primaryBlue),
-                      _buildStatCard('Disponible', '${_revenuDisponibles.toStringAsFixed(0)} F', Icons.account_balance_wallet, AppColors.success),
-                      _buildStatCard('Total cumulé', '${_revenuTotal.toStringAsFixed(0)} F', Icons.account_balance, AppColors.accentRed),
+                      _buildStatCard('Total cumulé', '${_revenuTotal.toStringAsFixed(0)} F', Icons.account_balance_wallet, AppColors.accentRed),
+                      _buildStatCard('Artisans inscrits', '$_totalProspects', Icons.people, Colors.orange),
                     ],
                   ),
                   
@@ -166,9 +159,15 @@ class _AgentDashboardScreenState extends State<AgentDashboardScreen> {
       width: double.infinity,
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
-        gradient: const LinearGradient(colors: [AppColors.primaryBlue, Color(0xFF1E88E5)]),
+        color: AppColors.primaryBlue,
         borderRadius: BorderRadius.circular(20),
-        boxShadow: [BoxShadow(color: AppColors.primaryBlue.withOpacity(0.3), blurRadius: 10, offset: const Offset(0, 5))],
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.primaryBlue.withOpacity(0.3),
+            blurRadius: 10,
+            offset: const Offset(0, 5),
+          )
+        ],
       ),
       child: Column(
         children: [
