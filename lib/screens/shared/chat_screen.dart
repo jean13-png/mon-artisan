@@ -80,6 +80,14 @@ class _ChatScreenState extends State<ChatScreen> {
     final currentUserName = '${authProvider.userModel!.prenom} ${authProvider.userModel!.nom}';
 
     try {
+      // Charger les commandes pour être sûr d'avoir les données à jour pour les actions (ex: devis)
+      final commandeProvider = Provider.of<CommandeProvider>(context, listen: false);
+      if (authProvider.userModel!.hasRole('artisan')) {
+        commandeProvider.loadArtisanCommandes(currentUserId);
+      } else {
+        commandeProvider.loadClientCommandes(currentUserId);
+      }
+
       final chatId = await ChatService.getOrCreateChat(
         currentUserId: currentUserId,
         otherUserId: widget.otherUserId,

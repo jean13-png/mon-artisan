@@ -1062,6 +1062,20 @@ class _HomeArtisanScreenState extends State<HomeArtisanScreen> {
                                   fontWeight: FontWeight.bold,
                                   fontSize: 10)),
                         ),
+                      ] else if (commande.statut == 'terminee') ...[
+                        const SizedBox(width: 8),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: AppColors.primaryBlue.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                          child: Text('ATTENTE CLIENT',
+                              style: AppTextStyles.bodySmall.copyWith(
+                                  color: AppColors.primaryBlue,
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 10)),
+                        ),
                       ],
                     ],
                   ),

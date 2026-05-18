@@ -96,15 +96,24 @@ class _EnvoyerDevisScreenState extends State<EnvoyerDevisScreen> {
 
     try {
       final commandeProvider = Provider.of<CommandeProvider>(context, listen: false);
-      
       final montant = double.parse(_montantController.text);
+      final message = _messageController.text.trim();
       
-      final success = await commandeProvider.envoyerDevis(
-        commandeId: widget.commande.id,
-        montantDevis: montant,
-        messageDevis: _messageController.text.trim(),
-        distanceKm: _distanceKm!,
-      );
+      bool success;
+      if (widget.commande.typeCommande == 'diagnostic_requis') {
+        success = await commandeProvider.soumettreDevisPostDiagnostic(
+          commandeId: widget.commande.id,
+          montantDevis: montant,
+          descriptionProbleme: message,
+        );
+      } else {
+        success = await commandeProvider.envoyerDevis(
+          commandeId: widget.commande.id,
+          montantDevis: montant,
+          messageDevis: message,
+          distanceKm: _distanceKm!,
+        );
+      }
 
       if (success && mounted) {
         // Afficher un message de succès
