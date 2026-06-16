@@ -168,7 +168,7 @@ class AppRouter {
           return CategoryMetiersScreen(
             categorie: p['categorie'] ?? '',
             initialVille: p['ville'],
-          );
+          ); 
         },
       ),
       GoRoute(

@@ -520,13 +520,12 @@ class ArtisanProfileScreen extends StatelessWidget {
                   padding: const EdgeInsets.all(12),
                 ),
               ),
-              const SizedBox(width: 12),
               Expanded(
                 child: CustomButton(
                   text: disponible ? 'Commander' : 'Indisponible',
                   onPressed: !disponible ? null : () {
                     context.push(
-                      AppRouter.selectCommandeType,
+                      AppRouter.createCommande,
                       extra: artisan,
                     );
                   },

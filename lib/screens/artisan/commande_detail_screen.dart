@@ -196,132 +196,6 @@ class _CommandeDetailScreenState extends State<CommandeDetailScreen> {
     }
   }
 
-  Future<void> _validerDiagnostic() async {
-    final commandeProvider = Provider.of<CommandeProvider>(context, listen: false);
-    
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: Text('Confirmer le diagnostic', style: AppTextStyles.h3),
-        content: Text(
-          'Confirmez-vous être arrivé chez le client et avoir commencé le diagnostic ?',
-          style: AppTextStyles.bodyMedium,
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: Text('Annuler', style: AppTextStyles.bodyMedium),
-          ),
-          ElevatedButton(
-            onPressed: () => Navigator.pop(context, true),
-            style: ElevatedButton.styleFrom(backgroundColor: AppColors.primaryBlue),
-            child: Text('Confirmer', style: AppTextStyles.button),
-          ),
-        ],
-      ),
-    );
-
-    if (confirmed == true && mounted) {
-      final success = await commandeProvider.validerDiagnosticArtisan(widget.commande.id);
-      if (success && mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Diagnostic validé. Vous pouvez maintenant envoyer votre devis.'),
-            backgroundColor: AppColors.success,
-          ),
-        );
-        // On ne ferme pas la page car l'artisan doit maintenant remplir le devis
-        setState(() {}); 
-      }
-    }
-  }
-
-  Widget _buildDevisPostDiagnosticSection(BuildContext context, CommandeModel commande) {
-    final TextEditingController montantController = TextEditingController();
-    final TextEditingController descriptionController = TextEditingController();
-    final TextEditingController justificationController = TextEditingController();
-    final formKey = GlobalKey<FormState>();
-
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(24),
-      margin: const EdgeInsets.symmetric(horizontal: 0),
-      color: AppColors.white,
-      child: Form(
-        key: formKey,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text('Soumettre votre devis final', style: AppTextStyles.h3.copyWith(color: AppColors.primaryBlue)),
-            const SizedBox(height: 8),
-            Text(
-              'Après avoir analysé la panne, indiquez le montant total des travaux (hors frais de diagnostic déjà payés).',
-              style: AppTextStyles.bodySmall,
-            ),
-            const SizedBox(height: 20),
-            CustomTextField(
-              label: 'Montant total des travaux (FCFA)',
-              hint: 'Ex: 15000',
-              controller: montantController,
-              keyboardType: TextInputType.number,
-              prefixIcon: const Icon(Icons.monetization_on_outlined),
-              validator: (value) {
-                if (value == null || value.isEmpty) return 'Montant requis';
-                if (double.tryParse(value) == null) return 'Montant invalide';
-                return null;
-              },
-            ),
-            const SizedBox(height: 16),
-            CustomTextField(
-              label: 'Rapport détaillé / Pièces à changer',
-              hint: 'Détaillez ce que vous avez trouvé et ce qu\'il faut faire...',
-              controller: descriptionController,
-              maxLines: 4,
-              validator: (value) {
-                if (value == null || value.isEmpty) return 'Rapport requis';
-                if (value.length < 20) return 'Soyez plus précis (min 20 car.)';
-                return null;
-              },
-            ),
-            const SizedBox(height: 16),
-            CustomTextField(
-              label: 'Justification du prix (optionnel)',
-              hint: 'Détaillez le coût des pièces ou de la main d\'œuvre...',
-              controller: justificationController,
-              maxLines: 2,
-            ),
-            const SizedBox(height: 24),
-            SizedBox(
-              width: double.infinity,
-              child: CustomButton(
-                text: 'Envoyer le devis final',
-                onPressed: () async {
-                  if (formKey.currentState!.validate()) {
-                    final success = await Provider.of<CommandeProvider>(context, listen: false)
-                        .soumettreDevisPostDiagnostic(
-                      commandeId: commande.id,
-                      montantDevis: double.parse(montantController.text),
-                      descriptionProbleme: descriptionController.text.trim(),
-                      justificationMontant: justificationController.text.trim(),
-                    );
-                    if (success && mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Devis envoyé au client'), backgroundColor: AppColors.success),
-                      );
-                      Navigator.pop(context);
-                    }
-                  }
-                },
-                backgroundColor: AppColors.primaryBlue,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
   Future<void> _terminerCommande() async {
     final commandeProvider =
         Provider.of<CommandeProvider>(context, listen: false);
@@ -404,49 +278,6 @@ class _CommandeDetailScreenState extends State<CommandeDetailScreen> {
           body: SingleChildScrollView(
             child: Column(
               children: [
-                // Badge DIAGNOSTIC
-                if (commande.typeCommande == 'diagnostic_requis')
-                  Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                    color: AppColors.primaryBlue,
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        const Icon(Icons.search, color: AppColors.white, size: 18),
-                        const SizedBox(width: 8),
-                        Flexible(
-                          child: Text(
-                            'DIAGNOSTIC',
-                            style: AppTextStyles.bodyMedium.copyWith(
-                              color: AppColors.white,
-                              fontWeight: FontWeight.bold,
-                              letterSpacing: 1.2,
-                            ),
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                        if (commande.montantDiagnostic != null) ...[
-                          const SizedBox(width: 12),
-                          Flexible(
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                              decoration: BoxDecoration(
-                                color: AppColors.white.withOpacity(0.25),
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              child: Text(
-                                '${commande.montantDiagnostic!.toStringAsFixed(0)} F',
-                                style: AppTextStyles.bodySmall.copyWith(color: AppColors.white),
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ],
-                    ),
-                  ),
-
                 // Statut
                 Container(
                   width: double.infinity,
@@ -721,7 +552,7 @@ class _CommandeDetailScreenState extends State<CommandeDetailScreen> {
                 ],
 
                 // Montant / Récapitulatif financier
-                if (commande.montant > 0 || commande.montantDevis != null || (commande.typeCommande == 'diagnostic_requis' && commande.montantDiagnostic != null)) ...[
+                if (commande.montant > 0 || commande.montantDevis != null) ...[
                   Container(
                     width: double.infinity,
                     padding: const EdgeInsets.all(24),
@@ -732,32 +563,6 @@ class _CommandeDetailScreenState extends State<CommandeDetailScreen> {
                         Text(_isClient ? 'Récapitulatif financier' : 'Rémunération', style: AppTextStyles.h3),
                         const SizedBox(height: 16),
                         
-                        // Frais de diagnostic (si applicable)
-                        if (commande.typeCommande == 'diagnostic_requis' && commande.montantDiagnostic != null) ...[
-                          Row(
-                            children: [
-                              Expanded(
-                                child: Text('Frais de diagnostic (déplacement)',
-                                    style: AppTextStyles.bodyMedium
-                                        .copyWith(color: AppColors.greyDark)),
-                              ),
-                              const SizedBox(width: 8),
-                              Text(
-                                  '${commande.montantDiagnostic!.toStringAsFixed(0)} FCFA',
-                                  style: AppTextStyles.bodyMedium.copyWith(
-                                    fontWeight: commande.fraisDeplacementPayes == true ? FontWeight.bold : FontWeight.normal,
-                                    color: commande.fraisDeplacementPayes == true ? AppColors.success : AppColors.onSurface,
-                                  )),
-                            ],
-                          ),
-                          if (commande.fraisDeplacementPayes == true)
-                            Align(
-                              alignment: Alignment.centerRight,
-                              child: Text('Payé', style: AppTextStyles.bodySmall.copyWith(color: AppColors.success, fontWeight: FontWeight.bold)),
-                            ),
-                          const SizedBox(height: 12),
-                        ],
-
                         if (commande.montantDevis != null) ...[
                           Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -859,15 +664,8 @@ class _CommandeDetailScreenState extends State<CommandeDetailScreen> {
                   const SizedBox(height: 16),
                 ],
 
-                // Section devis post-diagnostic (Seul l'artisan peut soumettre le devis final)
-                if (!_isClient && 
-                    commande.statut == 'diagnostic_valide') ...[
-                  const SizedBox(height: 16),
-                  _buildDevisPostDiagnosticSection(context, commande),
-                ],
-
                 // Info en attente client (pour l'artisan)
-                if (!_isClient && (commande.statut == 'devis_envoye' || commande.statut == 'devis_post_diagnostic_envoye')) ...[
+                if (!_isClient && (commande.statut == 'devis_envoye')) ...[
                   const SizedBox(height: 16),
                   Container(
                     width: double.infinity,
@@ -968,7 +766,7 @@ class _CommandeDetailScreenState extends State<CommandeDetailScreen> {
               ),
               const SizedBox(height: 16),
               CustomTextField(
-                label: commande.typeCommande == 'diagnostic_requis' ? 'Rapport / Message' : 'Message au client',
+                label: 'Message au client',
                 controller: messageController,
                 maxLines: 3,
                 validator: (v) => (v == null || v.isEmpty) ? 'Requis' : null,
@@ -981,20 +779,11 @@ class _CommandeDetailScreenState extends State<CommandeDetailScreen> {
           ElevatedButton(
             onPressed: () async {
               if (formKey.currentState!.validate()) {
-                bool success;
-                if (commande.typeCommande == 'diagnostic_requis') {
-                  success = await Provider.of<CommandeProvider>(context, listen: false).modifierDevisPostDiagnostic(
-                    commandeId: commande.id,
-                    montantDevis: double.parse(montantController.text),
-                    descriptionProbleme: messageController.text,
-                  );
-                } else {
-                  success = await Provider.of<CommandeProvider>(context, listen: false).modifierDevis(
+                bool success = await Provider.of<CommandeProvider>(context, listen: false).modifierDevis(
                     commandeId: commande.id,
                     montantDevis: double.parse(montantController.text),
                     messageDevis: messageController.text,
                   );
-                }
                 
                 if (success && mounted) {
                   Navigator.pop(context);
@@ -1104,19 +893,8 @@ class _CommandeDetailScreenState extends State<CommandeDetailScreen> {
   Widget? _buildClientActions(BuildContext context, CommandeModel commande) {
     final statut = commande.statut;
 
-    // Action : Payer les frais de déplacement
-    if ((statut == 'diagnostic_demande' || statut == 'diagnostic_acceptee') && commande.fraisDeplacementPayes != true) {
-      return _buildBottomBar(
-        child: CustomButton(
-          text: 'Payer les frais de déplacement (${commande.montantDiagnostic?.toInt()} F)',
-          onPressed: () => context.push('${AppRouter.payment}?commandeId=${commande.id}&montant=${commande.montantDiagnostic?.toInt() ?? 0}'),
-          backgroundColor: AppColors.primaryBlue,
-        ),
-      );
-    }
-
     // Action : Accepter le devis final
-    if (statut == 'devis_envoye' || statut == 'devis_post_diagnostic_envoye') {
+    if (statut == 'devis_envoye') {
       return _buildBottomBar(
         child: Row(
           children: [
@@ -1157,7 +935,7 @@ class _CommandeDetailScreenState extends State<CommandeDetailScreen> {
     }
 
     // Action : Marquer le service comme rendu (Validation client)
-    if (statut == 'en_cours' || statut == 'devis_post_diagnostic_accepte' || statut == 'acceptee') {
+    if (statut == 'en_cours' || statut == 'acceptee') {
       return _buildBottomBar(
         child: Row(
           children: [
@@ -1177,52 +955,13 @@ class _CommandeDetailScreenState extends State<CommandeDetailScreen> {
       );
     }
 
-    // En attente (Diagnostic en cours)
-    if (statut == 'diagnostic_paye' || statut == 'diagnostic_valide') {
-      return _buildBottomBar(
-        child: Row(
-          children: [
-            const Icon(Icons.info_outline, color: AppColors.primaryBlue),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Text(
-                statut == 'diagnostic_paye' ? 'Artisan en route pour le diagnostic' :
-                'Diagnostic effectué, en attente du devis',
-                style: AppTextStyles.bodyMedium.copyWith(color: AppColors.primaryBlue, fontWeight: FontWeight.bold),
-              ),
-            ),
-            _buildChatButton(commande),
-            const SizedBox(width: 8),
-            _buildCallButton(),
-          ],
-        ),
-      );
-    }
-
     return _buildCommunicationBottomBar(commande);
   }
 
   Widget? _buildArtisanActions(BuildContext context, CommandeModel commande) {
     final statut = commande.statut;
 
-    // Diagnostic payé mais pas encore validé par l'artisan
-    if (statut == 'diagnostic_paye' && !commande.diagnosticValideArtisan) {
-      return _buildBottomBar(
-        child: ElevatedButton.icon(
-          onPressed: _validerDiagnostic,
-          icon: const Icon(Icons.check_circle_outline),
-          label: const Text('Valider le diagnostic (je suis sur place)'),
-          style: ElevatedButton.styleFrom(
-            backgroundColor: AppColors.primaryBlue,
-            foregroundColor: AppColors.white,
-            padding: const EdgeInsets.symmetric(vertical: 16),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-          ),
-        ),
-      );
-    }
-
-    if (statut == 'en_attente' || statut == 'diagnostic_demande') {
+    if (statut == 'en_attente') {
       return _buildBottomBar(
         child: Row(
           children: [
@@ -1239,10 +978,8 @@ class _CommandeDetailScreenState extends State<CommandeDetailScreen> {
             Expanded(
               flex: 2,
               child: CustomButton(
-                text: commande.typeCommande == 'diagnostic_requis' ? 'Accepter le diagnostic' : 'Envoyer un devis',
-                onPressed: commande.typeCommande == 'diagnostic_requis' 
-                    ? _accepterCommande 
-                    : () {
+                text: 'Envoyer un devis',
+                onPressed: () {
                         Navigator.push(
                           context,
                           MaterialPageRoute(
@@ -1258,47 +995,7 @@ class _CommandeDetailScreenState extends State<CommandeDetailScreen> {
       );
     }
 
-    if (statut == 'diagnostic_acceptee') {
-      return _buildBottomBar(
-        child: Row(
-          children: [
-            const Icon(Icons.schedule, color: AppColors.warning),
-            const SizedBox(width: 12),
-            const Expanded(
-              child: Text(
-                'En attente du paiement des frais de diagnostic par le client',
-                style: TextStyle(color: AppColors.warning, fontWeight: FontWeight.bold),
-              ),
-            ),
-            _buildChatButton(commande),
-            const SizedBox(width: 8),
-            _buildCallButton(),
-          ],
-        ),
-      );
-    }
-
-    if (statut == 'diagnostic_valide') {
-      return _buildBottomBar(
-        child: Row(
-          children: [
-            const Icon(Icons.info_outline, color: AppColors.primaryBlue),
-            const SizedBox(width: 12),
-            const Expanded(
-              child: Text(
-                'Veuillez remplir le devis ci-dessus pour le client',
-                style: TextStyle(color: AppColors.primaryBlue, fontWeight: FontWeight.bold),
-              ),
-            ),
-            _buildChatButton(commande),
-            const SizedBox(width: 8),
-            _buildCallButton(),
-          ],
-        ),
-      );
-    }
-
-    if (statut == 'devis_post_diagnostic_envoye' || statut == 'devis_envoye') {
+    if (statut == 'devis_envoye') {
        return _buildBottomBar(
         child: Row(
           children: [
@@ -1318,7 +1015,7 @@ class _CommandeDetailScreenState extends State<CommandeDetailScreen> {
       );
     }
 
-    if (statut == 'devis_accepte' || statut == 'acceptee' || statut == 'en_cours' || statut == 'devis_post_diagnostic_accepte') {
+    if (statut == 'devis_accepte' || statut == 'acceptee' || statut == 'en_cours') {
       return _buildBottomBar(
         child: Row(
           children: [
@@ -1482,16 +1179,7 @@ class _CommandeDetailScreenState extends State<CommandeDetailScreen> {
   Color _getStatutColor(String statut) {
     switch (statut) {
       case 'en_attente':
-      case 'diagnostic_demande':
         return AppColors.warning;
-      case 'diagnostic_paye':
-        return AppColors.primaryBlue;
-      case 'diagnostic_valide':
-        return AppColors.success;
-      case 'devis_post_diagnostic_envoye':
-        return AppColors.primaryBlue;
-      case 'devis_post_diagnostic_accepte':
-        return AppColors.success;
       case 'devis_envoye':
         return AppColors.primaryBlue;
       case 'devis_accepte':
@@ -1516,16 +1204,7 @@ class _CommandeDetailScreenState extends State<CommandeDetailScreen> {
   IconData _getStatutIcon(String statut) {
     switch (statut) {
       case 'en_attente':
-      case 'diagnostic_demande':
         return Icons.schedule;
-      case 'diagnostic_paye':
-        return Icons.payment;
-      case 'diagnostic_valide':
-        return Icons.fact_check;
-      case 'devis_post_diagnostic_envoye':
-        return Icons.description;
-      case 'devis_post_diagnostic_accepte':
-        return Icons.check_circle;
       case 'devis_envoye':
         return Icons.description;
       case 'devis_accepte':
@@ -1553,12 +1232,7 @@ class _CommandeDetailScreenState extends State<CommandeDetailScreen> {
     if (isClient) {
       switch (statut) {
         case 'en_attente': return 'En attente de l\'artisan';
-        case 'diagnostic_demande': return 'Payer les frais de déplacement';
-        case 'diagnostic_paye': return 'Frais payés - Artisan en route';
-        case 'diagnostic_en_cours': return 'Diagnostic en cours...';
-        case 'diagnostic_valide': return 'Diagnostic fini - Devis en attente';
         case 'devis_envoye': return 'Devis reçu - Action requise';
-        case 'devis_post_diagnostic_envoye': return 'Devis final reçu - Action requise';
         case 'devis_accepte': return 'Devis accepté - Payer pour lancer';
         case 'acceptee': return 'Payé - Travaux sécurisés';
         case 'en_cours': return 'Travaux en cours...';
@@ -1571,12 +1245,7 @@ class _CommandeDetailScreenState extends State<CommandeDetailScreen> {
     } else {
       switch (statut) {
         case 'en_attente': return 'Nouvelle demande ! Répondez vite';
-        case 'diagnostic_demande': return 'En attente du paiement client';
-        case 'diagnostic_paye': return 'Payé ! Allez faire le diagnostic';
-        case 'diagnostic_en_cours': return 'Diagnostic en cours';
-        case 'diagnostic_valide': return 'Diagnostic validé - Envoyez le devis';
         case 'devis_envoye': return 'Devis envoyé - Attente client';
-        case 'devis_post_diagnostic_envoye': return 'Devis final envoyé';
         case 'devis_accepte': return 'Accepté ! Attente paiement travaux';
         case 'acceptee': return 'Payé ! Commencez les travaux';
         case 'en_cours': return 'En cours';
