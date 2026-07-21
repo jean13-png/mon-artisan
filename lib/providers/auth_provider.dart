@@ -172,6 +172,7 @@ class AuthProvider extends ChangeNotifier {
   }
 
   Future<void> signOut() async {
+    NotificationService.stopListening();
     await FirebaseService.signOut();
     _userModel = null;
     notifyListeners();
@@ -190,6 +191,46 @@ class AuthProvider extends ChangeNotifier {
     } catch (e) {
       _isLoading = false;
       _errorMessage = 'Impossible d\'envoyer l\'email de récupération';
+      notifyListeners();
+      return false;
+    }
+  }
+
+  Future<bool> changePassword(String currentPassword, String newPassword) async {
+    _isLoading = true;
+    _errorMessage = null;
+    notifyListeners();
+
+    try {
+      if (_firebaseUser == null || _firebaseUser?.email == null) {
+        _errorMessage = 'Utilisateur non connecté';
+        _isLoading = false;
+        notifyListeners();
+        return false;
+      }
+
+      // Réauthentifier l'utilisateur pour des raisons de sécurité
+      final credential = EmailAuthProvider.credential(
+        email: _firebaseUser!.email!,
+        password: currentPassword,
+      );
+
+      await _firebaseUser!.reauthenticateWithCredential(credential);
+
+      // Mettre à jour le mot de passe
+      await _firebaseUser!.updatePassword(newPassword);
+
+      _isLoading = false;
+      notifyListeners();
+      return true;
+    } on FirebaseAuthException catch (e) {
+      _isLoading = false;
+      _errorMessage = _getErrorMessage(e.code);
+      notifyListeners();
+      return false;
+    } catch (e) {
+      _isLoading = false;
+      _errorMessage = 'Erreur lors du changement de mot de passe';
       notifyListeners();
       return false;
     }

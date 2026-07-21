@@ -10,6 +10,7 @@ import '../core/services/firebase_service.dart';
 import '../core/services/cloudinary_service.dart';
 import '../core/services/geolocation_service.dart';
 import '../core/services/firestore_service.dart';
+import '../core/utils/logger.dart';
 
 class ArtisanProvider extends ChangeNotifier {
   ArtisanModel? _currentArtisan;
@@ -73,7 +74,7 @@ class ArtisanProvider extends ChangeNotifier {
         );
       }
     } catch (e) {
-      print('Erreur chargement profil: $e');
+      Logger.error('Erreur chargement profil', e);
       if (_currentArtisan == null) {
         _errorMessage = 'Erreur lors du chargement du profil';
       }
@@ -113,7 +114,7 @@ class ArtisanProvider extends ChangeNotifier {
           .toList();
 
     } catch (e) {
-      print('Erreur chargement commandes: $e');
+      Logger.error('Erreur chargement commandes', e);
       _errorMessage = 'Erreur lors du chargement des commandes';
       // Initialiser avec des listes vides en cas d'erreur
       _nouvellesCommandes = [];
@@ -171,15 +172,15 @@ class ArtisanProvider extends ChangeNotifier {
               return const GeoPoint(0, 0);
             },
           );
-          print('[SEARCH] Géo: ${docs.length} docs dans le rayon $radiusKm km');
+          Logger.log('Géo: ${docs.length} docs dans le rayon $radiusKm km');
         } catch (geoError) {
-          print('[WARNING] Recherche géo échouée ($geoError), fallback query classique');
+          Logger.warning('Recherche géo échouée, fallback query classique');
         }
 
         // Si la recherche géo retourne 0 (geohash vides ou absents),
         // fallback sur query classique qui filtre par distance en mémoire
         if (docs.isEmpty) {
-          print('[SEARCH] Géo vide → fallback query classique (limite 100)');
+          Logger.log('Géo vide → fallback query classique (limite 100)');
           final fallback = await rawCollection.limit(100).get();
           docs = fallback.docs;
         }
@@ -222,7 +223,7 @@ class ArtisanProvider extends ChangeNotifier {
 
             fetchedArtisans.add(ArtisanModel.fromFirestore(doc));
           } catch (e) {
-            print('[ERROR] Erreur parsing artisan ${doc.id}: $e');
+            Logger.error('Erreur parsing artisan ${doc.id}', e);
           }
         }
 
@@ -235,7 +236,7 @@ class ArtisanProvider extends ChangeNotifier {
 
         // Si toujours 0 résultats après filtre distance, relancer sans filtre distance
         if (fetchedArtisans.isEmpty) {
-          print('[SEARCH] 0 résultats avec filtre distance → recherche sans limite de rayon');
+          Logger.log('0 résultats avec filtre distance → recherche sans limite de rayon');
           final fallback2 = await rawCollection.get();
           for (var doc in fallback2.docs) {
             try {
@@ -254,10 +255,10 @@ class ArtisanProvider extends ChangeNotifier {
               }
               fetchedArtisans.add(ArtisanModel.fromFirestore(doc));
             } catch (e) {
-              print('[ERROR] $e');
+              Logger.error('Erreur', e);
             }
           }
-          print('[SEARCH] Sans limite rayon: ${fetchedArtisans.length} résultats');
+          Logger.log('Sans limite rayon: ${fetchedArtisans.length} résultats');
           fetchedArtisans.sort((a, b) {
             final distA = GeolocationService.calculateDistance(latitude, longitude, a.position.latitude, a.position.longitude);
             final distB = GeolocationService.calculateDistance(latitude, longitude, b.position.latitude, b.position.longitude);
@@ -278,7 +279,7 @@ class ArtisanProvider extends ChangeNotifier {
 
         // On limite à 100 pour éviter de charger toute la base
         final querySnapshot = await query.limit(100).get();
-        print('[SEARCH] Classique: ${querySnapshot.docs.length} docs Firestore');
+        Logger.log('Classique: ${querySnapshot.docs.length} docs Firestore');
 
         for (var doc in querySnapshot.docs) {
           try {
@@ -304,7 +305,7 @@ class ArtisanProvider extends ChangeNotifier {
 
             fetchedArtisans.add(ArtisanModel.fromFirestore(doc));
           } catch (e) {
-            print('[ERROR] Erreur parsing artisan ${doc.id}: $e');
+            Logger.error('Erreur parsing artisan ${doc.id}', e);
           }
         }
 
@@ -312,10 +313,10 @@ class ArtisanProvider extends ChangeNotifier {
       }
 
       _artisans = fetchedArtisans;
-      print('[SEARCH] Artisans trouvés: ${_artisans.length}');
+      Logger.log('Artisans trouvés: ${_artisans.length}');
 
     } catch (e) {
-      print('Erreur recherche artisans: $e');
+      Logger.error('Erreur recherche artisans', e);
       _errorMessage = 'Erreur lors de la recherche: $e';
       _artisans = [];
     }

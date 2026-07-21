@@ -105,17 +105,18 @@ class SelectCommandeTypeScreen extends StatelessWidget {
 
             const SizedBox(height: 32),
 
-            // Option 1: Panne connue
+            // Option 1: Commander un service
             _buildOptionCard(
               context: context,
-              icon: Icons.build_circle,
+              icon: Icons.description_outlined,
               iconColor: AppColors.success,
-              title: 'Je connais la panne',
-              description: 'Vous savez exactement quel est le problème et ce qu\'il faut réparer',
+              title: 'Commander un service',
+              description: 'Vous savez ce que vous voulez (panne connue, coiffure, installation, etc.)',
               features: [
-                'Description détaillée du problème',
-                'L\'artisan vous envoie un devis',
-                'Paiement après acceptation du devis',
+                'Décris ce que tu veux',
+                'L\'artisan te propose un devis',
+                'Paiement sécurisé en escrow',
+                'Validation finale par toi après la prestation',
               ],
               onTap: () {
                 Navigator.push(
@@ -123,7 +124,7 @@ class SelectCommandeTypeScreen extends StatelessWidget {
                   MaterialPageRoute(
                     builder: (context) => CreateCommandeScreen(
                       artisan: artisan,
-                      typeCommande: 'panne_connue',
+                      typeCommande: 'panne_connue', // On garde le type existant pour la compatibilité
                     ),
                   ),
                 );
@@ -132,18 +133,18 @@ class SelectCommandeTypeScreen extends StatelessWidget {
 
             const SizedBox(height: 20),
 
-            // Option 2: Diagnostic requis
+            // Option 2: Besoin d'un diagnostic
             _buildOptionCard(
               context: context,
               icon: Icons.search,
               iconColor: AppColors.info,
-              title: 'J\'ai besoin d\'un diagnostic',
-              description: 'Vous ne connaissez pas exactement le problème et avez besoin d\'un diagnostic',
+              title: 'Besoin d\'un diagnostic',
+              description: 'Tu ne connais pas la panne et tu as besoin que l\'artisan vienne voir d\'abord',
               features: [
                 'Frais de déplacement calculés automatiquement',
                 'Diagnostic sur place par l\'artisan',
                 'Devis détaillé après diagnostic',
-                'Vous décidez ensuite de continuer ou non',
+                'Tu décides ensuite de continuer ou non',
               ],
               badge: 'Recommandé',
               onTap: () {

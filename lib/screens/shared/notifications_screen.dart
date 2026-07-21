@@ -344,19 +344,9 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
               final isArtisan = authProvider.userModel?.role == 'artisan';
               
               if (isArtisan) {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => CommandeDetailScreen(commande: commande),
-                  ),
-                );
+                context.push(AppRouter.commandeDetail, extra: commande);
               } else {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => DevisDetailScreen(commande: commande),
-                  ),
-                );
+                context.push(AppRouter.devisDetail, extra: commande);
               }
             } else {
               ScaffoldMessenger.of(context).showSnackBar(

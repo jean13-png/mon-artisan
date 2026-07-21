@@ -248,8 +248,18 @@ class CommandeProvider extends ChangeNotifier {
   }
 
   // Mettre à jour le statut d'une commande
+  /// Mettre à jour le statut d'une commande avec gestion de la disponibilité artisan
   Future<bool> updateCommandeStatut(String commandeId, String newStatut) async {
     try {
+      // Récupérer la commande actuelle pour connaître l'artisan
+      final doc = await FirebaseService.firestore
+          .collection('commandes')
+          .doc(commandeId)
+          .get();
+      
+      if (!doc.exists) return false;
+      final commande = CommandeModel.fromFirestore(doc);
+
       await FirebaseService.firestore
           .collection('commandes')
           .doc(commandeId)
@@ -257,6 +267,17 @@ class CommandeProvider extends ChangeNotifier {
         'statut': newStatut,
         'updatedAt': Timestamp.now(),
       });
+
+      // ✅ Gestion centralisée de la disponibilité
+      // Si la commande est terminée, annulée ou refusée, on libère l'artisan
+      final statusDeLiberation = ['terminee', 'annulee', 'refusee', 'devis_refuse', 'validee'];
+      if (statusDeLiberation.contains(newStatut)) {
+        await FirestoreService.setArtisanAvailable(commande.artisanId);
+      } 
+      // Si la commande repasse en "en cours" ou "acceptee", on s'assure qu'il est occupé
+      else if (['en_cours', 'acceptee', 'devis_accepte'].contains(newStatut)) {
+        await FirestoreService.setArtisanBusy(commande.artisanId, commandeId);
+      }
 
       // Mettre à jour localement
       final index = _commandes.indexWhere((c) => c.id == commandeId);
@@ -270,7 +291,7 @@ class CommandeProvider extends ChangeNotifier {
 
       return true;
     } catch (e) {
-      _errorMessage = 'Erreur lors de la mise à jour du statut';
+      _errorMessage = 'Erreur lors de la mise à jour du statut: $e';
       notifyListeners();
       return false;
     }
@@ -387,53 +408,7 @@ class CommandeProvider extends ChangeNotifier {
 
   // Marquer une commande comme terminée (artisan)
   Future<bool> terminerCommande(String commandeId) async {
-    try {
-      // Récupérer la commande pour obtenir le clientId
-      final commandeDoc = await FirebaseService.firestore
-          .collection('commandes')
-          .doc(commandeId)
-          .get();
-      
-      if (!commandeDoc.exists) {
-        _errorMessage = 'Commande introuvable';
-        notifyListeners();
-        return false;
-      }
-      
-      final commande = CommandeModel.fromFirestore(commandeDoc);
-      
-      await FirebaseService.firestore
-          .collection('commandes')
-          .doc(commandeId)
-          .update({
-        'statut': 'terminee',
-        'completedAt': Timestamp.now(),
-        'updatedAt': Timestamp.now(),
-      });
-
-      // Créer une notification pour le client
-      await FirestoreService.createNotification({
-        'userId': commande.clientId,
-        'type': 'commande_terminee',
-        'titre': 'Prestation terminée',
-        'message': 'L\'artisan a terminé votre prestation. N\'oubliez pas de le noter !',
-        'data': {
-          'commandeId': commandeId,
-          'metier': commande.metier,
-        },
-      });
-
-      // Notification locale
-      await NotificationService.showPrestationCompletedNotification(
-        artisanName: 'L\'artisan',
-      );
-
-      return true;
-    } catch (e) {
-      _errorMessage = 'Erreur lors de la finalisation de la commande';
-      notifyListeners();
-      return false;
-    }
+    return updateCommandeStatut(commandeId, 'terminee');
   }
 
   void clearError() {
@@ -520,10 +495,7 @@ class CommandeProvider extends ChangeNotifier {
     }
   }
 
-  // M1 — Déléguer à GeolocationService (source unique de vérité)
-  double calculateDistance(double lat1, double lon1, double lat2, double lon2) {
-    return GeolocationService.calculateDistance(lat1, lon1, lat2, lon2);
-  }
+
 
   // Envoyer un devis (artisan)
   Future<bool> envoyerDevis({

@@ -979,14 +979,7 @@ class _CommandeDetailScreenState extends State<CommandeDetailScreen> {
               flex: 2,
               child: CustomButton(
                 text: 'Envoyer un devis',
-                onPressed: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => EnvoyerDevisScreen(commande: commande),
-                          ),
-                        );
-                      },
+                onPressed: () => context.push(AppRouter.envoyerDevis, extra: commande),
                 backgroundColor: AppColors.primaryBlue,
               ),
             ),
@@ -1063,17 +1056,10 @@ class _CommandeDetailScreenState extends State<CommandeDetailScreen> {
 
   Widget _buildChatButton(CommandeModel commande) {
     return IconButton(
-      onPressed: () {
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) => ChatScreen(
-              otherUserId: _isClient ? commande.artisanId : commande.clientId,
-              otherUserName: _otherUserNom ?? '${_isClient ? 'Artisan' : 'Client'} #${(_isClient ? commande.artisanId : commande.clientId).substring(0, 8)}',
-            ),
-          ),
-        );
-      },
+      onPressed: () => context.push(AppRouter.chat, extra: {
+        'otherUserId': _isClient ? commande.artisanId : commande.clientId,
+        'otherUserName': _otherUserNom ?? '${_isClient ? 'Artisan' : 'Client'} #${(_isClient ? commande.artisanId : commande.clientId).substring(0, 8)}',
+      }),
       icon: const Icon(Icons.chat_bubble_outline, color: AppColors.primaryBlue),
       style: IconButton.styleFrom(
         backgroundColor: AppColors.primaryBlue.withOpacity(0.1),

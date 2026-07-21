@@ -8,6 +8,9 @@ import '../../models/commande_model.dart';
 import '../../models/artisan_model.dart';
 import '../../providers/commande_provider.dart';
 import '../../providers/artisan_provider.dart';
+import '../../core/services/geolocation_service.dart';
+import '../../core/utils/ui_utils.dart';
+import '../../core/utils/logger.dart';
 import '../../widgets/custom_button.dart';
 import '../../widgets/custom_textfield.dart';
 
@@ -51,10 +54,8 @@ class _EnvoyerDevisScreenState extends State<EnvoyerDevisScreen> {
       _artisan = artisanProvider.currentArtisan;
       
       if (_artisan != null) {
-        final commandeProvider = Provider.of<CommandeProvider>(context, listen: false);
-        
         // Calculer la distance entre l'artisan et le client
-        final distance = commandeProvider.calculateDistance(
+        final distance = GeolocationService.calculateDistance(
           _artisan!.position.latitude,
           _artisan!.position.longitude,
           widget.commande.position.latitude,
@@ -66,12 +67,12 @@ class _EnvoyerDevisScreenState extends State<EnvoyerDevisScreen> {
           _isCalculatingDistance = false;
         });
         
-        print('[INFO] Distance calculée: ${distance.toStringAsFixed(2)} km');
+        Logger.log('Distance calculée: ${distance.toStringAsFixed(2)} km');
       } else {
         setState(() => _isCalculatingDistance = false);
       }
     } catch (e) {
-      print('[ERROR] Erreur calcul distance: $e');
+      Logger.error('Erreur calcul distance', e);
       setState(() {
         _distanceKm = 0;
         _isCalculatingDistance = false;

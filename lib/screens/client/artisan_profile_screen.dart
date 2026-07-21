@@ -5,6 +5,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import '../../core/constants/colors.dart';
 import '../../core/constants/text_styles.dart';
 import '../../core/routes/app_router.dart';
+import '../../core/utils/ui_utils.dart';
 import '../../models/artisan_model.dart';
 import '../../widgets/custom_button.dart';
 import '../shared/chat_screen.dart';
@@ -475,11 +476,9 @@ class ArtisanProfileScreen extends StatelessWidget {
                   // Appeler l'artisan si le numéro est disponible
                   final tel = artisan.telephone;
                   if (tel == null || tel.isEmpty) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('Numéro non disponible'),
-                        backgroundColor: AppColors.error,
-                      ),
+                    UIUtils.showErrorSnackBar(
+                      context,
+                      'Numéro non disponible',
                     );
                     return;
                   }
@@ -501,15 +500,10 @@ class ArtisanProfileScreen extends StatelessWidget {
               IconButton(
                 onPressed: !disponible ? null : () {
                   // Ouvrir le chat avec l'artisan
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => ChatScreen(
-                        otherUserId: artisan.userId,
-                        otherUserName: artisan.fullName.isNotEmpty ? artisan.fullName : 'Artisan',
-                      ),
-                    ),
-                  );
+                  context.push(AppRouter.chat, extra: {
+                    'otherUserId': artisan.userId,
+                    'otherUserName': artisan.fullName.isNotEmpty ? artisan.fullName : 'Artisan',
+                  });
                 },
                 icon: Icon(
                   Icons.chat_bubble_outline,
@@ -573,18 +567,17 @@ class ArtisanProfileScreen extends StatelessWidget {
           ElevatedButton(
             onPressed: () {
               if (reportController.text.trim().isEmpty) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Veuillez saisir une explication')),
+                UIUtils.showErrorSnackBar(
+                  context,
+                  'Veuillez saisir une explication',
                 );
                 return;
               }
               // Ici on pourrait appeler un service pour enregistrer le signalement
               Navigator.pop(context);
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Signalement envoyé avec succès. Notre équipe va l\'étudier.'),
-                  backgroundColor: AppColors.success,
-                ),
+              UIUtils.showSuccessSnackBar(
+                context,
+                'Signalement envoyé avec succès. Notre équipe va l\'étudier.',
               );
             },
             style: ElevatedButton.styleFrom(

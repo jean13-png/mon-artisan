@@ -15,10 +15,13 @@ subprojects {
     val newSubprojectBuildDir: Directory = newBuildDir.dir(project.name)
     project.layout.buildDirectory.value(newSubprojectBuildDir)
     
-    // Force Java 17 pour tous les sous-projets
+    // Force Java 17 et Build Tools pour tous les sous-projets
     afterEvaluate {
         if (project.hasProperty("android")) {
             extensions.configure<com.android.build.gradle.BaseExtension> {
+                compileSdkVersion(36)
+                buildToolsVersion("36.1.0")
+                
                 compileOptions {
                     sourceCompatibility = JavaVersion.VERSION_17
                     targetCompatibility = JavaVersion.VERSION_17

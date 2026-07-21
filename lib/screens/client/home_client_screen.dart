@@ -16,6 +16,7 @@ import '../../providers/commande_provider.dart';
 import '../../widgets/double_tap_to_exit.dart';
 import '../../widgets/location_permission_dialog.dart';
 import '../../widgets/badge_icon.dart';
+import '../../widgets/loading_widget.dart';
 import '../shared/conversations_list_screen.dart';
 
 class HomeClientScreen extends StatefulWidget {
@@ -195,9 +196,7 @@ class _HomeClientScreenState extends State<HomeClientScreen> {
     final user = authProvider.userModel;
 
     if (user == null) {
-      return const Scaffold(
-        body: Center(child: CircularProgressIndicator()),
-      );
+      return const LoadingWidget(message: 'Chargement de votre profil...');
     }
 
     return DoubleTapToExit(
@@ -239,11 +238,7 @@ class _HomeClientScreenState extends State<HomeClientScreen> {
               icon: Icons.chat_bubble_outline,
               count: _unreadMessagesCount,
               onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                      builder: (_) => const ConversationsListScreen()),
-                ).then((_) => _loadUnreadCounts());
+                context.push(AppRouter.conversationsList).then((_) => _loadUnreadCounts());
               },
             ),
             BadgeIcon(

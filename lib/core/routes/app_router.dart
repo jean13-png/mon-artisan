@@ -29,10 +29,13 @@ import '../../screens/artisan/envoyer_devis_screen.dart';
 import '../../screens/client/commandes_history_screen.dart';
 import '../../screens/client/rate_artisan_screen.dart';
 import '../../screens/client/artisan_reviews_screen.dart'; // Import for ArtisanReviewsScreen
+import '../../screens/client/devis_detail_screen.dart';
 import '../../screens/shared/notifications_screen.dart';
 import '../../screens/shared/edit_profile_screen.dart';
 import '../../screens/shared/settings_screen.dart';
 import '../../screens/shared/chat_screen.dart';
+import '../../screens/shared/conversations_list_screen.dart';
+import '../../screens/shared/change_password_screen.dart';
 import '../../screens/shared/location_picker_screen.dart';
 import '../../models/artisan_model.dart';
 import '../../models/commande_model.dart';
@@ -57,8 +60,10 @@ class AppRouter {
   static const String commandesHistory = '/commandes-history';
   static const String rateArtisan = '/rate-artisan';
   static const String artisanReviews = '/artisan-reviews'; // New route for all artisan reviews
+  static const String devisDetail = '/devis-detail';
   static const String allCategories = '/all-categories';
   static const String locationPicker = '/location-picker';
+  static const String conversationsList = '/conversations-list';
 
 
   static const String becomeAgent = '/become-agent';
@@ -81,6 +86,7 @@ class AppRouter {
   static const String notifications = '/notifications';
   static const String editProfile = '/edit-profile';
   static const String settings = '/settings';
+  static const String changePassword = '/change-password';
   static const String chat = '/chat';
 
   // ── Ensembles de routes par niveau d'accès ────────────────────────────────
@@ -92,11 +98,11 @@ class AppRouter {
   };
   static const _clientRoutes = {
     homeClient, categoryMetiers, allCategories, searchArtisan, artisanProfile, selectCommandeType,
-    createCommande, payment, commandesHistory, rateArtisan, artisanReviews, locationPicker,
-    becomeAgent, agentDashboard,
+    createCommande, payment, commandesHistory, rateArtisan, artisanReviews, devisDetail, locationPicker,
+    becomeAgent, agentDashboard, conversationsList,
   };
   static const _artisanRoutes = {
-    homeArtisan, commandeDetail, envoyerDevis, revenus, completeProfile,
+    homeArtisan, commandeDetail, envoyerDevis, revenus, completeProfile, conversationsList,
   };
 
   // ── Factory ───────────────────────────────────────────────────────────────
@@ -243,8 +249,20 @@ class AppRouter {
         },
       ),
       GoRoute(
+        path: devisDetail,
+        builder: (context, state) {
+          final commande = state.extra as CommandeModel?;
+          if (commande == null) return const _ErrorScreen(message: 'Commande manquante');
+          return DevisDetailScreen(commande: commande);
+        },
+      ),
+      GoRoute(
         path: notifications,
         builder: (context, state) => const NotificationsScreen(),
+      ),
+      GoRoute(
+        path: conversationsList,
+        builder: (context, state) => const ConversationsListScreen(),
       ),
       GoRoute(
         path: revenus,
@@ -257,6 +275,10 @@ class AppRouter {
       GoRoute(
         path: settings,
         builder: (context, state) => const SettingsScreen(),
+      ),
+      GoRoute(
+        path: changePassword,
+        builder: (context, state) => const ChangePasswordScreen(),
       ),
       GoRoute(
         path: completeProfile,

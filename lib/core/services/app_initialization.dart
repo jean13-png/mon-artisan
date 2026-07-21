@@ -7,20 +7,31 @@ class AppInitialization {
   /// Initialiser l'application
   static Future<void> initialize() async {
     try {
-      // Charger les variables d'environnement
-      await dotenv.load(fileName: ".env");
+      try {
+        await dotenv.load(fileName: ".env");
+      } catch (e) {
+        print('[WARNING] .env error: $e');
+      }
 
-      // Initialiser Firebase
-      await Firebase.initializeApp(
-        options: DefaultFirebaseOptions.currentPlatform,
-      );
+      try {
+        if (Firebase.apps.isEmpty) {
+          await Firebase.initializeApp(
+            options: DefaultFirebaseOptions.currentPlatform,
+          );
+        }
+      } catch (e) {
+        if (!e.toString().contains('duplicate-app')) {
+          rethrow;
+        }
+      }
 
-      // Initialiser les notifications
-      await NotificationService.initialize();
-
-      print('[SUCCESS] Application initialisée avec succès');
+      try {
+        await NotificationService.initialize();
+      } catch (e) {
+        print('[WARNING] Notifications error: $e');
+      }
     } catch (e) {
-      print('[ERROR] Erreur lors de l\'initialisation: $e');
+      print('[ERROR] Initialization error: $e');
       rethrow;
     }
   }

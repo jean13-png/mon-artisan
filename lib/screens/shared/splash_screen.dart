@@ -36,13 +36,16 @@ class _SplashScreenState extends State<SplashScreen> {
     // Attendre que l'initialisation de l'auth soit terminée si elle est encore en cours
     if (!authProvider.isInitialCheckDone) {
       debugPrint('[SPLASH] Attente de l\'initialisation de l\'auth...');
-      // On peut soit attendre ici, soit laisser le redirect de GoRouter s'en charger
-      // puisque AuthProvider notifiera quand isInitialCheckDone changera.
-      // Mais pour la sécurité du timer, on va attendre un peu.
       int attempts = 0;
-      while (!authProvider.isInitialCheckDone && attempts < 30) { // Max 3 secondes de plus
+      while (!authProvider.isInitialCheckDone && attempts < 50) { // Max 5 secondes (100ms * 50)
         await Future.delayed(const Duration(milliseconds: 100));
         attempts++;
+      }
+      
+      if (!authProvider.isInitialCheckDone) {
+        debugPrint('[SPLASH] Timeout de l\'auth, redirection forcée vers roleSelection');
+        if (mounted) context.go(AppRouter.roleSelection);
+        return;
       }
     }
 

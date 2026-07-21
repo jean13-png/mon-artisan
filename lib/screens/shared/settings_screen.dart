@@ -53,12 +53,7 @@ class SettingsScreen extends StatelessWidget {
             title: 'Changer le mot de passe',
             subtitle: 'Modifier votre mot de passe',
             onTap: () {
-              // TODO: Implémenter changement de mot de passe
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Fonctionnalité bientôt disponible'),
-                ),
-              );
+              context.push(AppRouter.changePassword);
             },
           ),
           

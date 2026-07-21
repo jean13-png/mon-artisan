@@ -1,3 +1,4 @@
+import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -6,15 +7,49 @@ import 'dart:io';
 /// Fonction globale obligatoire pour gérer les messages en arrière-plan
 @pragma('vm:entry-point')
 Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
+  // Initialiser Firebase pour le background isolate
+  await Firebase.initializeApp();
   print("Message reçu en arrière-plan : ${message.messageId}");
+  
+  // Afficher une notification locale même en arrière-plan
+  if (message.notification != null) {
+    // Réinitialiser les notifications locales pour l'isolate
+    final FlutterLocalNotificationsPlugin localNotifs = FlutterLocalNotificationsPlugin();
+    // Configuration minimale
+    const AndroidInitializationSettings androidInit = AndroidInitializationSettings('@mipmap/ic_launcher');
+    await localNotifs.initialize(
+      const InitializationSettings(android: androidInit),
+    );
+    
+    // Afficher la notification
+    const AndroidNotificationDetails androidDetails = AndroidNotificationDetails(
+      'mon_artisan_channel',
+      'Mon Artisan Notifications',
+      channelDescription: 'Notifications pour Mon Artisan',
+      importance: Importance.max,
+      priority: Priority.high,
+      showWhen: true,
+      visibility: NotificationVisibility.public,
+      showBadge: true,
+    );
+
+    await localNotifs.show(
+      DateTime.now().millisecondsSinceEpoch % 2147483647,
+      message.notification!.title ?? 'Mon Artisan',
+      message.notification!.body ?? '',
+      const NotificationDetails(android: androidDetails),
+    );
+  }
 }
 
 class NotificationService {
-  static final FirebaseMessaging _firebaseMessaging = FirebaseMessaging.instance;
+  static FirebaseMessaging get _firebaseMessaging => FirebaseMessaging.instance;
   static final FlutterLocalNotificationsPlugin _localNotifications =
       FlutterLocalNotificationsPlugin();
 
   static bool _isInitialized = false;
+  static String? _currentUserId;
+  static StreamSubscription? _notificationsSubscription;
 
   /// Initialiser le service de notifications
   static Future<void> initialize() async {
@@ -23,7 +58,6 @@ class NotificationService {
     try {
       // Configurer le handler de fond avant toute chose
       FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
-
       // Demander la permission
       NotificationSettings settings = await _firebaseMessaging.requestPermission(
         alert: true,
@@ -63,9 +97,10 @@ class NotificationService {
     }
   }
 
-  /// Associer le token FCM actuel à un utilisateur dans Firestore
+  /// Associer le token FCM actuel à un utilisateur dans Firestore et commencer à écouter les notifications
   static Future<void> updateUserToken(String userId) async {
     try {
+      _currentUserId = userId;
       String? token = await _firebaseMessaging.getToken();
       if (token != null) {
         await FirebaseFirestore.instance.collection('users').doc(userId).update({
@@ -74,9 +109,42 @@ class NotificationService {
         });
         print('FCM Token mis à jour pour l\'utilisateur $userId');
       }
+      // Commencer à écouter les nouvelles notifications pour cet utilisateur
+      _listenToNotifications(userId);
     } catch (e) {
       print('Erreur lors de la mise à jour du token FCM : $e');
     }
+  }
+
+  /// Écouter les nouvelles notifications dans Firestore
+  static void _listenToNotifications(String userId) {
+    // Annuler l'écoute précédente si elle existe
+    _notificationsSubscription?.cancel();
+
+    // Écouter les nouvelles notifications
+    _notificationsSubscription = FirebaseFirestore.instance
+        .collection('notifications')
+        .where('userId', isEqualTo: userId)
+        .where('isRead', isEqualTo: false)
+        .orderBy('createdAt', descending: true)
+        .limit(1)
+        .snapshots()
+        .listen((snapshot) {
+          for (var change in snapshot.docChanges) {
+            if (change.type == DocumentChangeType.added) {
+              final notification = change.doc.data() as Map<String, dynamic>;
+              final titre = notification['titre'] as String?;
+              final message = notification['message'] as String?;
+              if (titre != null && message != null) {
+                _showLocalNotification(
+                  title: titre,
+                  body: message,
+                  payload: change.doc.id,
+                );
+              }
+            }
+          }
+        });
   }
 
   /// Initialiser les notifications locales
@@ -116,6 +184,7 @@ class NotificationService {
           importance: Importance.max,
           enableVibration: true,
           playSound: true,
+          showBadge: true,
         );
 
         await _localNotifications
@@ -162,6 +231,10 @@ class NotificationService {
         importance: Importance.max,
         priority: Priority.high,
         showWhen: true,
+        visibility: NotificationVisibility.public, // Affiche sur écran de verrouillage
+        channelShowBadge: true, // Affiche badge sur l'icône
+        icon: '@mipmap/ic_launcher',
+        largeIcon: DrawableResourceAndroidBitmap('@mipmap/ic_launcher'),
       );
 
       const DarwinNotificationDetails iosDetails =
@@ -299,5 +372,12 @@ class NotificationService {
       body: 'Votre retrait de $montant FCFA a été approuvé',
       payload: 'withdrawal_approved',
     );
+  }
+
+  /// Arrêter d'écouter les notifications (lors de la déconnexion)
+  static void stopListening() {
+    _notificationsSubscription?.cancel();
+    _notificationsSubscription = null;
+    _currentUserId = null;
   }
 }

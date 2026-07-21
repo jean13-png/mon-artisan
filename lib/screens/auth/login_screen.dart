@@ -7,6 +7,7 @@ import '../../core/routes/app_router.dart';
 import '../../widgets/custom_button.dart';
 import '../../widgets/custom_textfield.dart';
 import '../../providers/auth_provider.dart';
+import '../../core/utils/ui_utils.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -54,11 +55,10 @@ class _LoginScreenState extends State<LoginScreen> {
           context.go(AppRouter.homeArtisan);
         }
       } else if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(authProvider.errorMessage ?? 'Erreur de connexion'),
-            backgroundColor: AppColors.error,
-          ),
+        UIUtils.showSnackBar(
+          context,
+          authProvider.errorMessage ?? 'Erreur de connexion',
+          isError: true,
         );
       }
     }

@@ -232,19 +232,9 @@ class _CommandesHistoryScreenState extends State<CommandesHistoryScreen> {
     return GestureDetector(
       onTap: () {
         if (widget.isArtisan) {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => CommandeDetailScreen(commande: commande as CommandeModel),
-            ),
-          );
+          context.push(AppRouter.commandeDetail, extra: commande as CommandeModel);
         } else {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => DevisDetailScreen(commande: commande as CommandeModel),
-            ),
-          );
+          context.push(AppRouter.devisDetail, extra: commande as CommandeModel);
         }
       },
       child: Container(

@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:provider/provider.dart';
@@ -30,8 +31,8 @@ class HomeArtisanScreen extends StatefulWidget {
 class _HomeArtisanScreenState extends State<HomeArtisanScreen> {
   int _unreadNotificationsCount = 0;
   int _unreadMessagesCount = 0;
-  bool _autoRefreshActive = true;
   bool _showDailyCTA = false;
+  Timer? _autoRefreshTimer;
 
   @override
   void initState() {
@@ -50,18 +51,21 @@ class _HomeArtisanScreenState extends State<HomeArtisanScreen> {
 
   @override
   void dispose() {
-    _autoRefreshActive = false;
+    _autoRefreshTimer?.cancel();
     super.dispose();
   }
 
   void _startAutoRefresh() {
-    Future.delayed(const Duration(seconds: 30), () {
-      if (!_autoRefreshActive || !mounted) return;
+    _autoRefreshTimer?.cancel();
+    _autoRefreshTimer = Timer.periodic(const Duration(seconds: 30), (timer) async {
+      if (!mounted) {
+        timer.cancel();
+        return;
+      }
       final authProvider = Provider.of<AuthProvider>(context, listen: false);
       if (authProvider.userModel != null) {
         _loadArtisanData();
         _loadUnreadCounts();
-        _startAutoRefresh();
       }
     });
   }
