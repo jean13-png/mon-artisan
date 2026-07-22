@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'package:cloudinary_public/cloudinary_public.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import '../../core/utils/logger.dart';
 
 class CloudinaryService {
   static String get _cloudName => dotenv.env['CLOUDINARY_CLOUD_NAME'] ?? '';
@@ -15,7 +16,7 @@ class CloudinaryService {
   /// Upload une image vers Cloudinary
   static Future<String> uploadImage(String filePath, String folder) async {
     try {
-      print('[UPLOAD] Upload Image Cloudinary: $filePath vers $folder');
+      Logger.log('[UPLOAD] Upload Image Cloudinary: $filePath vers $folder');
       
       final file = File(filePath);
       if (!await file.exists()) {
@@ -35,7 +36,7 @@ class CloudinaryService {
 
       return response.secureUrl;
     } catch (e) {
-      print('[ERROR] Erreur upload Image Cloudinary: $e');
+      Logger.log('[ERROR] Erreur upload Image Cloudinary: $e');
       throw Exception('Erreur upload image: $e');
     }
   }
@@ -43,7 +44,7 @@ class CloudinaryService {
   /// Upload un fichier audio vers Cloudinary
   static Future<String> uploadAudio(String filePath, String folder) async {
     try {
-      print('[UPLOAD] Upload Audio Cloudinary: $filePath vers $folder');
+      Logger.log('[UPLOAD] Upload Audio Cloudinary: $filePath vers $folder');
       
       final file = File(filePath);
       if (!await file.exists()) {
@@ -63,11 +64,11 @@ class CloudinaryService {
       );
 
       final url = response.secureUrl;
-      print('[SUCCESS] Upload Audio réussi: $url');
+      Logger.log('[SUCCESS] Upload Audio réussi: $url');
       
       return url;
     } catch (e) {
-      print('[ERROR] Erreur upload Audio Cloudinary: $e');
+      Logger.log('[ERROR] Erreur upload Audio Cloudinary: $e');
       throw Exception('Erreur upload audio: $e');
     }
   }

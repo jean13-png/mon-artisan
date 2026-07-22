@@ -6,6 +6,7 @@ import '../core/services/adresse_service.dart';
 import '../core/services/firebase_service.dart';
 import '../screens/shared/location_picker_screen.dart';
 import '../widgets/map_picker_widget.dart';
+import '../../core/utils/logger.dart';
 
 /// Carte affichée avant une commande pour proposer au client
 /// de mettre à jour sa position.
@@ -139,7 +140,7 @@ class _PositionClientWidgetState extends State<PositionClientWidget> {
         'updatedAt': Timestamp.now(),
       });
     } catch (e) {
-      print('[WARNING] Impossible de sauvegarder la position ajustée: $e');
+      Logger.log('[WARNING] Impossible de sauvegarder la position ajustée: $e');
     }
 
     if (mounted) {

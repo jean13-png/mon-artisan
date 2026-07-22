@@ -6,6 +6,7 @@ import '../../core/services/firebase_service.dart';
 import '../../models/user_model.dart';
 import '../../models/artisan_model.dart';
 import '../../models/commande_model.dart';
+import '../../core/utils/logger.dart';
 
 class UserDetailScreen extends StatefulWidget {
   final String userId;
@@ -72,7 +73,7 @@ class _UserDetailScreenState extends State<UserDetailScreen> {
 
       setState(() => _isLoading = false);
     } catch (e) {
-      print('[ERROR] Erreur chargement détails: $e');
+      Logger.log('[ERROR] Erreur chargement détails: $e');
       setState(() => _isLoading = false);
     }
   }

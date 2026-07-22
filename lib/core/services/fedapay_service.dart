@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import '../constants/app_constants.dart';
+import '../../core/utils/logger.dart';
 
 class FedaPayService {
   static final String apiKey = AppConstants.fedapayApiKey;
@@ -17,8 +18,8 @@ class FedaPayService {
   }) async {
     // ✅ MODE SIMULATION pour tester sans vraie API
     if (AppConstants.simulateFedaPay) {
-      print('[FEDAPAY SIMULATION] Transaction simulée');
-      print('[FEDAPAY SIMULATION] Montant: $amount XOF');
+      Logger.log('[FEDAPAY SIMULATION] Transaction simulée');
+      Logger.log('[FEDAPAY SIMULATION] Montant: $amount XOF');
       
       await Future.delayed(const Duration(seconds: 2)); // Simuler délai réseau
       
@@ -34,10 +35,10 @@ class FedaPayService {
     }
     
     try {
-      print('[FEDAPAY] Création transaction...');
-      print('[FEDAPAY] Montant: $amount XOF');
-      print('[FEDAPAY] Email: $customerEmail');
-      print('[FEDAPAY] Téléphone: $customerPhone');
+      Logger.log('[FEDAPAY] Création transaction...');
+      Logger.log('[FEDAPAY] Montant: $amount XOF');
+      Logger.log('[FEDAPAY] Email: $customerEmail');
+      Logger.log('[FEDAPAY] Téléphone: $customerPhone');
       
       final response = await http.post(
         Uri.parse('$baseUrl/transactions'),
@@ -60,8 +61,8 @@ class FedaPayService {
         }),
       );
 
-      print('[FEDAPAY] Status code: ${response.statusCode}');
-      print('[FEDAPAY] Response body: ${response.body}');
+      Logger.log('[FEDAPAY] Status code: ${response.statusCode}');
+      Logger.log('[FEDAPAY] Response body: ${response.body}');
 
       if (response.statusCode == 200 || response.statusCode == 201) {
         final data = jsonDecode(response.body);
@@ -79,14 +80,14 @@ class FedaPayService {
           throw Exception('ID transaction manquant dans la réponse FedaPay');
         }
         
-        print('[FEDAPAY] Transaction créée: ${data['v1']['id']}');
+        Logger.log('[FEDAPAY] Transaction créée: ${data['v1']['id']}');
         return data;
       } else {
-        print('[FEDAPAY ERROR] ${response.statusCode}: ${response.body}');
+        Logger.log('[FEDAPAY ERROR] ${response.statusCode}: ${response.body}');
         throw Exception('Erreur FedaPay (${response.statusCode}): ${response.body}');
       }
     } catch (e) {
-      print('[FEDAPAY ERROR] Exception: $e');
+      Logger.log('[FEDAPAY ERROR] Exception: $e');
       throw Exception('Erreur FedaPay: $e');
     }
   }
@@ -95,7 +96,7 @@ class FedaPayService {
   static Future<String> checkTransactionStatus(String transactionId) async {
     // ✅ MODE SIMULATION
     if (AppConstants.simulateFedaPay) {
-      print('[FEDAPAY SIMULATION] Vérification statut: $transactionId');
+      Logger.log('[FEDAPAY SIMULATION] Vérification statut: $transactionId');
       await Future.delayed(const Duration(seconds: 1));
       return 'approved'; // Simuler succès
     }
@@ -128,5 +129,51 @@ class FedaPayService {
   // Calculer le montant artisan
   static double calculateArtisanAmount(double montant) {
     return montant - calculateCommission(montant);
+  }
+
+  // Rembourser une transaction FedaPay
+  static Future<Map<String, dynamic>> refundTransaction({
+    required String transactionId,
+    required double amount,
+    String? reason,
+  }) async {
+    if (AppConstants.simulateFedaPay) {
+      Logger.log('[FEDAPAY SIMULATION] Remboursement simulé: $amount XOF pour transaction $transactionId');
+      await Future.delayed(const Duration(seconds: 1));
+      return {
+        'v1': {
+          'id': 'refund_sim_${DateTime.now().millisecondsSinceEpoch}',
+          'transaction_id': transactionId,
+          'amount': amount,
+          'status': 'approved',
+        }
+      };
+    }
+
+    try {
+      final response = await http.post(
+        Uri.parse('$baseUrl/refunds'),
+        headers: {
+          'Authorization': 'Bearer $apiKey',
+          'Content-Type': 'application/json',
+        },
+        body: jsonEncode({
+          'transaction_id': transactionId,
+          'amount': amount,
+          'reason': reason ?? 'Remboursement demandé par l\'application',
+        }),
+      );
+
+      if (response.statusCode == 201 || response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        Logger.log('[FEDAPAY] Remboursement créé: ${data['v1']?['id'] ?? 'ID manquant'}');
+        return data;
+      } else {
+        throw Exception('Erreur FedaPay (${response.statusCode}): ${response.body}');
+      }
+    } catch (e) {
+      Logger.log('[FEDAPAY ERROR] Remboursement échoué: $e');
+      rethrow;
+    }
   }
 }

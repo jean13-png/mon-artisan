@@ -8,7 +8,6 @@ import '../../core/routes/app_router.dart';
 import '../../core/utils/ui_utils.dart';
 import '../../models/artisan_model.dart';
 import '../../widgets/custom_button.dart';
-import '../shared/chat_screen.dart';
 
 class ArtisanProfileScreen extends StatelessWidget {
   final ArtisanModel artisan;

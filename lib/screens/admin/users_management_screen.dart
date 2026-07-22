@@ -8,6 +8,7 @@ import '../../core/services/firebase_service.dart';
 import '../../models/user_model.dart';
 import '../../models/artisan_model.dart';
 import 'user_detail_screen.dart';
+import '../../core/utils/logger.dart';
 
 class UsersManagementScreen extends StatefulWidget {
   const UsersManagementScreen({super.key});
@@ -58,7 +59,7 @@ class _UsersManagementScreenState extends State<UsersManagementScreen> with Sing
 
       setState(() => _isLoading = false);
     } catch (e) {
-      print('[ERROR] Erreur chargement utilisateurs: $e');
+      Logger.log('[ERROR] Erreur chargement utilisateurs: $e');
       setState(() => _isLoading = false);
     }
   }

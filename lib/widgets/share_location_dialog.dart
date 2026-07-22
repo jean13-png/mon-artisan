@@ -5,6 +5,7 @@ import '../core/constants/text_styles.dart';
 import '../core/services/firebase_service.dart';
 import '../screens/shared/location_picker_screen.dart';
 import '../widgets/map_picker_widget.dart';
+import '../../core/utils/logger.dart';
 
 class ShareLocationDialog {
   static Future<void> show({
@@ -128,7 +129,7 @@ class ShareLocationDialog {
 
     try {
       // 1. Sauvegarder dans la commande
-      print('[INFO] Sauvegarde de la position dans Firestore...');
+      Logger.log('[INFO] Sauvegarde de la position dans Firestore...');
       await FirebaseService.commandesCollection.doc(commandeId).update({
         'clientPosition': GeoPoint(pos.latitude, pos.longitude),
         'clientAdresseExacte': pos.adresseComplete,
@@ -139,7 +140,7 @@ class ShareLocationDialog {
         'datePartagePosition': Timestamp.now(),
         'updatedAt': Timestamp.now(),
       });
-      print('[SUCCESS] Position sauvegardée');
+      Logger.log('[SUCCESS] Position sauvegardée');
 
       // 2. Envoyer notification à l'artisan
       try {
@@ -157,9 +158,9 @@ class ShareLocationDialog {
           'isRead': false,
           'createdAt': Timestamp.now(),
         });
-        print('[SUCCESS] Notification envoyée à l\'artisan');
+        Logger.log('[SUCCESS] Notification envoyée à l\'artisan');
       } catch (e) {
-        print('[WARNING] Erreur envoi notification: $e');
+        Logger.log('[WARNING] Erreur envoi notification: $e');
       }
 
       if (!context.mounted) return;
@@ -173,7 +174,7 @@ class ShareLocationDialog {
         ),
       );
     } catch (e) {
-      print('[ERROR] Erreur partage localisation: $e');
+      Logger.log('[ERROR] Erreur partage localisation: $e');
       if (context.mounted) {
         Navigator.of(context, rootNavigator: true).pop();
         ScaffoldMessenger.of(context).showSnackBar(

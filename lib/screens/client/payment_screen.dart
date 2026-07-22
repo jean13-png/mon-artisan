@@ -10,6 +10,7 @@ import '../../core/routes/app_router.dart';
 import '../../core/services/fedapay_service.dart';
 import '../../providers/commande_provider.dart';
 import '../../widgets/custom_button.dart';
+import '../../core/utils/logger.dart';
 
 class PaymentScreen extends StatefulWidget {
   final String commandeId;
@@ -26,14 +27,15 @@ class PaymentScreen extends StatefulWidget {
 }
 
 class _PaymentScreenState extends State<PaymentScreen> {
-  String _selectedMethod = 'mtn';
   bool _isProcessing = false;
   String? _transactionId;
+  int _verificationAttempts = 0;
+  static const int _maxVerificationAttempts = 20;
 
   Future<void> _processPayment() async {
     // ✅ PROTECTION 1: Empêcher double clic
     if (_isProcessing) {
-      print('[WARNING] Paiement déjà en cours, ignoré');
+      Logger.log('[WARNING] Paiement déjà en cours, ignoré');
       return;
     }
 
@@ -50,7 +52,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
         throw Exception('Montant invalide');
       }
 
-      print('[INFO] Création transaction FedaPay...');
+      Logger.log('[INFO] Création transaction FedaPay...');
       
       // ✅ PROTECTION 2: Utiliser commandeId comme référence unique
       // FedaPay va rejeter les transactions en double avec le même custom_metadata
@@ -62,7 +64,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
         commandeId: widget.commandeId, // ✅ Référence unique
       );
 
-      print('[SUCCESS] Transaction créée: ${transactionData['v1']?['id'] ?? 'ID manquant'}');
+      Logger.log('[SUCCESS] Transaction créée: ${transactionData['v1']?['id'] ?? 'ID manquant'}');
       
       // ✅ Vérifier que les données existent
       if (transactionData['v1'] == null) {
@@ -85,7 +87,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
       
       // ✅ En mode simulation, ne pas ouvrir le navigateur
       if (AppConstants.simulateFedaPay) {
-        print('[SIMULATION] Paiement simulé, pas de redirection');
+        Logger.log('[SIMULATION] Paiement simulé, pas de redirection');
         if (mounted) {
           _showPaymentVerificationDialog();
         }
@@ -100,7 +102,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
         throw Exception('Impossible d\'ouvrir la page de paiement');
       }
     } catch (e) {
-      print('[ERROR] Erreur paiement: $e');
+      Logger.log('[ERROR] Erreur paiement: $e');
       if (mounted) {
         setState(() => _isProcessing = false);
         ScaffoldMessenger.of(context).showSnackBar(
@@ -151,27 +153,42 @@ class _PaymentScreenState extends State<PaymentScreen> {
   Future<void> _verifyPaymentStatus() async {
     if (_transactionId == null) {
       if (mounted) {
-        Navigator.of(context).pop(); // Fermer le dialog
+        Navigator.of(context).pop();
         setState(() => _isProcessing = false);
       }
       return;
     }
 
+    if (_verificationAttempts >= _maxVerificationAttempts) {
+      if (mounted) {
+        Navigator.of(context).pop();
+        setState(() => _isProcessing = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Délai de vérification dépassé. Veuillez contacter le support.'),
+            backgroundColor: AppColors.error,
+          ),
+        );
+      }
+      return;
+    }
+
+    _verificationAttempts++;
+
     try {
-      print('[INFO] Vérification statut transaction $_transactionId...');
+      Logger.log('[INFO] Vérification statut transaction $_transactionId...');
       
       final status = await FedaPayService.checkTransactionStatus(_transactionId!);
-      print('[INFO] Statut: $status');
+      Logger.log('[INFO] Statut: $status');
 
       if (!mounted) return;
 
       if (status == 'approved' || status == 'completed') {
-        // ✅ PROTECTION 3: Marquer le paiement dans Firestore (avec idempotence)
         final commandeProvider = Provider.of<CommandeProvider>(context, listen: false);
         final success = await commandeProvider.effectuerPaiement(widget.commandeId);
 
         if (mounted) {
-          Navigator.of(context).pop(); // Fermer le dialog de vérification
+          Navigator.of(context).pop();
           
           if (success) {
             _showSuccessDialog();
@@ -186,16 +203,14 @@ class _PaymentScreenState extends State<PaymentScreen> {
           }
         }
       } else if (status == 'pending') {
-        // Toujours en attente, revérifier
         if (mounted) {
           Future.delayed(const Duration(seconds: 3), () {
             _verifyPaymentStatus();
           });
         }
       } else {
-        // Échec ou annulé
         if (mounted) {
-          Navigator.of(context).pop(); // Fermer le dialog
+          Navigator.of(context).pop();
           setState(() => _isProcessing = false);
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
@@ -206,9 +221,9 @@ class _PaymentScreenState extends State<PaymentScreen> {
         }
       }
     } catch (e) {
-      print('[ERROR] Erreur vérification: $e');
+      Logger.log('[ERROR] Erreur vérification: $e');
       if (mounted) {
-        Navigator.of(context).pop(); // Fermer le dialog
+        Navigator.of(context).pop();
         setState(() => _isProcessing = false);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(

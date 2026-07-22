@@ -11,6 +11,7 @@ import '../../widgets/custom_button.dart';
 import '../../widgets/custom_textfield.dart';
 import '../../widgets/ville_quartier_selector.dart';
 import '../../providers/auth_provider.dart';
+import '../../core/utils/logger.dart';
 
 class RegisterScreen extends StatefulWidget {
   final String role;
@@ -95,7 +96,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
           });
         }
       } catch (e) {
-        print('[ERROR] Erreur enregistrement code promo: $e');
+        Logger.log('[ERROR] Erreur enregistrement code promo: $e');
       }
     }
 

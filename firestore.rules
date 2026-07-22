@@ -21,7 +21,7 @@ service cloud.firestore {
     
     // Collection: users
     match /users/{userId} {
-      allow read: if isAuthenticated();
+      allow read: if isOwner(userId) || isAdmin();
       
       // Création: l'ID du document doit être l'UID de l'auth
       allow create: if isAuthenticated() && request.auth.uid == userId;
@@ -38,15 +38,7 @@ service cloud.firestore {
       allow create: if isAuthenticated() && artisanId == request.auth.uid;
       
       allow update: if isAuthenticated() && 
-                       (artisanId == request.auth.uid || 
-                        isAdmin() ||
-                        // Permettre mise à jour de disponibilité et revenus lors de commandes
-                        request.resource.data.diff(resource.data).affectedKeys().hasOnly([
-                          'disponibilite', 'commandeEnCours', 'raisonIndisponibilite',
-                          'dateDebutIndisponibilite', 'dateFinIndisponibilite', 'updatedAt',
-                          'revenusDisponibles', 'revenusTotal', 'nombreCommandes',
-                          'noteGlobale', 'nombreAvis'
-                        ]));
+                        (artisanId == request.auth.uid || isAdmin());
       
       allow delete: if isAdmin();
     }
@@ -122,19 +114,21 @@ service cloud.firestore {
       allow read: if isAuthenticated() && 
                      resource.data.userId == request.auth.uid;
       
-      // Création: 
-      // - Admin
-      // - Système (lors de création de commande, message, etc.)
-      // - Tout utilisateur authentifié peut créer une notification pour un autre
-      allow create: if isAuthenticated();
+      // Création: admin, soi-même, ou participant de la commande liée
+      allow create: if isAuthenticated() && 
+                       (isAdmin() || 
+                        request.resource.data.userId == request.auth.uid ||
+                        (request.resource.data.commandeId is string &&
+                         (get(/databases/$(database)/documents/commandes/$(request.resource.data.commandeId)).data.clientId == request.auth.uid ||
+                          get(/databases/$(database)/documents/commandes/$(request.resource.data.commandeId)).data.artisanId == request.auth.uid)));
       
       // Mise à jour: seulement ses propres notifications (pour marquer comme lu)
       allow update: if isAuthenticated() && 
-                       resource.data.userId == request.auth.uid;
+                        resource.data.userId == request.auth.uid;
       
       // Suppression: seulement ses propres notifications
       allow delete: if isAuthenticated() && 
-                       resource.data.userId == request.auth.uid;
+                        resource.data.userId == request.auth.uid;
     }
     
     // Collection: avis

@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import '../../core/utils/logger.dart';
 
 class ChatService {
   static final FirebaseFirestore _firestore = FirebaseFirestore.instance;
@@ -19,15 +20,15 @@ class ChatService {
   }) async {
     final chatId = getChatId(currentUserId, otherUserId);
     
-    print('[INFO] getOrCreateChat - ChatId: $chatId');
-    print('[INFO] getOrCreateChat - Current: $currentUserName ($currentUserId)');
-    print('[INFO] getOrCreateChat - Other: $otherUserName ($otherUserId)');
+    Logger.log('[INFO] getOrCreateChat - ChatId: $chatId');
+    Logger.log('[INFO] getOrCreateChat - Current: $currentUserName ($currentUserId)');
+    Logger.log('[INFO] getOrCreateChat - Other: $otherUserName ($otherUserId)');
 
     // Vérifier si le chat existe
     final chatDoc = await _firestore.collection('chats').doc(chatId).get();
 
     if (!chatDoc.exists) {
-      print('[INFO] getOrCreateChat - Chat n\'existe pas, création...');
+      Logger.log('[INFO] getOrCreateChat - Chat n\'existe pas, création...');
       
       // Créer le chat avec les métadonnées
       await _firestore.collection('chats').doc(chatId).set({
@@ -41,9 +42,9 @@ class ChatService {
         'lastMessage': '',
       });
       
-      print('[SUCCESS] getOrCreateChat - Chat créé avec succès');
+      Logger.log('[SUCCESS] getOrCreateChat - Chat créé avec succès');
     } else {
-      print('[INFO] getOrCreateChat - Chat existe déjà');
+      Logger.log('[INFO] getOrCreateChat - Chat existe déjà');
     }
 
     return chatId;
@@ -58,9 +59,9 @@ class ChatService {
     String type = 'text',
     String? audioUrl,
   }) async {
-    print('[INFO] sendMessage - ChatId: $chatId');
-    print('[INFO] sendMessage - De: $senderId vers: $receiverId (type: $type)');
-    print('[INFO] sendMessage - Message: ${message.substring(0, message.length > 50 ? 50 : message.length)}...');
+    Logger.log('[INFO] sendMessage - ChatId: $chatId');
+    Logger.log('[INFO] sendMessage - De: $senderId vers: $receiverId (type: $type)');
+    Logger.log('[INFO] sendMessage - Message: ${message.substring(0, message.length > 50 ? 50 : message.length)}...');
     
     try {
       // Ajouter le message
@@ -78,7 +79,7 @@ class ChatService {
         'isRead': false,
       });
 
-      print('[INFO] sendMessage - Message ajouté à la collection messages');
+      Logger.log('[INFO] sendMessage - Message ajouté à la collection messages');
 
       // Mettre à jour le dernier message du chat
       await _firestore.collection('chats').doc(chatId).update({
@@ -86,9 +87,9 @@ class ChatService {
         'lastMessage': message,
       });
 
-      print('[SUCCESS] sendMessage - Chat mis à jour avec le dernier message');
+      Logger.log('[SUCCESS] sendMessage - Chat mis à jour avec le dernier message');
     } catch (e) {
-      print('[ERROR] sendMessage - Erreur: $e');
+      Logger.log('[ERROR] sendMessage - Erreur: $e');
       rethrow;
     }
   }
@@ -101,7 +102,7 @@ class ChatService {
     DocumentSnapshot? startAfter,
   }) async {
     try {
-      print('[INFO] getUserChats - Recherche des chats pour userId: $userId (limit: $limit)');
+      Logger.log('[INFO] getUserChats - Recherche des chats pour userId: $userId (limit: $limit)');
       
       Query<Map<String, dynamic>> query = _firestore
           .collection('chats')
@@ -115,19 +116,19 @@ class ChatService {
 
       final QuerySnapshot<Map<String, dynamic>> chatsSnapshot = await query.get();
 
-      print('[INFO] getUserChats - ${chatsSnapshot.docs.length} chat(s) trouvé(s) dans Firestore');
+      Logger.log('[INFO] getUserChats - ${chatsSnapshot.docs.length} chat(s) trouvé(s) dans Firestore');
 
       List<Map<String, dynamic>> conversations = [];
 
       for (var chatDoc in chatsSnapshot.docs) {
-        print('[INFO] getUserChats - Traitement du chat: ${chatDoc.id}');
+        Logger.log('[INFO] getUserChats - Traitement du chat: ${chatDoc.id}');
         
         final chatData = chatDoc.data();
         final participants = List<String>.from(chatData['participants'] ?? []);
         final participantNames = Map<String, dynamic>.from(chatData['participantNames'] ?? {});
 
-        print('[INFO] getUserChats - Participants: $participants');
-        print('[INFO] getUserChats - Noms: $participantNames');
+        Logger.log('[INFO] getUserChats - Participants: $participants');
+        Logger.log('[INFO] getUserChats - Noms: $participantNames');
 
         // Trouver l'autre utilisateur
         final otherUserId = participants.firstWhere(
@@ -136,7 +137,7 @@ class ChatService {
         );
 
         if (otherUserId.isEmpty) {
-          print('[WARNING] getUserChats - Impossible de trouver l\'autre utilisateur dans ${chatDoc.id}');
+          Logger.log('[WARNING] getUserChats - Impossible de trouver l\'autre utilisateur dans ${chatDoc.id}');
           continue;
         }
 
@@ -144,8 +145,8 @@ class ChatService {
         final lastMessage = chatData['lastMessage'] ?? '';
         final lastMessageAt = chatData['lastMessageAt'] as Timestamp?;
 
-        print('[INFO] getUserChats - Autre utilisateur: $otherUserName ($otherUserId)');
-        print('[INFO] getUserChats - Dernier message: $lastMessage');
+        Logger.log('[INFO] getUserChats - Autre utilisateur: $otherUserName ($otherUserId)');
+        Logger.log('[INFO] getUserChats - Dernier message: $lastMessage');
 
         // Compter les messages non lus
         final unreadSnapshot = await _firestore
@@ -156,7 +157,7 @@ class ChatService {
             .where('isRead', isEqualTo: false)
             .get();
 
-        print('[INFO] getUserChats - Messages non lus: ${unreadSnapshot.docs.length}');
+        Logger.log('[INFO] getUserChats - Messages non lus: ${unreadSnapshot.docs.length}');
 
         conversations.add({
           'chatId': chatDoc.id,
@@ -170,7 +171,7 @@ class ChatService {
       
       // Plus besoin de trier côté client car le orderBy est dans la requête
       
-      print('[SUCCESS] getUserChats - ${conversations.length} conversation(s) retournée(s)');
+      Logger.log('[SUCCESS] getUserChats - ${conversations.length} conversation(s) retournée(s)');
       
       return {
         'conversations': conversations,
@@ -178,7 +179,7 @@ class ChatService {
         'hasMore': chatsSnapshot.docs.length == limit,
       };
     } catch (e) {
-      print('[ERROR] getUserChats - Erreur: $e');
+      Logger.log('[ERROR] getUserChats - Erreur: $e');
       return {
         'conversations': [],
         'lastDocument': null,
@@ -207,7 +208,7 @@ class ChatService {
       }
       await batch.commit();
     } catch (e) {
-      print('[ERROR] Erreur marquage messages lus: $e');
+      Logger.log('[ERROR] Erreur marquage messages lus: $e');
     }
   }
 
@@ -234,7 +235,7 @@ class ChatService {
 
       return totalUnread;
     } catch (e) {
-      print('[ERROR] Erreur comptage messages non lus: $e');
+      Logger.log('[ERROR] Erreur comptage messages non lus: $e');
       return 0;
     }
   }
@@ -259,7 +260,7 @@ class ChatService {
 
       await batch.commit();
     } catch (e) {
-      print('[ERROR] Erreur suppression chat: $e');
+      Logger.log('[ERROR] Erreur suppression chat: $e');
       rethrow;
     }
   }

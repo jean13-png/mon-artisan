@@ -21,6 +21,7 @@ import '../../widgets/custom_button.dart';
 import '../../widgets/custom_textfield.dart';
 import '../../widgets/share_location_dialog.dart';
 import '../../widgets/position_client_widget.dart';
+import '../../core/utils/logger.dart';
 
 class CreateCommandeScreen extends StatefulWidget {
   final ArtisanModel artisan;
@@ -49,6 +50,8 @@ class _CreateCommandeScreenState extends State<CreateCommandeScreen> {
   AdresseDetectee? _adresseDetectee; // Position GPS détectée
   double? _fraisDiagnostic; // Calculé dynamiquement selon distance
   double? _distanceKm; // Distance artisan → client
+  int _paymentVerificationAttempts = 0;
+  static const int _maxPaymentVerificationAttempts = 20;
 
   bool get _isDiagnosticMode => widget.typeCommande == 'diagnostic_requis';
 
@@ -210,11 +213,11 @@ class _CreateCommandeScreenState extends State<CreateCommandeScreen> {
       // Uploader les photos si présentes
       List<String> photoUrls = [];
       if (_selectedImages.isNotEmpty) {
-        print('[INFO] Upload de ${_selectedImages.length} photo(s)...');
+        Logger.log('[INFO] Upload de ${_selectedImages.length} photo(s)...');
         try {
           final photoPaths = _selectedImages.map((img) => img.path).toList();
           photoUrls = await commandeProvider.uploadPhotos(photoPaths, commandeId);
-          print('[SUCCESS] ${photoUrls.length} photo(s) uploadée(s)');
+          Logger.log('[SUCCESS] ${photoUrls.length} photo(s) uploadée(s)');
           
           // Mettre à jour la commande avec les URLs des photos
           await FirebaseService.firestore
@@ -225,7 +228,7 @@ class _CreateCommandeScreenState extends State<CreateCommandeScreen> {
             'updatedAt': Timestamp.now(),
           });
         } catch (e) {
-          print('[WARNING] Erreur upload photos: $e');
+          Logger.log('[WARNING] Erreur upload photos: $e');
           // Continuer même si l'upload des photos échoue
         }
       }
@@ -325,6 +328,22 @@ class _CreateCommandeScreenState extends State<CreateCommandeScreen> {
   Future<void> _verifyPaymentStatus(String commandeId) async {
     if (_transactionId == null) return;
 
+    if (_paymentVerificationAttempts >= _maxPaymentVerificationAttempts) {
+      if (mounted) {
+        Navigator.of(context).pop();
+        setState(() => _isLoading = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Délai de vérification dépassé. Veuillez contacter le support.'),
+            backgroundColor: AppColors.error,
+          ),
+        );
+      }
+      return;
+    }
+
+    _paymentVerificationAttempts++;
+
     try {
       final status = await FedaPayService.checkTransactionStatus(_transactionId!);
       if (!mounted) return;
@@ -332,7 +351,7 @@ class _CreateCommandeScreenState extends State<CreateCommandeScreen> {
       if (status == 'approved' || status == 'completed') {
         final success = await Provider.of<CommandeProvider>(context, listen: false).effectuerPaiement(commandeId);
         if (mounted) {
-          Navigator.of(context).pop(); // Fermer le dialog de vérif
+          Navigator.of(context).pop();
           if (success) {
             _showSuccessDialog();
           }

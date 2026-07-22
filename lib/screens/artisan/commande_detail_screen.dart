@@ -13,9 +13,8 @@ import '../../providers/auth_provider.dart';
 import '../../providers/commande_provider.dart';
 import '../../widgets/custom_button.dart';
 import '../../widgets/custom_textfield.dart';
-import '../shared/chat_screen.dart';
 import '../../widgets/read_only_map_widget.dart';
-import 'envoyer_devis_screen.dart';
+import '../../core/utils/logger.dart';
 
 class CommandeDetailScreen extends StatefulWidget {
   final CommandeModel commande;
@@ -63,7 +62,7 @@ class _CommandeDetailScreenState extends State<CommandeDetailScreen> {
         });
       }
     } catch (e) {
-      print('[ERROR] Impossible de charger les infos de l\'autre utilisateur: $e');
+      Logger.log('[ERROR] Impossible de charger les infos de l\'autre utilisateur: $e');
     }
   }
 
@@ -152,46 +151,6 @@ class _CommandeDetailScreenState extends State<CommandeDetailScreen> {
           ),
         );
         Navigator.pop(context);
-      }
-    }
-  }
-
-  Future<void> _accepterCommande() async {
-    final commandeProvider = Provider.of<CommandeProvider>(context, listen: false);
-
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: Text('Accepter la commande', style: AppTextStyles.h3),
-        content: Text(
-          'Voulez-vous accepter cette intervention ?',
-          style: AppTextStyles.bodyMedium,
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: Text('Annuler', style: AppTextStyles.bodyMedium),
-          ),
-          ElevatedButton(
-            onPressed: () => Navigator.pop(context, true),
-            style: ElevatedButton.styleFrom(backgroundColor: AppColors.success),
-            child: Text('Accepter', style: AppTextStyles.button),
-          ),
-        ],
-      ),
-    );
-
-    if (confirmed == true && mounted) {
-      final success = await commandeProvider.accepterCommande(widget.commande.id);
-      if (success && mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Commande acceptée'),
-            backgroundColor: AppColors.success,
-          ),
-        );
-        setState(() {}); 
       }
     }
   }
@@ -333,12 +292,12 @@ class _CommandeDetailScreenState extends State<CommandeDetailScreen> {
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Text(
-                                  _otherUserNom?.isNotEmpty == true
-                                      ? _otherUserNom!
-                                      : (_isClient ? 'Artisan' : 'Client') + ' #${(_isClient ? commande.artisanId : commande.clientId).substring(0, 8)}',
-                                  style: AppTextStyles.bodyLarge.copyWith(fontWeight: FontWeight.bold),
-                                ),
+                                 Text(
+                                   _otherUserNom?.isNotEmpty == true
+                                       ? _otherUserNom!
+                                       : '${_isClient ? 'Artisan' : 'Client'} #${(_isClient ? commande.artisanId : commande.clientId).substring(0, 8)}',
+                                   style: AppTextStyles.bodyLarge.copyWith(fontWeight: FontWeight.bold),
+                                 ),
                                 if (_isClient)
                                   Text(commande.metier, style: AppTextStyles.bodySmall.copyWith(color: AppColors.greyDark)),
                               ],
@@ -367,11 +326,11 @@ class _CommandeDetailScreenState extends State<CommandeDetailScreen> {
                 ),
 
                 // Position du client (Seul l'artisan voit la position et l'itinéraire)
-                if (!_isClient && (commande.clientPosition != null || commande.position != null)) ...[
+                if (!_isClient && (commande.clientPosition != null)) ...[
                   const SizedBox(height: 16),
                   Builder(
                     builder: (context) {
-                      final position = commande.clientPosition ?? commande.position!;
+                      final position = commande.clientPosition ?? commande.position;
                       final adresse = commande.clientAdresseExacte ?? commande.adresse;
                       
                       return Container(

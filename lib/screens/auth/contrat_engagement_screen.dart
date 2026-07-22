@@ -8,6 +8,7 @@ import '../../core/routes/app_router.dart';
 import '../../core/services/firebase_service.dart';
 import '../../providers/auth_provider.dart';
 import '../../widgets/custom_button.dart';
+import '../../core/utils/logger.dart';
 
 class ContratEngagementScreen extends StatefulWidget {
   const ContratEngagementScreen({super.key});
@@ -39,14 +40,14 @@ class _ContratEngagementScreenState extends State<ContratEngagementScreen> {
         'dateInscription': Timestamp.now(), // Pour calculer les 7 jours
       });
 
-      print('[SUCCESS] Contrat accepté');
+      Logger.log('[SUCCESS] Contrat accepté');
 
       if (mounted) {
         // Rediriger vers le dashboard artisan
         context.go(AppRouter.homeArtisan);
       }
     } catch (e) {
-      print('[ERROR] Erreur acceptation contrat: $e');
+      Logger.log('[ERROR] Erreur acceptation contrat: $e');
       _showError('Erreur lors de l\'acceptation du contrat: $e');
     } finally {
       setState(() => _isLoading = false);

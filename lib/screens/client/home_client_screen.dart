@@ -17,7 +17,6 @@ import '../../widgets/double_tap_to_exit.dart';
 import '../../widgets/location_permission_dialog.dart';
 import '../../widgets/badge_icon.dart';
 import '../../widgets/loading_widget.dart';
-import '../shared/conversations_list_screen.dart';
 
 class HomeClientScreen extends StatefulWidget {
   const HomeClientScreen({super.key});

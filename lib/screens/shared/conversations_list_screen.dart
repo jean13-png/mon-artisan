@@ -8,6 +8,7 @@ import '../../core/routes/app_router.dart';
 import '../../core/services/chat_service.dart';
 import '../../providers/auth_provider.dart';
 import 'chat_screen.dart';
+import '../../core/utils/logger.dart';
 
 class ConversationsListScreen extends StatefulWidget {
   const ConversationsListScreen({super.key});
@@ -48,21 +49,21 @@ class _ConversationsListScreenState extends State<ConversationsListScreen> {
     final currentUserId = authProvider.userModel?.id;
 
     if (currentUserId == null) {
-      print('[ERROR] currentUserId est null');
+      Logger.log('[ERROR] currentUserId est null');
       setState(() => _isLoading = false);
       return;
     }
 
-    print('[INFO] ========================================');
-    print('[INFO] Chargement des conversations pour: $currentUserId');
+    Logger.log('[INFO] ========================================');
+    Logger.log('[INFO] Chargement des conversations pour: $currentUserId');
     setState(() => _isLoading = true);
 
     try {
       final Map<String, dynamic> result = await ChatService.getUserChats(userId: currentUserId);
       final List<Map<String, dynamic>> conversations = List<Map<String, dynamic>>.from(result['conversations'] ?? []);
       
-      print('[SUCCESS] ${conversations.length} conversation(s) trouvée(s)');
-      print('[INFO] ========================================');
+      Logger.log('[SUCCESS] ${conversations.length} conversation(s) trouvée(s)');
+      Logger.log('[INFO] ========================================');
 
       if (mounted) {
         setState(() {
@@ -73,7 +74,7 @@ class _ConversationsListScreenState extends State<ConversationsListScreen> {
         });
       }
     } catch (e) {
-      print('[ERROR] Erreur chargement conversations: $e');
+      Logger.log('[ERROR] Erreur chargement conversations: $e');
       if (mounted) {
         setState(() => _isLoading = false);
       }
@@ -106,7 +107,7 @@ class _ConversationsListScreenState extends State<ConversationsListScreen> {
         });
       }
     } catch (e) {
-      print('[ERROR] Erreur chargement plus de conversations: $e');
+      Logger.log('[ERROR] Erreur chargement plus de conversations: $e');
       if (mounted) {
         setState(() => _isLoadingMore = false);
       }
@@ -403,7 +404,7 @@ class _ConversationsListScreenState extends State<ConversationsListScreen> {
       // Recharger la liste
       await _loadConversations();
     } catch (e) {
-      print('[ERROR] Erreur suppression conversation: $e');
+      Logger.log('[ERROR] Erreur suppression conversation: $e');
       
       // Fermer le loader
       if (mounted) Navigator.pop(context);

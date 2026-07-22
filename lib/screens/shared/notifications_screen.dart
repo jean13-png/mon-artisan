@@ -8,8 +8,6 @@ import '../../core/routes/app_router.dart';
 import '../../core/services/firestore_service.dart';
 import '../../providers/auth_provider.dart';
 import '../../widgets/loading_widget.dart';
-import '../client/devis_detail_screen.dart';
-import '../artisan/commande_detail_screen.dart';
 
 class NotificationsScreen extends StatefulWidget {
   const NotificationsScreen({super.key});

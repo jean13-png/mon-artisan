@@ -3,13 +3,15 @@ import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'dart:io';
+import 'dart:async';
+import '../../core/utils/logger.dart';
 
 /// Fonction globale obligatoire pour gérer les messages en arrière-plan
 @pragma('vm:entry-point')
 Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   // Initialiser Firebase pour le background isolate
   await Firebase.initializeApp();
-  print("Message reçu en arrière-plan : ${message.messageId}");
+  Logger.log("Message reçu en arrière-plan : ${message.messageId}");
   
   // Afficher une notification locale même en arrière-plan
   if (message.notification != null) {
@@ -30,7 +32,6 @@ Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
       priority: Priority.high,
       showWhen: true,
       visibility: NotificationVisibility.public,
-      showBadge: true,
     );
 
     await localNotifs.show(
@@ -48,7 +49,6 @@ class NotificationService {
       FlutterLocalNotificationsPlugin();
 
   static bool _isInitialized = false;
-  static String? _currentUserId;
   static StreamSubscription? _notificationsSubscription;
 
   /// Initialiser le service de notifications
@@ -68,7 +68,7 @@ class NotificationService {
         sound: true,
       );
 
-      print('Statut des permissions : ${settings.authorizationStatus}');
+      Logger.log('Statut des permissions : ${settings.authorizationStatus}');
 
       // Initialiser les notifications locales
       await _initializeLocalNotifications();
@@ -87,32 +87,31 @@ class NotificationService {
 
       // Écouter le rafraîchissement du token
       _firebaseMessaging.onTokenRefresh.listen((newToken) {
-        print('FCM Token rafraîchi : $newToken');
+        Logger.log('FCM Token rafraîchi : $newToken');
         // On ne peut pas mettre à jour ici car on n'a pas forcément l'ID utilisateur
       });
 
       _isInitialized = true;
     } catch (e) {
-      print('Erreur lors de l\'initialisation des notifications: $e');
+      Logger.log('Erreur lors de l\'initialisation des notifications: $e');
     }
   }
 
   /// Associer le token FCM actuel à un utilisateur dans Firestore et commencer à écouter les notifications
   static Future<void> updateUserToken(String userId) async {
     try {
-      _currentUserId = userId;
       String? token = await _firebaseMessaging.getToken();
       if (token != null) {
         await FirebaseFirestore.instance.collection('users').doc(userId).update({
           'fcmToken': token,
           'updatedAt': FieldValue.serverTimestamp(),
         });
-        print('FCM Token mis à jour pour l\'utilisateur $userId');
+        Logger.log('FCM Token mis à jour pour l\'utilisateur $userId');
       }
       // Commencer à écouter les nouvelles notifications pour cet utilisateur
       _listenToNotifications(userId);
     } catch (e) {
-      print('Erreur lors de la mise à jour du token FCM : $e');
+      Logger.log('Erreur lors de la mise à jour du token FCM : $e');
     }
   }
 
@@ -193,13 +192,13 @@ class NotificationService {
             ?.createNotificationChannel(channel);
       }
     } catch (e) {
-      print('Erreur lors de l\'initialisation des notifications locales: $e');
+      Logger.log('Erreur lors de l\'initialisation des notifications locales: $e');
     }
   }
 
   /// Gérer les messages en avant-plan
   static void _handleForegroundMessage(RemoteMessage message) {
-    print('Message reçu en avant-plan: ${message.notification?.title}');
+    Logger.log('Message reçu en avant-plan: ${message.notification?.title}');
 
     if (message.notification != null) {
       _showLocalNotification(
@@ -212,7 +211,7 @@ class NotificationService {
 
   /// Gérer les messages en arrière-plan
   static void _handleBackgroundMessage(RemoteMessage message) {
-    print('Message reçu en arrière-plan: ${message.notification?.title}');
+    Logger.log('Message reçu en arrière-plan: ${message.notification?.title}');
     // Naviguer vers l'écran approprié
   }
 
@@ -257,7 +256,7 @@ class NotificationService {
         payload: payload,
       );
     } catch (e) {
-      print('Erreur lors de l\'affichage de la notification: $e');
+      Logger.log('Erreur lors de l\'affichage de la notification: $e');
     }
   }
 
@@ -266,7 +265,7 @@ class NotificationService {
     try {
       return await _firebaseMessaging.getToken();
     } catch (e) {
-      print('Erreur lors de la récupération du token FCM: $e');
+      Logger.log('Erreur lors de la récupération du token FCM: $e');
       return null;
     }
   }
@@ -275,9 +274,9 @@ class NotificationService {
   static Future<void> subscribeToTopic(String topic) async {
     try {
       await _firebaseMessaging.subscribeToTopic(topic);
-      print('Abonné au topic: $topic');
+      Logger.log('Abonné au topic: $topic');
     } catch (e) {
-      print('Erreur lors de l\'abonnement au topic: $e');
+      Logger.log('Erreur lors de l\'abonnement au topic: $e');
     }
   }
 
@@ -285,9 +284,9 @@ class NotificationService {
   static Future<void> unsubscribeFromTopic(String topic) async {
     try {
       await _firebaseMessaging.unsubscribeFromTopic(topic);
-      print('Désabonné du topic: $topic');
+      Logger.log('Désabonné du topic: $topic');
     } catch (e) {
-      print('Erreur lors de la désinscription du topic: $e');
+      Logger.log('Erreur lors de la désinscription du topic: $e');
     }
   }
 
@@ -378,6 +377,5 @@ class NotificationService {
   static void stopListening() {
     _notificationsSubscription?.cancel();
     _notificationsSubscription = null;
-    _currentUserId = null;
   }
 }

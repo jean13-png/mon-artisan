@@ -6,6 +6,7 @@ import '../../core/constants/text_styles.dart';
 import '../../core/routes/app_router.dart';
 import '../../core/services/firebase_service.dart';
 import '../../models/artisan_model.dart';
+import '../../core/utils/logger.dart';
 
 class ArtisansValidationScreen extends StatefulWidget {
   const ArtisansValidationScreen({super.key});
@@ -84,12 +85,12 @@ class _ArtisansValidationScreenState extends State<ArtisansValidationScreen> {
             child: StreamBuilder<QuerySnapshot>(
               stream: _getArtisansStream(),
               builder: (context, snapshot) {
-                print('[STREAM] Stream state: ${snapshot.connectionState}');
-                print('[STREAM] Has data: ${snapshot.hasData}');
-                print('[STREAM] Docs count: ${snapshot.data?.docs.length ?? 0}');
-                print('[STREAM] Has error: ${snapshot.hasError}');
+                Logger.log('[STREAM] Stream state: ${snapshot.connectionState}');
+                Logger.log('[STREAM] Has data: ${snapshot.hasData}');
+                Logger.log('[STREAM] Docs count: ${snapshot.data?.docs.length ?? 0}');
+                Logger.log('[STREAM] Has error: ${snapshot.hasError}');
                 if (snapshot.hasError) {
-                  print('[ERROR] Error: ${snapshot.error}');
+                  Logger.log('[ERROR] Error: ${snapshot.error}');
                 }
                 
                 if (snapshot.connectionState == ConnectionState.waiting) {
@@ -476,7 +477,7 @@ class _ArtisansValidationScreenState extends State<ArtisansValidationScreen> {
       final userId = artisanData['userId'] as String?;
 
       if (userId == null || userId.isEmpty) {
-        print('[ERROR] userId introuvable pour artisan $artisanId');
+        Logger.log('[ERROR] userId introuvable pour artisan $artisanId');
         return;
       }
       

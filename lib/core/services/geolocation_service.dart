@@ -4,6 +4,7 @@ import 'package:geocoding/geocoding.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:geoflutterfire_plus/geoflutterfire_plus.dart';
 import 'dart:math' as math;
+import '../../core/utils/logger.dart';
 
 class GeolocationService {
 
@@ -122,7 +123,7 @@ class GeolocationService {
 
       return position;
     } catch (e) {
-      print('[ERROR] Erreur getCurrentPosition: $e');
+      Logger.log('[ERROR] Erreur getCurrentPosition: $e');
       rethrow;
     }
   }

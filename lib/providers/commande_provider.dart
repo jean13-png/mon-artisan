@@ -7,7 +7,8 @@ import '../core/services/firebase_service.dart';
 import '../core/services/firestore_service.dart';
 import '../core/services/notification_service.dart';
 import '../core/services/cloudinary_service.dart';
-import '../core/services/geolocation_service.dart';
+import '../core/services/fedapay_service.dart';
+import '../../core/utils/logger.dart';
 
 class CommandeProvider extends ChangeNotifier {
   List<CommandeModel> _commandes = [];
@@ -238,7 +239,7 @@ class CommandeProvider extends ChangeNotifier {
         notifyListeners();
       }
     } catch (e) {
-      print('[ERROR] Erreur _fetchCommandes: $e');
+      Logger.log('[ERROR] Erreur _fetchCommandes: $e');
       if (!isSilent) {
         _isLoading = false;
         _errorMessage = 'Erreur lors du chargement des commandes. Vérifiez vos index Firestore.';
@@ -324,6 +325,13 @@ class CommandeProvider extends ChangeNotifier {
           .update({
         'statut': newStatut,
         'acceptedAt': Timestamp.now(),
+        'updatedAt': Timestamp.now(),
+      });
+
+      await FirebaseService.artisansCollection
+          .doc(commande.artisanId)
+          .update({
+        'nombreCommandes': FieldValue.increment(1),
         'updatedAt': Timestamp.now(),
       });
 
@@ -433,6 +441,30 @@ class CommandeProvider extends ChangeNotifier {
       
       final commande = CommandeModel.fromFirestore(commandeDoc);
       
+      // Rembourser via FedaPay si un ID de transaction est disponible
+      String? transactionId = commande.fedapayTransactionId;
+      double montantRemboursement = commande.montant;
+      
+      if (commande.fedapayTransactionIdDiagnostic != null && commande.fedapayTransactionId == null) {
+        transactionId = commande.fedapayTransactionIdDiagnostic;
+        montantRemboursement = commande.montantDiagnostic ?? commande.montant;
+      } else if (commande.fedapayTransactionIdDeplacement != null && commande.fedapayTransactionId == null) {
+        transactionId = commande.fedapayTransactionIdDeplacement;
+        montantRemboursement = commande.fraisDeplacement ?? commande.montant;
+      }
+      
+      if (transactionId != null && transactionId.isNotEmpty) {
+        try {
+          await FedaPayService.refundTransaction(
+            transactionId: transactionId,
+            amount: montantRemboursement,
+            reason: raison,
+          );
+        } catch (e) {
+          Logger.log('[WARNING] Remboursement FedaPay échoué, on continue pour mettre à jour le statut local: $e');
+        }
+      }
+      
       // Mettre à jour le statut
       await FirebaseService.firestore
           .collection('commandes')
@@ -444,7 +476,7 @@ class CommandeProvider extends ChangeNotifier {
         'updatedAt': Timestamp.now(),
       });
 
-      // M10 — Libérer l'artisan lors d'un remboursement
+      // Libérer l'artisan lors d'un remboursement
       await FirestoreService.setArtisanAvailable(commande.artisanId);
 
       // Créer une notification pour le client
@@ -476,7 +508,7 @@ class CommandeProvider extends ChangeNotifier {
         final file = File(photoPaths[i]);
         
         if (!await file.exists()) {
-          print('[ERROR] Fichier introuvable: ${photoPaths[i]}');
+          Logger.log('[ERROR] Fichier introuvable: ${photoPaths[i]}');
           continue;
         }
         
@@ -485,12 +517,12 @@ class CommandeProvider extends ChangeNotifier {
         final url = await CloudinaryService.uploadImage(photoPaths[i], folder);
         uploadedUrls.add(url);
         
-        print('[SUCCESS] Photo ${i + 1} uploadée: $url');
+        Logger.log('[SUCCESS] Photo ${i + 1} uploadée: $url');
       }
       
       return uploadedUrls;
     } catch (e) {
-      print('[ERROR] Erreur upload photos: $e');
+      Logger.log('[ERROR] Erreur upload photos: $e');
       throw Exception('Erreur lors de l\'upload des photos');
     }
   }
@@ -507,7 +539,7 @@ class CommandeProvider extends ChangeNotifier {
     // ✅ IDEMPOTENCE: Vérifier si l'opération est déjà en cours
     final operationKey = 'devis_$commandeId';
     if (_isOperationInProgress(operationKey)) {
-      print('[WARNING] Envoi de devis déjà en cours pour $commandeId');
+      Logger.log('[WARNING] Envoi de devis déjà en cours pour $commandeId');
       return false;
     }
     
@@ -531,7 +563,7 @@ class CommandeProvider extends ChangeNotifier {
       
       // ✅ IDEMPOTENCE: Vérifier si un devis a déjà été envoyé
       if (commande.statut == 'devis_envoye' || commande.montantDevis != null) {
-        print('[INFO] Devis déjà envoyé pour $commandeId');
+        Logger.log('[INFO] Devis déjà envoyé pour $commandeId');
         return true; // Retourner succès car déjà fait
       }
       
@@ -567,10 +599,10 @@ class CommandeProvider extends ChangeNotifier {
         },
       });
 
-      print('[SUCCESS] Devis envoyé avec succès');
+      Logger.log('[SUCCESS] Devis envoyé avec succès');
       return true;
     } catch (e) {
-      print('[ERROR] Erreur envoi devis: $e');
+      Logger.log('[ERROR] Erreur envoi devis: $e');
       _errorMessage = 'Erreur lors de l\'envoi du devis';
       notifyListeners();
       return false;
@@ -617,7 +649,7 @@ class CommandeProvider extends ChangeNotifier {
 
       return true;
     } catch (e) {
-      print('[ERROR] Erreur modification devis: $e');
+      Logger.log('[ERROR] Erreur modification devis: $e');
       _errorMessage = 'Erreur lors de la modification du devis';
       notifyListeners();
       return false;
@@ -651,7 +683,7 @@ class CommandeProvider extends ChangeNotifier {
       if (commande.fraisDeplacementPayes == true && commande.montantDiagnostic != null) {
         // Pour les frais de déplacement, on crédite le montant net à l'artisan
         await FirestoreService.crediterArtisan(commande.artisanId, commande.montantDiagnostic!);
-        print('[SUCCESS] Frais de diagnostic (${commande.montantDiagnostic} FCFA) crédités à l\'artisan');
+        Logger.log('[SUCCESS] Frais de diagnostic (${commande.montantDiagnostic} FCFA) crédités à l\'artisan');
       }
 
       // Notifier le client
@@ -725,7 +757,7 @@ class CommandeProvider extends ChangeNotifier {
 
       return true;
     } catch (e) {
-      print('[ERROR] Erreur envoi devis post-diagnostic: $e');
+      Logger.log('[ERROR] Erreur envoi devis post-diagnostic: $e');
       _errorMessage = 'Erreur lors de l\'envoi du devis post-diagnostic: $e';
       notifyListeners();
       return false;
@@ -748,7 +780,6 @@ class CommandeProvider extends ChangeNotifier {
       final commande = CommandeModel.fromFirestore(commandeDoc);
 
       final commissionDevis = montantDevis * AppConstants.commissionRate;
-      final montantArtisanDevis = montantDevis - commissionDevis;
 
       // Recalculer les totaux (Diagnostic déjà payé + Nouveau devis)
       final nouveauMontantTotal = (commande.montantDiagnostic ?? 0.0) + montantDevis;
@@ -782,7 +813,7 @@ class CommandeProvider extends ChangeNotifier {
 
       return true;
     } catch (e) {
-      print('[ERROR] Erreur modification devis post-diagnostic: $e');
+      Logger.log('[ERROR] Erreur modification devis post-diagnostic: $e');
       _errorMessage = 'Erreur lors de la modification du devis';
       notifyListeners();
       return false;
@@ -794,7 +825,7 @@ class CommandeProvider extends ChangeNotifier {
     // ✅ IDEMPOTENCE: Vérifier si l'opération est déjà en cours
     final operationKey = 'accepter_devis_$commandeId';
     if (_isOperationInProgress(operationKey)) {
-      print('[WARNING] Acceptation de devis déjà en cours pour $commandeId');
+      Logger.log('[WARNING] Acceptation de devis déjà en cours pour $commandeId');
       return false;
     }
     
@@ -824,7 +855,7 @@ class CommandeProvider extends ChangeNotifier {
       
       // ✅ IDEMPOTENCE: Vérifier si déjà accepté
       if (commande.statut == 'devis_accepte' || commande.dateAcceptationDevis != null) {
-        print('[INFO] Devis déjà accepté pour $commandeId');
+        Logger.log('[INFO] Devis déjà accepté pour $commandeId');
         return true; // Retourner succès car déjà fait
       }
       
@@ -862,10 +893,10 @@ class CommandeProvider extends ChangeNotifier {
         },
       });
 
-      print('[SUCCESS] Devis accepté');
+      Logger.log('[SUCCESS] Devis accepté');
       return true;
     } catch (e) {
-      print('[ERROR] Erreur acceptation devis: $e');
+      Logger.log('[ERROR] Erreur acceptation devis: $e');
       _errorMessage = 'Erreur lors de l\'acceptation du devis';
       notifyListeners();
       return false;
@@ -913,10 +944,10 @@ class CommandeProvider extends ChangeNotifier {
         },
       });
 
-      print('[SUCCESS] Devis refusé');
+      Logger.log('[SUCCESS] Devis refusé');
       return true;
     } catch (e) {
-      print('[ERROR] Erreur refus devis: $e');
+      Logger.log('[ERROR] Erreur refus devis: $e');
       _errorMessage = 'Erreur lors du refus du devis';
       notifyListeners();
       return false;
@@ -963,7 +994,7 @@ class CommandeProvider extends ChangeNotifier {
       
       return true;
     } catch (e) {
-      print('[ERROR] Erreur annulation: $e');
+      Logger.log('[ERROR] Erreur annulation: $e');
       _errorMessage = 'Erreur lors de l\'annulation de la commande';
       notifyListeners();
       return false;
@@ -977,7 +1008,7 @@ class CommandeProvider extends ChangeNotifier {
     // ✅ IDEMPOTENCE: Vérifier si l'opération est déjà en cours
     final operationKey = 'paiement_$commandeId';
     if (_isOperationInProgress(operationKey)) {
-      print('[WARNING] Paiement déjà en cours pour $commandeId');
+      Logger.log('[WARNING] Paiement déjà en cours pour $commandeId');
       return false;
     }
     
@@ -1001,18 +1032,18 @@ class CommandeProvider extends ChangeNotifier {
       
       // ✅ PROTECTION STRICTE: Ne pas repayer si déjà bloqué (escrow) ou déjà payé
       if (commande.paiementStatut == 'bloque' || commande.paiementStatut == 'paye' || commande.paiementStatut == 'debloque') {
-        print('[INFO] Commande $commandeId déjà payée ou en escrow. Opération ignorée.');
+        Logger.log('[INFO] Commande $commandeId déjà payée ou en escrow. Opération ignorée.');
         return true;
       }
       
       // ✅ IDEMPOTENCE & FLUX: Vérifier si déjà payé pour ce flux
       if (commande.statut == 'diagnostic_demande' && commande.fraisDeplacementPayes == true) {
-        print('[INFO] Frais de diagnostic déjà payés pour $commandeId');
+        Logger.log('[INFO] Frais de diagnostic déjà payés pour $commandeId');
         return true;
       }
       
       if (commande.statut == 'devis_post_diagnostic_accepte' && commande.paiementStatut == 'bloque' && (commande.fedapayTransactionId?.isNotEmpty ?? false)) {
-         print('[INFO] Paiement final déjà effectué pour $commandeId');
+         Logger.log('[INFO] Paiement final déjà effectué pour $commandeId');
          return true;
       }
 
@@ -1051,10 +1082,10 @@ class CommandeProvider extends ChangeNotifier {
         },
       });
 
-      print('[SUCCESS] Paiement mis en escrow pour commande $commandeId');
+      Logger.log('[SUCCESS] Paiement mis en escrow pour commande $commandeId');
       return true;
     } catch (e) {
-      print('[ERROR] Erreur paiement: $e');
+      Logger.log('[ERROR] Erreur paiement: $e');
       _errorMessage = 'Erreur lors du paiement';
       notifyListeners();
       return false;
@@ -1104,7 +1135,7 @@ class CommandeProvider extends ChangeNotifier {
         'data': {'commandeId': commandeId, 'montant': commande.montantArtisan},
       });
 
-      print('[SUCCESS] Prestation validée par le client. Argent débloqué.');
+      Logger.log('[SUCCESS] Prestation validée par le client. Argent débloqué.');
       return true;
     } catch (e) {
       _errorMessage = 'Erreur lors de la validation: $e';
@@ -1187,7 +1218,7 @@ class CommandeProvider extends ChangeNotifier {
               'nombreAvis': avisVisibles.length,
               'updatedAt': Timestamp.now(),
             });
-            print('[SUCCESS] Note globale de l\'artisan mise à jour: ${noteGlobale.toStringAsFixed(1)}');
+            Logger.log('[SUCCESS] Note globale de l\'artisan mise à jour: ${noteGlobale.toStringAsFixed(1)}');
           }
         }
       }
@@ -1201,10 +1232,10 @@ class CommandeProvider extends ChangeNotifier {
         'data': {'commandeId': commandeId, 'note': note},
       });
 
-      print('[SUCCESS] Note enregistrée: $note/5');
+      Logger.log('[SUCCESS] Note enregistrée: $note/5');
       return true;
     } catch (e) {
-      print('[ERROR] Erreur notation: $e');
+      Logger.log('[ERROR] Erreur notation: $e');
       _errorMessage = 'Erreur lors de la notation';
       notifyListeners();
       return false;

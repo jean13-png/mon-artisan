@@ -4,6 +4,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../core/constants/colors.dart';
 import '../../core/constants/text_styles.dart';
 import '../../providers/auth_provider.dart';
+import '../../core/utils/logger.dart';
 
 class AgentDashboardScreen extends StatefulWidget {
   const AgentDashboardScreen({super.key});
@@ -74,7 +75,7 @@ class _AgentDashboardScreenState extends State<AgentDashboardScreen> {
           .toList();
 
     } catch (e) {
-      print('[ERROR] Erreur stats agent: $e');
+      Logger.log('[ERROR] Erreur stats agent: $e');
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }

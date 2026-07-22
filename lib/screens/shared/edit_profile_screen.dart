@@ -15,6 +15,7 @@ import '../../widgets/custom_textfield.dart';
 import '../../widgets/loading_widget.dart';
 import '../../widgets/ville_quartier_selector.dart';
 import '../../widgets/position_client_widget.dart';
+import '../../core/utils/logger.dart';
 
 class EditProfileScreen extends StatefulWidget {
   const EditProfileScreen({super.key});
@@ -72,7 +73,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
             }
           }
         } catch (e) {
-          print('Erreur chargement tarif: $e');
+          Logger.log('Erreur chargement tarif: $e');
         }
       }
     }

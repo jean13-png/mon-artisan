@@ -8,7 +8,6 @@ import '../../models/commande_model.dart';
 import '../../widgets/loading_widget.dart';
 import 'rate_artisan_screen.dart';
 import 'devis_detail_screen.dart';
-import '../artisan/commande_detail_screen.dart';
 import 'package:go_router/go_router.dart';
 import '../../core/routes/app_router.dart';
 

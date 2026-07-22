@@ -10,6 +10,7 @@ import '../../providers/auth_provider.dart';
 import '../../core/services/fedapay_service.dart';
 import '../../core/services/firebase_service.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import '../../core/utils/logger.dart';
 
 class ArtisanPaymentScreen extends StatefulWidget {
   final String codeAgent;
@@ -108,7 +109,7 @@ class _ArtisanPaymentScreenState extends State<ArtisanPaymentScreen> {
   Future<void> _processPayment() async {
     // ✅ PROTECTION: Empêcher double clic
     if (_isProcessingPayment) {
-      print('[WARNING] Paiement déjà en cours, ignoré');
+      Logger.log('[WARNING] Paiement déjà en cours, ignoré');
       return;
     }
 
@@ -139,7 +140,7 @@ class _ArtisanPaymentScreenState extends State<ArtisanPaymentScreen> {
     });
 
     try {
-      print('[INFO] Création transaction FedaPay pour inscription artisan...');
+      Logger.log('[INFO] Création transaction FedaPay pour inscription artisan...');
       
       // ✅ Créer la transaction FedaPay
       final transactionData = await FedaPayService.createTransaction(
@@ -150,7 +151,7 @@ class _ArtisanPaymentScreenState extends State<ArtisanPaymentScreen> {
         commandeId: 'inscription_${authProvider.userModel!.id}_${DateTime.now().millisecondsSinceEpoch}',
       );
 
-      print('[SUCCESS] Transaction créée: ${transactionData['v1']?['id'] ?? 'ID manquant'}');
+      Logger.log('[SUCCESS] Transaction créée: ${transactionData['v1']?['id'] ?? 'ID manquant'}');
       
       // ✅ Vérifier que les données existent
       if (transactionData['v1'] == null) {
@@ -173,7 +174,7 @@ class _ArtisanPaymentScreenState extends State<ArtisanPaymentScreen> {
       
       // ✅ En mode simulation, ne pas ouvrir le navigateur
       if (AppConstants.simulateFedaPay) {
-        print('[SIMULATION] Paiement simulé, pas de redirection');
+        Logger.log('[SIMULATION] Paiement simulé, pas de redirection');
         if (mounted) {
           _showPaymentVerificationDialog();
         }
@@ -188,7 +189,7 @@ class _ArtisanPaymentScreenState extends State<ArtisanPaymentScreen> {
         throw Exception('Impossible d\'ouvrir la page de paiement');
       }
     } catch (e) {
-      print('[ERROR] Erreur paiement inscription: $e');
+      Logger.log('[ERROR] Erreur paiement inscription: $e');
       setState(() {
         _isLoading = false;
         _isProcessingPayment = false;
@@ -253,10 +254,10 @@ class _ArtisanPaymentScreenState extends State<ArtisanPaymentScreen> {
     }
 
     try {
-      print('[INFO] Vérification statut transaction $_transactionId...');
+      Logger.log('[INFO] Vérification statut transaction $_transactionId...');
       
       final status = await FedaPayService.checkTransactionStatus(_transactionId!);
-      print('[INFO] Statut: $status');
+      Logger.log('[INFO] Statut: $status');
 
       if (status == 'approved' || status == 'completed') {
         // ✅ Paiement réussi, enregistrer dans Firestore
@@ -290,7 +291,7 @@ class _ArtisanPaymentScreenState extends State<ArtisanPaymentScreen> {
         }
       }
     } catch (e) {
-      print('[ERROR] Erreur vérification: $e');
+      Logger.log('[ERROR] Erreur vérification: $e');
       if (mounted) {
         Navigator.of(context).pop(); // Fermer le dialog
         setState(() {
@@ -344,9 +345,9 @@ class _ArtisanPaymentScreenState extends State<ArtisanPaymentScreen> {
       // Créditer la commission de l'agent
       await _crediterAgent(_agentId!, commissionAgent);
 
-      print('[SUCCESS] Paiement inscription enregistré');
+      Logger.log('[SUCCESS] Paiement inscription enregistré');
     } catch (e) {
-      print('[ERROR] Erreur enregistrement paiement: $e');
+      Logger.log('[ERROR] Erreur enregistrement paiement: $e');
       rethrow;
     }
   }
@@ -432,7 +433,7 @@ class _ArtisanPaymentScreenState extends State<ArtisanPaymentScreen> {
         });
       }
     } catch (e) {
-      print('Erreur lors du crédit agent: $e');
+      Logger.log('Erreur lors du crédit agent: $e');
     }
   }
 

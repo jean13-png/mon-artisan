@@ -9,7 +9,6 @@ import '../../models/artisan_model.dart';
 import '../../providers/commande_provider.dart';
 import '../../providers/artisan_provider.dart';
 import '../../core/services/geolocation_service.dart';
-import '../../core/utils/ui_utils.dart';
 import '../../core/utils/logger.dart';
 import '../../widgets/custom_button.dart';
 import '../../widgets/custom_textfield.dart';

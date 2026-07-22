@@ -3,6 +3,7 @@ import '../../models/user_model.dart';
 import '../../models/artisan_model.dart';
 import '../../models/commande_model.dart';
 import '../../models/metier_model.dart';
+import '../../core/utils/logger.dart';
 
 class FirestoreService {
   static final FirebaseFirestore _firestore = FirebaseFirestore.instance;
@@ -460,7 +461,7 @@ class FirestoreService {
         'hasMore': querySnapshot.docs.length == limit,
       };
     } catch (e) {
-      print('Erreur notifications: $e');
+      Logger.log('Erreur notifications: $e');
       return {
         'notifications': [],
         'lastDocument': null,
@@ -526,37 +527,4 @@ class FirestoreService {
     }
   }
 
-  // ==================== TRANSACTIONS ====================
-
-  /// Transaction pour accepter une commande et mettre à jour les stats artisan
-  static Future<void> accepterCommandeTransaction(
-    String commandeId,
-    String artisanId,
-  ) async {
-    try {
-      await _firestore.runTransaction((transaction) async {
-        // Mettre à jour la commande
-        transaction.update(
-          commandes.doc(commandeId),
-          {
-            'statut': 'acceptee',
-            'acceptedAt': Timestamp.now(),
-            'updatedAt': Timestamp.now(),
-          },
-        );
-
-        // Mettre à jour les stats artisan
-        final artisanDoc = await transaction.get(artisans.doc(artisanId));
-        if (artisanDoc.exists) {
-          final nombreCommandes = (artisanDoc['nombreCommandes'] ?? 0) as int;
-          transaction.update(artisans.doc(artisanId), {
-            'nombreCommandes': nombreCommandes + 1,
-            'updatedAt': Timestamp.now(),
-          });
-        }
-      });
-    } catch (e) {
-      throw Exception('Erreur lors de l\'acceptation de la commande: $e');
-    }
-  }
 }

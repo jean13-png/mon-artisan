@@ -5,6 +5,7 @@ import '../models/user_model.dart';
 import '../core/services/firebase_service.dart';
 import '../core/services/notification_service.dart';
 import '../core/constants/metiers_data.dart';
+import '../../core/utils/logger.dart';
 
 class AuthProvider extends ChangeNotifier {
   User? _firebaseUser;
@@ -39,22 +40,22 @@ class AuthProvider extends ChangeNotifier {
 
   Future<void> _loadUserData(String userId) async {
     try {
-      print('[LOAD] Loading user data for: $userId');
+      Logger.log('[LOAD] Loading user data for: $userId');
       final doc = await FirebaseService.usersCollection.doc(userId).get();
       if (doc.exists) {
-        print('[INFO] Document exists, data: ${doc.data()}');
+        Logger.log('[INFO] Document exists, data: ${doc.data()}');
         _userModel = UserModel.fromFirestore(doc);
-        print('[SUCCESS] UserModel created: roles=${_userModel?.roles}, hasAdmin=${_userModel?.hasRole('admin')}');
+        Logger.log('[SUCCESS] UserModel created: roles=${_userModel?.roles}, hasAdmin=${_userModel?.hasRole('admin')}');
         
         // Mettre à jour le token FCM pour les notifications push
         NotificationService.updateUserToken(userId);
         
         notifyListeners();
       } else {
-        print('[ERROR] Document does not exist');
+        Logger.log('[ERROR] Document does not exist');
       }
     } catch (e) {
-      print('[ERROR] Error loading user data: $e');
+      Logger.log('[ERROR] Error loading user data: $e');
       _errorMessage = 'Erreur lors du chargement des données utilisateur';
       notifyListeners();
     }
@@ -351,7 +352,7 @@ class AuthProvider extends ChangeNotifier {
           .doc(userId) // ← ID = UID Firebase Auth
           .set(artisanData, SetOptions(merge: true)); // merge: true = idempotent
     } catch (e) {
-      print('Erreur création profil artisan: $e');
+      Logger.log('Erreur création profil artisan: $e');
     }
   }
 }

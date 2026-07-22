@@ -49,7 +49,7 @@ class ArtisanProvider extends ChangeNotifier {
         _currentArtisan = ArtisanModel.fromFirestore(querySnapshot.docs.first);
         // M2 — Charger les commandes maintenant que l'index est géré en mémoire
         await _loadCommandes();
-      } else if (_currentArtisan == null) {
+      } else {
         // Profil artisan non trouvé - créer un profil minimal en mémoire (seulement si vide)
         _currentArtisan = ArtisanModel(
           id: '',
@@ -237,7 +237,7 @@ class ArtisanProvider extends ChangeNotifier {
         // Si toujours 0 résultats après filtre distance, relancer sans filtre distance
         if (fetchedArtisans.isEmpty) {
           Logger.log('0 résultats avec filtre distance → recherche sans limite de rayon');
-          final fallback2 = await rawCollection.get();
+          final fallback2 = await rawCollection.limit(200).get();
           for (var doc in fallback2.docs) {
             try {
               final data = doc.data();
@@ -387,7 +387,7 @@ class ArtisanProvider extends ChangeNotifier {
         await FirebaseService.commandesCollection
             .doc(commandeId)
             .update({
-          'statut': 'annulee',
+          'statut': 'refusee',
           'commentaireArtisan': raison,
           'updatedAt': Timestamp.now(),
         });
@@ -476,20 +476,20 @@ class ArtisanProvider extends ChangeNotifier {
       if (position != null) {
         // Utiliser la position GPS actuelle
         geoPosition = GeoPoint(position.latitude, position.longitude);
-        print('[SUCCESS] Position GPS utilisée: ${position.latitude}, ${position.longitude}');
+        Logger.log('[SUCCESS] Position GPS utilisée: ${position.latitude}, ${position.longitude}');
       } else {
         // Géolocaliser l'adresse
         try {
-          print('[INFO] Géolocalisation de l\'adresse: $atelierAdresse');
+          Logger.log('[INFO] Géolocalisation de l\'adresse: $atelierAdresse');
           final locations = await locationFromAddress(atelierAdresse);
           
           if (locations.isNotEmpty) {
             final location = locations.first;
             geoPosition = GeoPoint(location.latitude, location.longitude);
-            print('[SUCCESS] Position trouvée: ${location.latitude}, ${location.longitude}');
+            Logger.log('[SUCCESS] Position trouvée: ${location.latitude}, ${location.longitude}');
           }
         } catch (e) {
-          print('[WARNING] Erreur géolocalisation: $e');
+          Logger.log('[WARNING] Erreur géolocalisation: $e');
           // Position par défaut (centre de la ville)
           geoPosition = const GeoPoint(6.3703, 2.3912);
         }
@@ -521,18 +521,25 @@ class ArtisanProvider extends ChangeNotifier {
         'updatedAt': Timestamp.now(),
       });
 
-      print('[SUCCESS] Profil artisan mis à jour avec succès');
+      Logger.log('[SUCCESS] Profil artisan mis à jour avec succès');
 
       // Notifier l'admin qu'un nouveau profil est à valider
-      await FirebaseService.firestore.collection('notifications').add({
-        'userId': 'admin',
-        'titre': 'Nouveau profil à valider',
-        'message': 'Un artisan a soumis son profil pour validation.',
-        'type': 'nouveau_profil',
-        'artisanId': artisanDoc.id,
-        'isRead': false,
-        'createdAt': Timestamp.now(),
-      });
+      // Note: userId 'admin' n'est pas un UID Firebase valide. Cette notification
+      // peut être bloquée par les règles Firestore si aucun admin n'est ciblé précisément.
+      // L'admin voit les profils en attente dans son dashboard via verificationStatus.
+      try {
+        await FirebaseService.firestore.collection('notifications').add({
+          'userId': 'admin',
+          'titre': 'Nouveau profil à valider',
+          'message': 'Un artisan a soumis son profil pour validation.',
+          'type': 'nouveau_profil',
+          'artisanId': artisanDoc.id,
+          'isRead': false,
+          'createdAt': Timestamp.now(),
+        });
+      } catch (e) {
+        Logger.log('[WARNING] Notification admin ignorée: $e');
+      }
       
       // Recharger le profil
       await loadArtisanProfile(userId);
@@ -541,7 +548,7 @@ class ArtisanProvider extends ChangeNotifier {
       notifyListeners();
       return true;
     } catch (e) {
-      print('[ERROR] Erreur mise à jour profil: $e');
+      Logger.log('[ERROR] Erreur mise à jour profil: $e');
       _errorMessage = 'Erreur lors de la mise à jour du profil: $e';
       _isLoading = false;
       notifyListeners();
@@ -580,7 +587,7 @@ class ArtisanProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
-      print('[INFO] Mise à jour de la position pour ${_currentArtisan!.userId}');
+      Logger.log('[INFO] Mise à jour de la position pour ${_currentArtisan!.userId}');
       
       // 1. Obtenir la position actuelle
       final position = await GeolocationService.getCurrentPosition();
@@ -607,13 +614,13 @@ class ArtisanProvider extends ChangeNotifier {
         updatedAt: DateTime.now(),
       );
 
-      print('[SUCCESS] Position mise à jour : ${position.latitude}, ${position.longitude}');
+      Logger.log('[SUCCESS] Position mise à jour : ${position.latitude}, ${position.longitude}');
       
       _isLoading = false;
       notifyListeners();
       return true;
     } catch (e) {
-      print('[ERROR] Erreur updateLocation: $e');
+      Logger.log('[ERROR] Erreur updateLocation: $e');
       _errorMessage = 'Impossible de mettre à jour votre position. Vérifiez votre GPS.';
       _isLoading = false;
       notifyListeners();
@@ -624,7 +631,7 @@ class ArtisanProvider extends ChangeNotifier {
   // Uploader une image vers Cloudinary
   Future<String> uploadImage(String filePath, String storagePath) async {
     try {
-      print('[UPLOAD] Début upload Cloudinary: $storagePath');
+      Logger.log('[UPLOAD] Début upload Cloudinary: $storagePath');
       
       final file = File(filePath);
       
@@ -635,7 +642,7 @@ class ArtisanProvider extends ChangeNotifier {
       
       // Vérifier la taille du fichier (max 10MB pour Cloudinary)
       final fileSize = await file.length();
-      print('[INFO] Taille fichier: ${(fileSize / 1024 / 1024).toStringAsFixed(2)} MB');
+      Logger.log('[INFO] Taille fichier: ${(fileSize / 1024 / 1024).toStringAsFixed(2)} MB');
       
       if (fileSize > 10 * 1024 * 1024) {
         throw Exception('Fichier trop volumineux (max 10MB)');
@@ -644,15 +651,15 @@ class ArtisanProvider extends ChangeNotifier {
       // Extraire le dossier du storagePath
       // Ex: artisans/userId/diplome/123.jpg -> artisans/userId/diplome
       final folder = storagePath.substring(0, storagePath.lastIndexOf('/'));
-      print('[INFO] Dossier Cloudinary: $folder');
+      Logger.log('[INFO] Dossier Cloudinary: $folder');
       
       // Upload vers Cloudinary
       final downloadUrl = await CloudinaryService.uploadImage(filePath, folder);
-      print('[SUCCESS] URL obtenue: $downloadUrl');
+      Logger.log('[SUCCESS] URL obtenue: $downloadUrl');
       
       return downloadUrl;
     } catch (e) {
-      print('[ERROR] Erreur upload: $e');
+      Logger.log('[ERROR] Erreur upload: $e');
       
       // Messages d'erreur simplifiés
       if (e.toString().contains('network') || e.toString().contains('connection')) {

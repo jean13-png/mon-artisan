@@ -1,4 +1,3 @@
-import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:provider/provider.dart';
@@ -10,11 +9,11 @@ import 'package:permission_handler/permission_handler.dart';
 import '../../core/constants/colors.dart';
 import '../../core/constants/text_styles.dart';
 import '../../core/services/chat_service.dart';
-import '../../core/services/firebase_service.dart';
 import '../../core/services/cloudinary_service.dart';
 import '../../core/routes/app_router.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/commande_provider.dart';
+import '../../core/utils/logger.dart';
 
 class ChatScreen extends StatefulWidget {
   final String otherUserId;
@@ -106,7 +105,7 @@ class _ChatScreenState extends State<ChatScreen> {
         userId: currentUserId,
       );
     } catch (e) {
-      print('[ERROR] Erreur initialisation chat: $e');
+      Logger.log('[ERROR] Erreur initialisation chat: $e');
       setState(() {
         _isLoading = false;
         _initError = e.toString();
@@ -175,7 +174,7 @@ class _ChatScreenState extends State<ChatScreen> {
         }
       }
     } catch (e) {
-      print('[ERROR] start recording: $e');
+      Logger.log('[ERROR] start recording: $e');
       if (mounted) {
         setState(() {
           _isStartingRecording = false;
@@ -210,7 +209,7 @@ class _ChatScreenState extends State<ChatScreen> {
       
       // Si l'enregistrement est trop court (moins de 1 seconde), on ignore
       if (duration.inSeconds < 1) {
-        print('[INFO] Enregistrement trop court, annulé.');
+        Logger.log('[INFO] Enregistrement trop court, annulé.');
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text('Appuyez longuement pour enregistrer'), duration: Duration(seconds: 1)),
@@ -229,7 +228,6 @@ class _ChatScreenState extends State<ChatScreen> {
           );
         }
         
-        final file = File(path);
         // Upload vers Cloudinary au lieu de Firebase
         final audioUrl = await CloudinaryService.uploadAudio(path, 'chat_audios/$_chatId');
         
@@ -245,7 +243,7 @@ class _ChatScreenState extends State<ChatScreen> {
         _scrollToBottom();
       }
     } catch (e) {
-      print('[ERROR] stop recording: $e');
+      Logger.log('[ERROR] stop recording: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Erreur lors de l\'envoi du vocal')),

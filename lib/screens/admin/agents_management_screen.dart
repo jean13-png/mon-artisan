@@ -257,7 +257,8 @@ class _AgentsManagementScreenState extends State<AgentsManagementScreen> with Si
               content: Text('Erreur: $e'), backgroundColor: AppColors.error));
         }
       }
-    } else // Rejeter la demande
+    } else {
+      // Rejeter la demande
       await FirebaseService.firestore.collection('users').doc(user.id).update({
         'agentStatus': 'rejected',
         'isAgent': false,
@@ -274,7 +275,10 @@ class _AgentsManagementScreenState extends State<AgentsManagementScreen> with Si
         'isRead': false,
       });
 
-      if (mounted) {ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Demande rejetée'), backgroundColor: AppColors.error));
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+            content: Text('Demande rejetée'), backgroundColor: AppColors.error));
+      }
     }
   }
 

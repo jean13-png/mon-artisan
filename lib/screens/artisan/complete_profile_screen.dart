@@ -13,6 +13,7 @@ import '../../widgets/custom_button.dart';
 import '../../widgets/custom_textfield.dart';
 import '../../widgets/ville_quartier_selector.dart';
 import '../../widgets/position_client_widget.dart';
+import '../../core/utils/logger.dart';
 
 class CompleteProfileScreen extends StatefulWidget {
   const CompleteProfileScreen({super.key});
@@ -66,12 +67,12 @@ class _CompleteProfileScreenState extends State<CompleteProfileScreen> {
       final authProvider = Provider.of<AuthProvider>(context, listen: false);
       final artisanProvider = Provider.of<ArtisanProvider>(context, listen: false);
 
-      print('[UPLOAD] Upload diplôme depuis: ${image.path}');
-      print('[INFO] User ID: ${authProvider.userModel!.id}');
+      Logger.log('[UPLOAD] Upload diplôme depuis: ${image.path}');
+      Logger.log('[INFO] User ID: ${authProvider.userModel!.id}');
 
       final storagePath =
           'artisans/${authProvider.userModel!.id}/diplome/${DateTime.now().millisecondsSinceEpoch}.jpg';
-      print('[INFO] Chemin Storage: $storagePath');
+      Logger.log('[INFO] Chemin Storage: $storagePath');
 
       final url = await artisanProvider.uploadImage(
         image.path,
@@ -79,7 +80,7 @@ class _CompleteProfileScreenState extends State<CompleteProfileScreen> {
       );
 
       if (!mounted) return;
-      print('[SUCCESS] Diplôme uploadé: $url');
+      Logger.log('[SUCCESS] Diplôme uploadé: $url');
 
       setState(() {
         _diplomeUrl = url;
@@ -101,7 +102,7 @@ class _CompleteProfileScreenState extends State<CompleteProfileScreen> {
         );
       }
     } catch (e) {
-      print('[ERROR] Erreur upload diplôme: $e');
+      Logger.log('[ERROR] Erreur upload diplôme: $e');
       if (mounted) {
         _showError('Impossible de télécharger le diplôme. Vérifiez votre connexion.');
       }
@@ -128,12 +129,12 @@ class _CompleteProfileScreenState extends State<CompleteProfileScreen> {
       final authProvider = Provider.of<AuthProvider>(context, listen: false);
       final artisanProvider = Provider.of<ArtisanProvider>(context, listen: false);
 
-      print('[UPLOAD] Upload carte CIP depuis: ${image.path}');
-      print('[INFO] User ID: ${authProvider.userModel!.id}');
+      Logger.log('[UPLOAD] Upload carte CIP depuis: ${image.path}');
+      Logger.log('[INFO] User ID: ${authProvider.userModel!.id}');
 
       final storagePath =
           'artisans/${authProvider.userModel!.id}/cip/${DateTime.now().millisecondsSinceEpoch}.jpg';
-      print('[INFO] Chemin Storage: $storagePath');
+      Logger.log('[INFO] Chemin Storage: $storagePath');
 
       final url = await artisanProvider.uploadImage(
         image.path,
@@ -141,7 +142,7 @@ class _CompleteProfileScreenState extends State<CompleteProfileScreen> {
       );
 
       if (!mounted) return;
-      print('[SUCCESS] Carte CIP uploadée: $url');
+      Logger.log('[SUCCESS] Carte CIP uploadée: $url');
 
       setState(() {
         _cipPhotoUrl = url;
@@ -163,7 +164,7 @@ class _CompleteProfileScreenState extends State<CompleteProfileScreen> {
         );
       }
     } catch (e) {
-      print('[ERROR] Erreur upload carte CIP: $e');
+      Logger.log('[ERROR] Erreur upload carte CIP: $e');
       if (mounted) {
         _showError('Impossible de télécharger la carte CIP. Vérifiez votre connexion.');
       }
@@ -194,14 +195,14 @@ class _CompleteProfileScreenState extends State<CompleteProfileScreen> {
       final authProvider = Provider.of<AuthProvider>(context, listen: false);
       final artisanProvider = Provider.of<ArtisanProvider>(context, listen: false);
 
-      print('[UPLOAD] Upload de ${images.length} photo(s)');
-      print('[INFO] User ID: ${authProvider.userModel!.id}');
+      Logger.log('[UPLOAD] Upload de ${images.length} photo(s)');
+      Logger.log('[INFO] User ID: ${authProvider.userModel!.id}');
 
       int uploaded = 0;
       for (final image in images.take(5 - _atelierPhotosUrls.length)) {
         final storagePath =
             'artisans/${authProvider.userModel!.id}/atelier/${DateTime.now().millisecondsSinceEpoch}_$uploaded.jpg';
-        print('[INFO] Upload photo ${uploaded + 1}: $storagePath');
+        Logger.log('[INFO] Upload photo ${uploaded + 1}: $storagePath');
 
         final url = await artisanProvider.uploadImage(
           image.path,
@@ -209,7 +210,7 @@ class _CompleteProfileScreenState extends State<CompleteProfileScreen> {
         );
 
         if (!mounted) break;
-        print('[SUCCESS] Photo ${uploaded + 1} uploadée: $url');
+        Logger.log('[SUCCESS] Photo ${uploaded + 1} uploadée: $url');
 
         setState(() {
           _atelierPhotosUrls.add(url);
@@ -234,7 +235,7 @@ class _CompleteProfileScreenState extends State<CompleteProfileScreen> {
         );
       }
     } catch (e) {
-      print('[ERROR] Erreur upload photos: $e');
+      Logger.log('[ERROR] Erreur upload photos: $e');
       if (mounted) {
         _showError('Impossible de télécharger les photos. Vérifiez votre connexion.');
       }
@@ -292,11 +293,11 @@ class _CompleteProfileScreenState extends State<CompleteProfileScreen> {
       final authProvider = Provider.of<AuthProvider>(context, listen: false);
       final artisanProvider = Provider.of<ArtisanProvider>(context, listen: false);
       
-      print('[SUBMIT] Soumission du profil...');
-      print('[INFO] User ID: ${authProvider.userModel!.id}');
-      print('[INFO] Ville: $_selectedVille, Quartier: $_selectedQuartier');
-      print('[INFO] Diplôme: $_diplomeUrl');
-      print('[INFO] Photos: ${_atelierPhotosUrls.length}');
+      Logger.log('[SUBMIT] Soumission du profil...');
+      Logger.log('[INFO] User ID: ${authProvider.userModel!.id}');
+      Logger.log('[INFO] Ville: $_selectedVille, Quartier: $_selectedQuartier');
+      Logger.log('[INFO] Diplôme: $_diplomeUrl');
+      Logger.log('[INFO] Photos: ${_atelierPhotosUrls.length}');
       
       // Construire l'adresse simple
       final adresse = '$_selectedQuartier, $_selectedVille';
@@ -317,14 +318,14 @@ class _CompleteProfileScreenState extends State<CompleteProfileScreen> {
       );
 
       if (success && mounted) {
-        print('[SUCCESS] Profil soumis avec succès');
+        Logger.log('[SUCCESS] Profil soumis avec succès');
         _showSuccess();
       } else if (mounted) {
-        print('[ERROR] Échec soumission: ${artisanProvider.errorMessage}');
+        Logger.log('[ERROR] Échec soumission: ${artisanProvider.errorMessage}');
         _showError(artisanProvider.errorMessage ?? 'Erreur. Réessayez.');
       }
     } catch (e) {
-      print('[ERROR] Erreur soumission: $e');
+      Logger.log('[ERROR] Erreur soumission: $e');
       if (mounted) {
         _showError('Erreur. Vérifiez votre connexion.');
       }
