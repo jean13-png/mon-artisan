@@ -30,6 +30,28 @@ class ArtisanProvider extends ChangeNotifier {
   bool get isLoading => _isLoading;
   String? get errorMessage => _errorMessage;
 
+  // Montant en attente de validation client (terminee + bloque)
+  Future<double> getPendingValidationAmount() async {
+    if (_currentArtisan == null) return 0;
+    try {
+      final snapshot = await FirebaseService.commandesCollection
+          .where('artisanId', isEqualTo: _currentArtisan!.userId)
+          .where('statut', isEqualTo: 'terminee')
+          .where('paiementStatut', isEqualTo: 'bloque')
+          .get();
+      return snapshot.docs.fold<double>(0, (sum, doc) {
+        final data = doc.data() as Map<String, dynamic>?;
+        if (data == null) return sum;
+        final value = data['montantArtisan'];
+        final montant = value is num ? value.toDouble() : 0.0;
+        return sum + montant;
+      });
+    } catch (e) {
+      Logger.error('Erreur calcul pending', e);
+      return 0;
+    }
+  }
+
   // Charger le profil artisan
   Future<void> loadArtisanProfile(String userId) async {
     // Si on a déjà les données, on charge en arrière-plan sans bloquer l'UI

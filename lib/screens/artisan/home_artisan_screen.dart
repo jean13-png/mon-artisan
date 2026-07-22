@@ -756,52 +756,121 @@ class _HomeArtisanScreenState extends State<HomeArtisanScreen> {
           ],
         ),
         padding: const EdgeInsets.all(22),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.center,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('Revenus disponibles',
-                      style: AppTextStyles.bodySmall
-                          .copyWith(color: AppColors.white.withOpacity(0.75))),
-                  const SizedBox(height: 6),
-                  Text(
-                    '${artisan.revenusDisponibles.toStringAsFixed(0)} FCFA',
-                    style: AppTextStyles.h1.copyWith(color: AppColors.white, fontSize: 26),
+            Text('Mon portefeuille',
+                style: AppTextStyles.bodySmall.copyWith(color: AppColors.white.withOpacity(0.75))),
+            const SizedBox(height: 16),
+            Row(
+              children: [
+                Expanded(
+                  child: _buildSoldeChip(
+                    label: 'En validation',
+                    suffix: 'FCFA',
+                    color: AppColors.warning,
+                    amountFuture: context.read<ArtisanProvider>().getPendingValidationAmount(),
                   ),
-                  const SizedBox(height: 4),
-                  Text(
-                    'Total : ${artisan.revenusTotal.toStringAsFixed(0)} FCFA',
-                    style: AppTextStyles.bodySmall
-                        .copyWith(color: AppColors.white.withOpacity(0.6)),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: _buildSoldeChip(
+                    label: 'Disponible',
+                    suffix: 'FCFA',
+                    color: AppColors.success,
+                    amount: artisan.revenusDisponibles,
                   ),
-                ],
-              ),
+                ),
+              ],
             ),
-            const SizedBox(width: 12),
-            ElevatedButton(
-              onPressed: artisan.revenusDisponibles > 0
-                  ? () => context.push(AppRouter.revenus)
-                  : null,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.white,
-                disabledBackgroundColor: AppColors.white.withOpacity(0.3),
-                foregroundColor: AppColors.primaryBlue,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                elevation: 0,
+            const SizedBox(height: 16),
+            Row(
+              children: [
+                Text('Total généré',
+                    style: AppTextStyles.bodySmall.copyWith(color: AppColors.white.withOpacity(0.6))),
+                const Spacer(),
+                Text(
+                  '${artisan.revenusTotal.toStringAsFixed(0)} FCFA',
+                  style: AppTextStyles.bodySmall.copyWith(color: AppColors.white),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: artisan.revenusDisponibles > 0
+                    ? () => context.push(AppRouter.revenus)
+                    : null,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.white,
+                  disabledBackgroundColor: AppColors.white.withOpacity(0.3),
+                  foregroundColor: AppColors.primaryBlue,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                  elevation: 0,
+                ),
+                child: Text('Retirer',
+                    style: AppTextStyles.button.copyWith(
+                        color: artisan.revenusDisponibles > 0
+                            ? AppColors.primaryBlue
+                            : AppColors.white.withOpacity(0.5),
+                        fontSize: 14)),
               ),
-              child: Text('Retirer',
-                  style: AppTextStyles.button.copyWith(
-                      color: artisan.revenusDisponibles > 0
-                          ? AppColors.primaryBlue
-                          : AppColors.white.withOpacity(0.5),
-                      fontSize: 14)),
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildSoldeChip({
+    required String label,
+    required String suffix,
+    required Color color,
+    double? amount,
+    Future<double>? amountFuture,
+  }) {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: AppColors.white.withOpacity(0.12),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: AppColors.white.withOpacity(0.18)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 8,
+                height: 8,
+                decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+              ),
+              const SizedBox(width: 8),
+              Text(label,
+                  style: AppTextStyles.bodySmall.copyWith(color: AppColors.white.withOpacity(0.8))),
+            ],
+          ),
+          const SizedBox(height: 10),
+          if (amountFuture != null)
+            FutureBuilder<double>(
+              future: amountFuture,
+              builder: (context, snapshot) {
+                final value = snapshot.data ?? 0;
+                return Text(
+                  '${value.toStringAsFixed(0)} $suffix',
+                  style: AppTextStyles.h2.copyWith(color: AppColors.white, fontSize: 20),
+                );
+              },
+            )
+          else
+            Text(
+              '${(amount ?? 0).toStringAsFixed(0)} $suffix',
+              style: AppTextStyles.h2.copyWith(color: AppColors.white, fontSize: 20),
+            ),
+        ],
       ),
     );
   }

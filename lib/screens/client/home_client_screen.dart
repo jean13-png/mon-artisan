@@ -672,6 +672,8 @@ class _HomeClientScreenState extends State<HomeClientScreen> {
   }
 
   Widget _buildOngoingOrderCard(dynamic commande) {
+    final bool canValidate = commande.statut == 'terminee' && commande.paiementStatut == 'bloque';
+    
     return GestureDetector(
       onTap: () => context.push(AppRouter.commandeDetail, extra: commande),
       child: Container(
@@ -753,10 +755,86 @@ class _HomeClientScreenState extends State<HomeClientScreen> {
                 Icon(Icons.arrow_forward_ios, size: 12, color: AppColors.primaryBlue),
               ],
             ),
+            if (canValidate) ...[
+              const SizedBox(height: 12),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  onPressed: () => _validerPrestation(commande.id),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.success,
+                    padding: const EdgeInsets.symmetric(vertical: 10),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                  ),
+                  icon: const Icon(Icons.check_circle_outline, size: 18, color: AppColors.white),
+                  label: Text(
+                    'Valider la prestation',
+                    style: AppTextStyles.bodySmall.copyWith(
+                      color: AppColors.white,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+              ),
+            ],
           ],
         ),
       ),
     );
+  }
+
+  Future<void> _validerPrestation(String commandeId) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('Valider la prestation', style: AppTextStyles.h3),
+        content: Text(
+          'Confirmez-vous que la prestation a été réalisée de manière satisfaisante ? Le paiement sera débloqué et crédité à l\'artisan.',
+          style: AppTextStyles.bodyMedium,
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: Text('Annuler', style: AppTextStyles.bodyMedium),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: ElevatedButton.styleFrom(backgroundColor: AppColors.success),
+            child: Text('Valider', style: AppTextStyles.button.copyWith(color: AppColors.white)),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true) return;
+
+    if (!mounted) return;
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const Center(child: CircularProgressIndicator()),
+    );
+
+    final success = await Provider.of<CommandeProvider>(context, listen: false).validerPrestation(commandeId);
+
+    if (!mounted) return;
+    Navigator.pop(context);
+
+    if (success) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Prestation validée ! Le paiement a été débloqué.'),
+          backgroundColor: AppColors.success,
+        ),
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(Provider.of<CommandeProvider>(context, listen: false).errorMessage ?? 'Erreur lors de la validation'),
+          backgroundColor: AppColors.error,
+        ),
+      );
+    }
   }
 
   String _getStatusText(String statut) {

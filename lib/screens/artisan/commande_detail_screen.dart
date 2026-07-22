@@ -269,6 +269,11 @@ class _CommandeDetailScreenState extends State<CommandeDetailScreen> {
 
                 const SizedBox(height: 16),
 
+                // Suivi dynamique de commande
+                _buildTrackingCard(commande),
+
+                const SizedBox(height: 16),
+
                 // Informations de l'autre partie
                 Container(
                   width: double.infinity,
@@ -1202,4 +1207,165 @@ class _CommandeDetailScreenState extends State<CommandeDetailScreen> {
       }
     }
   }
+
+  Widget _buildTrackingCard(CommandeModel commande) {
+    final steps = _trackingSteps(commande);
+    final currentIndex = _currentTrackingStepIndex(commande);
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: AppColors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.black.withOpacity(0.05),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('Suivi de la commande', style: AppTextStyles.h3),
+          const SizedBox(height: 20),
+          ...List.generate(steps.length, (i) {
+            final step = steps[i];
+            final bool isActive = i <= currentIndex;
+            final bool isLast = i == steps.length - 1;
+
+            return Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Column(
+                  children: [
+                    Container(
+                      width: 28,
+                      height: 28,
+                      decoration: BoxDecoration(
+                        color: isActive ? AppColors.success : AppColors.greyMedium,
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(
+                        isActive ? Icons.check : Icons.circle,
+                        size: 14,
+                        color: AppColors.white,
+                      ),
+                    ),
+                    if (!isLast)
+                      Container(
+                        width: 2,
+                        height: 40,
+                        color: isActive ? AppColors.success : AppColors.greyMedium,
+                      ),
+                  ],
+                ),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Padding(
+                    padding: EdgeInsets.only(top: 2, bottom: isLast ? 0 : 20),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          step.label,
+                          style: AppTextStyles.bodyMedium.copyWith(
+                            color: isActive ? AppColors.onSurface : AppColors.greyMedium,
+                            fontWeight: isActive ? FontWeight.w700 : FontWeight.normal,
+                          ),
+                        ),
+                        if (step.date != null) ...[
+                          const SizedBox(height: 4),
+                          Text(
+                            step.date!,
+                            style: AppTextStyles.bodySmall.copyWith(
+                              color: AppColors.greyDark,
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            );
+          }),
+        ],
+      ),
+    );
+  }
+
+  List<_TrackingStep> _trackingSteps(CommandeModel commande) {
+    final steps = <_TrackingStep>[
+      _TrackingStep('Demande envoyée', _fmt(commande.createdAt)),
+    ];
+
+    if (commande.acceptedAt != null) {
+      steps.add(_TrackingStep('Artisan assigné', _fmt(commande.acceptedAt)));
+    }
+    if (commande.dateDevis != null) {
+      steps.add(_TrackingStep('Devis envoyé', _fmt(commande.dateDevis)));
+    }
+    if (commande.dateAcceptationDevis != null) {
+      steps.add(_TrackingStep('Devis accepté', _fmt(commande.dateAcceptationDevis)));
+    }
+    if (commande.fedapayTransactionId != null || commande.paiementStatut == 'bloque' || commande.paiementStatut == 'debloque') {
+      final date = commande.dateValidationClient ?? commande.acceptedAt;
+      steps.add(_TrackingStep('Paiement sécurisé', _fmt(date)));
+    }
+    if (commande.statut == 'en_cours' || commande.statut == 'terminee' || commande.statut == 'validee') {
+      steps.add(_TrackingStep('Travaux en cours', _fmt(commande.acceptedAt)));
+    }
+    if (commande.statut == 'terminee' || commande.statut == 'validee') {
+      steps.add(_TrackingStep('Travaux terminés', _fmt(commande.completedAt ?? commande.updatedAt)));
+    }
+    if (commande.statut == 'validee') {
+      steps.add(_TrackingStep('Prestation validée', _fmt(commande.dateValidationClient ?? commande.dateDeblocagePaiement)));
+    }
+
+    return steps;
+  }
+
+  int _currentTrackingStepIndex(CommandeModel commande) {
+    final steps = _trackingSteps(commande);
+    final map = <String, int>{};
+    for (var i = 0; i < steps.length; i++) {
+      map[steps[i].label] = i;
+    }
+
+    final statusMap = <String, String>{
+      'en_attente': 'Demande envoyée',
+      'diagnostic_demande': 'Demande envoyée',
+      'diagnostic_acceptee': 'Demande envoyée',
+      'diagnostic_paye': 'Paiement sécurisé',
+      'diagnostic_valide': 'Devis envoyé',
+      'devis_envoye': 'Devis envoyé',
+      'devis_accepte': 'Devis accepté',
+      'devis_post_diagnostic_envoye': 'Devis envoyé',
+      'devis_post_diagnostic_accepte': 'Devis accepté',
+      'acceptee': 'Paiement sécurisé',
+      'en_cours': 'Travaux en cours',
+      'terminee': 'Travaux terminés',
+      'validee': 'Prestation validée',
+      'annulee': 'Demande envoyée',
+      'refusee': 'Demande envoyée',
+    };
+
+    final label = statusMap[commande.statut] ?? 'Demande envoyée';
+    return map[label] ?? 0;
+  }
+
+  String _fmt(DateTime? d) {
+    if (d == null) return '';
+    return '${d.day}/${d.month}/${d.year} à ${d.hour.toString().padLeft(2, '0')}:${d.minute.toString().padLeft(2, '0')}';
+  }
+}
+
+class _TrackingStep {
+  final String label;
+  final String? date;
+
+  _TrackingStep(this.label, this.date);
 }

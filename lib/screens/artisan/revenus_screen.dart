@@ -73,23 +73,71 @@ class _RevenusScreenState extends State<RevenusScreen> {
               ),
               child: Column(
                 children: [
-                  Text(
-                    'Solde disponible',
-                    style: AppTextStyles.bodyLarge.copyWith(
-                      color: AppColors.white,
-                    ),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'En validation',
+                              style: AppTextStyles.bodyLarge.copyWith(color: AppColors.white),
+                            ),
+                            const SizedBox(height: 8),
+                            FutureBuilder<double>(
+                              future: artisanProvider.getPendingValidationAmount(),
+                              builder: (context, snapshot) {
+                                final pending = snapshot.data ?? 0;
+                                return Text(
+                                  '${pending.toStringAsFixed(0)} FCFA',
+                                  style: AppTextStyles.h1.copyWith(
+                                    color: AppColors.white,
+                                    fontSize: 28,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                );
+                              },
+                            ),
+                          ],
+                        ),
+                      ),
+                      Container(width: 1, height: 40, color: AppColors.white.withOpacity(0.25)),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.end,
+                          children: [
+                            Text(
+                              'Disponible',
+                              style: AppTextStyles.bodyLarge.copyWith(color: AppColors.white),
+                            ),
+                            const SizedBox(height: 8),
+                            Text(
+                              '${artisan.revenusDisponibles.toStringAsFixed(0)} FCFA',
+                              style: AppTextStyles.h1.copyWith(
+                                color: AppColors.white,
+                                fontSize: 28,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
                   ),
-                  const SizedBox(height: 8),
-                  Text(
-                    '${artisan.revenusDisponibles.toStringAsFixed(0)} FCFA',
-                    style: AppTextStyles.h1.copyWith(
-                      color: AppColors.white,
-                      fontSize: 36,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const SizedBox(height: 24),
                   const SizedBox(height: 20),
+                  Row(
+                    children: [
+                      Text('Total généré',
+                          style: AppTextStyles.bodySmall.copyWith(color: AppColors.white.withOpacity(0.6))),
+                      const Spacer(),
+                      Text(
+                        '${artisan.revenusTotal.toStringAsFixed(0)} FCFA',
+                        style: AppTextStyles.bodySmall.copyWith(color: AppColors.white),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
                   // Bouton retrait
                   SizedBox(
                     width: double.infinity,
