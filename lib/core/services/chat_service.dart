@@ -88,6 +88,23 @@ class ChatService {
       });
 
       Logger.log('[SUCCESS] sendMessage - Chat mis à jour avec le dernier message');
+
+      // Créer une notification dans Firestore pour le destinataire
+      try {
+        await _firestore.collection('notifications').add({
+          'userId': receiverId,
+          'titre': 'Nouveau message',
+          'message': message,
+          'type': 'nouveau_message',
+          'chatId': chatId,
+          'senderId': senderId,
+          'data': {'chatId': chatId},
+          'isRead': false,
+          'createdAt': Timestamp.now(),
+        });
+      } catch (e) {
+        Logger.log('[WARNING] Notification message non créée: $e');
+      }
     } catch (e) {
       Logger.log('[ERROR] sendMessage - Erreur: $e');
       rethrow;

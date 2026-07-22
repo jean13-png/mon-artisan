@@ -126,7 +126,6 @@ class NotificationService {
         .where('userId', isEqualTo: userId)
         .where('isRead', isEqualTo: false)
         .orderBy('createdAt', descending: true)
-        .limit(1)
         .snapshots()
         .listen((snapshot) {
           for (var change in snapshot.docChanges) {
@@ -205,6 +204,12 @@ class NotificationService {
         title: message.notification!.title ?? 'Mon Artisan',
         body: message.notification!.body ?? '',
         payload: message.data.toString(),
+      );
+    } else if (message.data.isNotEmpty) {
+      _showLocalNotification(
+        title: message.data['titre']?.toString() ?? 'Mon Artisan',
+        body: message.data['message']?.toString() ?? '',
+        payload: message.data['payload']?.toString(),
       );
     }
   }

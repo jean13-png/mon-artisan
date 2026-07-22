@@ -212,7 +212,7 @@ class ArtisanCard extends StatelessWidget {
                           ],
                         ),
                         const SizedBox(height: 4),
-                        // Note + tarif
+                        // Note + expérience
                         Row(
                           children: [
                             Icon(Icons.star, size: 14, color: AppColors.warning),

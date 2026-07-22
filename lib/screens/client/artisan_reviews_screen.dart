@@ -17,7 +17,7 @@ class ArtisanReviewsScreen extends StatelessWidget {
       ),
       body: Center(
         child: Text(
-          'Tous les avis pour l\'artisan ID: $artisanId seront affichés ici.',
+          'Les avis seront affichés ici.',
           style: AppTextStyles.bodyLarge,
         ),
       ),

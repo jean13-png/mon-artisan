@@ -251,79 +251,6 @@ class ArtisanProfileScreen extends StatelessWidget {
                 
                 const SizedBox(height: 16),
                 
-                // Tarifs
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.all(24),
-                  color: AppColors.white,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Tarifs',
-                        style: AppTextStyles.h3,
-                      ),
-                      const SizedBox(height: 16),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: _buildTarifCard(
-                              'Tarif horaire',
-                              artisan.tarifs['tarifHoraire'] != null 
-                                  ? '${artisan.tarifs['tarifHoraire']} FCFA'
-                                  : (artisan.tarifs['horaire'] != null 
-                                      ? '${artisan.tarifs['horaire']} FCFA'
-                                      : 'Sur devis'),
-                              Icons.access_time,
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: _buildTarifCard(
-                              'Tarif journalier',
-                              artisan.tarifs['tarifJournalier'] != null 
-                                  ? '${artisan.tarifs['tarifJournalier']} FCFA'
-                                  : (artisan.tarifs['journalier'] != null 
-                                      ? '${artisan.tarifs['journalier']} FCFA'
-                                      : 'Sur devis'),
-                              Icons.calendar_today,
-                            ),
-                          ),
-                        ],
-                      ),
-                      if (artisan.tarifs['deplacementInclus'] == true) ...[
-                        const SizedBox(height: 12),
-                        Container(
-                          padding: const EdgeInsets.all(12),
-                          decoration: BoxDecoration(
-                            color: AppColors.success.withOpacity(0.1),
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: Row(
-                            children: [
-                              const Icon(
-                                Icons.check_circle,
-                                color: AppColors.success,
-                                size: 20,
-                              ),
-                              const SizedBox(width: 8),
-                              Text(
-                                'Déplacement inclus',
-                                style: AppTextStyles.bodyMedium.copyWith(
-                                  color: AppColors.success,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ],
-                  ),
-                ),
-                
-                const SizedBox(height: 16),
-                
                 // Galerie photos
                 if (artisan.photos.isNotEmpty) ...[
                   Container(
@@ -616,35 +543,4 @@ class ArtisanProfileScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildTarifCard(String label, String value, IconData icon) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: AppColors.greyLight,
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Column(
-        children: [
-          Icon(icon, color: AppColors.primaryBlue, size: 24),
-          const SizedBox(height: 8),
-          Text(
-            label,
-            style: AppTextStyles.bodySmall.copyWith(
-              color: AppColors.greyDark,
-            ),
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: 4),
-          Text(
-            value,
-            style: AppTextStyles.bodyMedium.copyWith(
-              fontWeight: FontWeight.w600,
-              color: AppColors.primaryBlue,
-            ),
-            textAlign: TextAlign.center,
-          ),
-        ],
-      ),
-    );
-  }
 }

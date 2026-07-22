@@ -597,6 +597,7 @@ class CommandeProvider extends ChangeNotifier {
           'montantDevis': montantDevis,
           'distanceKm': distanceKm,
         },
+        'commandeId': commandeId,
       });
 
       Logger.log('[SUCCESS] Devis envoyé avec succès');

@@ -7,7 +7,6 @@ class ArtisanModel {
   final String metierCategorie;
   final String description;
   final int experience;
-  final Map<String, dynamic> tarifs;
   final bool disponibilite;
   final double rayonAction;
   final GeoPoint position;
@@ -54,7 +53,6 @@ class ArtisanModel {
     required this.metierCategorie,
     required this.description,
     required this.experience,
-    required this.tarifs,
     this.disponibilite = true,
     this.rayonAction = 10.0,
     required this.position,
@@ -104,7 +102,6 @@ class ArtisanModel {
       metierCategorie: data['metierCategorie'] ?? '',
       description: data['description'] ?? '',
       experience: data['experience'] ?? 0,
-      tarifs: data['tarifs'] ?? {},
       disponibilite: data['disponibilite'] ?? true,
       rayonAction: (data['rayonAction'] ?? 10.0).toDouble(),
       position: data['position'] ?? const GeoPoint(0, 0),
@@ -156,7 +153,6 @@ class ArtisanModel {
     String? metierCategorie,
     String? description,
     int? experience,
-    Map<String, dynamic>? tarifs,
     bool? disponibilite,
     double? rayonAction,
     GeoPoint? position,
@@ -198,7 +194,6 @@ class ArtisanModel {
       metierCategorie: metierCategorie ?? this.metierCategorie,
       description: description ?? this.description,
       experience: experience ?? this.experience,
-      tarifs: tarifs ?? this.tarifs,
       disponibilite: disponibilite ?? this.disponibilite,
       rayonAction: rayonAction ?? this.rayonAction,
       position: position ?? this.position,
@@ -242,7 +237,6 @@ class ArtisanModel {
       'metierCategorie': metierCategorie,
       'description': description,
       'experience': experience,
-      'tarifs': tarifs,
       'disponibilite': disponibilite,
       'rayonAction': rayonAction,
       'position': position,

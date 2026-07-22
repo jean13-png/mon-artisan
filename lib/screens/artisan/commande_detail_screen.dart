@@ -270,7 +270,11 @@ class _CommandeDetailScreenState extends State<CommandeDetailScreen> {
                 const SizedBox(height: 16),
 
                 // Suivi dynamique de commande
-                _buildTrackingCard(commande),
+                GestureDetector(
+                  onTap: () {},
+                  behavior: HitTestBehavior.opaque,
+                  child: _buildTrackingCard(commande),
+                ),
 
                 const SizedBox(height: 16),
 

@@ -355,7 +355,7 @@ class _EnvoyerDevisScreenState extends State<EnvoyerDevisScreen> {
                     // Message
                     CustomTextField(
                       label: 'Message pour le client',
-                      hint: 'Expliquez votre tarif (matériel, temps, déplacement...)',
+                       hint: 'Expliquez votre proposition (matériel, temps, déplacement...)',
                       controller: _messageController,
                       maxLines: 5,
                       prefixIcon: const Icon(Icons.message_outlined),

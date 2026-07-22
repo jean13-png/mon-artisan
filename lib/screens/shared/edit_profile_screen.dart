@@ -30,7 +30,6 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   final _prenomController = TextEditingController();
   final _telephoneController = TextEditingController();
   final _emailController = TextEditingController();
-  final _tarifController = TextEditingController(text: '5000');
   
   String? _selectedVille;
   String? _selectedQuartier;
@@ -65,15 +64,12 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
               .get();
           if (artisanQuery.docs.isNotEmpty) {
             final data = artisanQuery.docs.first.data();
-            final tarifs = data['tarifs'] as Map<String, dynamic>?;
-            if (tarifs != null) {
-              setState(() {
-                _tarifController.text = (tarifs['horaire'] ?? tarifs['tarifHoraire'] ?? 5000).toString();
-              });
+            if (data.containsKey('rayonAction')) {
+              setState(() {});
             }
           }
         } catch (e) {
-          Logger.log('Erreur chargement tarif: $e');
+          Logger.log('Erreur chargement données artisan: $e');
         }
       }
     }
@@ -141,15 +137,13 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
 
       // Si c'est un artisan, mettre à jour aussi sa collection dénormalisée
       if (authProvider.userModel!.isArtisan) {
-        final double? newTarif = double.tryParse(_tarifController.text.trim());
         final artisanUpdates = {
           'nom': updates['nom'],
           'prenom': updates['prenom'],
           if (photoUrl != null) 'photoUrl': photoUrl,
-          if (newTarif != null) 'tarifs': {'horaire': newTarif},
           'updatedAt': Timestamp.now(),
         };
-        
+
         final artisanQuery = await FirebaseService.firestore
             .collection('artisans')
             .where('userId', isEqualTo: userId)
@@ -212,7 +206,6 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     _prenomController.dispose();
     _telephoneController.dispose();
     _emailController.dispose();
-    _tarifController.dispose();
     super.dispose();
   }
 
@@ -395,25 +388,6 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                       enabled: false, // Email généralement non modifiable
                     ),
                     const SizedBox(height: 16),
-                    
-                    if (user.isArtisan) ...[
-                      CustomTextField(
-                        label: 'Tarif Horaire (FCFA)',
-                        controller: _tarifController,
-                        prefixIcon: const Icon(Icons.payments_outlined),
-                        keyboardType: TextInputType.number,
-                        validator: (value) {
-                          if (value == null || value.isEmpty) {
-                            return 'Veuillez entrer votre tarif horaire';
-                          }
-                          if (double.tryParse(value) == null) {
-                            return 'Veuillez entrer un nombre valide';
-                          }
-                          return null;
-                        },
-                      ),
-                      const SizedBox(height: 16),
-                    ],
 
                     Text('Localisation', style: AppTextStyles.h3),
 

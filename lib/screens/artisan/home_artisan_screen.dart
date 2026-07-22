@@ -9,6 +9,7 @@ import '../../core/constants/text_styles.dart';
 import '../../core/routes/app_router.dart';
 import '../../core/services/firebase_service.dart';
 import '../../core/services/chat_service.dart';
+import '../../core/utils/logger.dart';
 import '../../models/commande_model.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/artisan_provider.dart';
@@ -213,7 +214,7 @@ class _HomeArtisanScreenState extends State<HomeArtisanScreen> {
                                 ),
                               ),
                               Text(
-                                'Mettez à jour vos tarifs ou vos photos.',
+                                 'Mettez à jour votre profil, vos photos et votre disponibilité.',
                                 style: AppTextStyles.bodySmall.copyWith(
                                   color: AppColors.white.withOpacity(0.9),
                                 ),
@@ -263,26 +264,28 @@ class _HomeArtisanScreenState extends State<HomeArtisanScreen> {
                   stream: FirebaseService.firestore
                       .collection('commandes')
                       .where('artisanId', isEqualTo: user.id)
-                      .where('statut', whereNotIn: ['validee', 'refusee', 'annulee', 'archivee'])
                       .snapshots(),
                   builder: (context, snapshot) {
                     if (snapshot.hasError) {
+                      Logger.log('Erreur chargement interventions: ${snapshot.error}');
                       return const Padding(
                         padding: EdgeInsets.all(20),
                         child: Text('Erreur lors du chargement des interventions'),
                       );
                     }
-                    
+
                     if (!snapshot.hasData) {
                       return const Center(child: CircularProgressIndicator());
                     }
 
-                    final activeInterventions = snapshot.data!.docs
+                    final allInterventions = snapshot.data!.docs
                         .map((doc) => CommandeModel.fromFirestore(doc))
                         .toList();
-                    
-                    // Trier par date de création (décroissant) car Firestore ne permet pas 
-                    // facilement le tri avec whereNotIn sans index composite complexe
+
+                    final activeInterventions = allInterventions
+                        .where((c) => c.statut != 'validee' && c.statut != 'refusee' && c.statut != 'annulee' && c.statut != 'archivee')
+                        .toList();
+
                     activeInterventions.sort((a, b) => b.createdAt.compareTo(a.createdAt));
 
                     return _buildCommandesSection(context, activeInterventions);

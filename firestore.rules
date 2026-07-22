@@ -114,13 +114,15 @@ service cloud.firestore {
       allow read: if isAuthenticated() && 
                      resource.data.userId == request.auth.uid;
       
-      // Création: admin, soi-même, ou participant de la commande liée
+      // Création: admin, soi-même, participant de la commande liée, ou expéditeur d'un message
       allow create: if isAuthenticated() && 
                        (isAdmin() || 
                         request.resource.data.userId == request.auth.uid ||
                         (request.resource.data.commandeId is string &&
                          (get(/databases/$(database)/documents/commandes/$(request.resource.data.commandeId)).data.clientId == request.auth.uid ||
-                          get(/databases/$(database)/documents/commandes/$(request.resource.data.commandeId)).data.artisanId == request.auth.uid)));
+                          get(/databases/$(database)/documents/commandes/$(request.resource.data.commandeId)).data.artisanId == request.auth.uid)) ||
+                        (request.resource.data.type == 'nouveau_message' &&
+                         request.resource.data.senderId == request.auth.uid));
       
       // Mise à jour: seulement ses propres notifications (pour marquer comme lu)
       allow update: if isAuthenticated() && 

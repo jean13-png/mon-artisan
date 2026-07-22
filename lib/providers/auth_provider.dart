@@ -313,7 +313,6 @@ class AuthProvider extends ChangeNotifier {
         'metierCategorie': finalCategorie,
         'description': '',
         'experience': 0,
-        'tarifs': {'horaire': 5000},
         'disponibilite': false,
         'rayonAction': 10.0,
         'position': user.position,

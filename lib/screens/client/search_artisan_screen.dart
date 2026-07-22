@@ -132,11 +132,7 @@ class _SearchArtisanScreenState extends State<SearchArtisanScreen> {
         return dA.compareTo(dB);
       });
     } else if (_sortBy == 'prix') {
-      sorted.sort((a, b) {
-        final pA = (a.tarifs['horaire'] ?? a.tarifs['tarifHoraire'] ?? 0) as num;
-        final pB = (b.tarifs['horaire'] ?? b.tarifs['tarifHoraire'] ?? 0) as num;
-        return pA.compareTo(pB);
-      });
+      sorted.sort((a, b) => a.noteGlobale.compareTo(b.noteGlobale));
     } else {
       sorted.sort((a, b) => b.noteGlobale.compareTo(a.noteGlobale));
     }

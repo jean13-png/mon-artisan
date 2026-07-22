@@ -79,7 +79,6 @@ class ArtisanProvider extends ChangeNotifier {
           metier: 'Artisan',
           metierCategorie: 'Autre',
           description: 'Profil à compléter',
-          tarifs: {'horaire': 5000},
           experience: 0,
           position: const GeoPoint(6.3703, 2.3912),
           geohash: '',

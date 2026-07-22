@@ -181,7 +181,7 @@ class _ContratEngagementScreenState extends State<ContratEngagementScreen> {
 
                   _buildArticle(
                     'Article 2',
-                    'L\'artisan s\'engage à respecter les tarifs et conditions annoncés sur son profil.',
+                    'L\'artisan s\'engage à respecter les conditions et la qualité annoncées sur son profil.',
                   ),
 
                   _buildArticle(

@@ -117,8 +117,8 @@ class GeolocationService {
 
       // Obtenir la position
       final position = await Geolocator.getCurrentPosition(
-        desiredAccuracy: LocationAccuracy.high,
-        timeLimit: const Duration(seconds: 15),
+        desiredAccuracy: LocationAccuracy.medium,
+        timeLimit: const Duration(seconds: 30),
       );
 
       return position;
