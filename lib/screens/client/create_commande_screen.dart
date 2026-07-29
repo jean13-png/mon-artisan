@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'dart:io' as dart_io;
+import 'dart:async';
 import '../../core/constants/colors.dart';
 import '../../core/constants/text_styles.dart';
 import '../../core/constants/app_constants.dart';
@@ -52,6 +53,7 @@ class _CreateCommandeScreenState extends State<CreateCommandeScreen> {
   double? _distanceKm; // Distance artisan → client
   int _paymentVerificationAttempts = 0;
   static const int _maxPaymentVerificationAttempts = 20;
+  Timer? _paymentPollingTimer;
 
   bool get _isDiagnosticMode => widget.typeCommande == 'diagnostic_requis';
 
@@ -74,6 +76,7 @@ class _CreateCommandeScreenState extends State<CreateCommandeScreen> {
 
   @override
   void dispose() {
+    _paymentPollingTimer?.cancel();
     _descriptionController.dispose();
     _adresseController.dispose();
     super.dispose();
@@ -320,15 +323,53 @@ class _CreateCommandeScreenState extends State<CreateCommandeScreen> {
       ),
     );
 
-    Future.delayed(const Duration(seconds: 5), () {
-      _verifyPaymentStatus(commandeId);
+    _paymentPollingTimer = Timer.periodic(const Duration(seconds: 3), (_) async {
+      if (_paymentVerificationAttempts >= _maxPaymentVerificationAttempts) {
+        _paymentPollingTimer?.cancel();
+        if (mounted) {
+          Navigator.of(context).pop();
+          setState(() => _isLoading = false);
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Délai de vérification dépassé. Veuillez contacter le support.'),
+              backgroundColor: AppColors.error,
+            ),
+          );
+        }
+        return;
+      }
+
+      _paymentVerificationAttempts++;
+
+      try {
+        final status = await FedaPayService.checkTransactionStatus(_transactionId!);
+        if (!mounted) return;
+
+        if (status == 'approved' || status == 'completed') {
+          _paymentPollingTimer?.cancel();
+          final success = await Provider.of<CommandeProvider>(context, listen: false).effectuerPaiement(commandeId);
+          if (mounted) {
+            Navigator.of(context).pop();
+            if (success) {
+              _showSuccessDialog();
+            }
+          }
+        } else if (status == 'canceled' || status == 'failed') {
+          _paymentPollingTimer?.cancel();
+          if (mounted) {
+            Navigator.of(context).pop();
+            setState(() => _isLoading = false);
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text('Le paiement a ${status == 'canceled' ? 'annulé' : 'échoué'}. Votre demande n\'est pas encore transmise.'), backgroundColor: AppColors.error),
+            );
+          }
+        }
+      } catch (e) {
+        Logger.log('[ERROR] Vérification paiement: $e');
+      }
     });
-  }
 
-  Future<void> _verifyPaymentStatus(String commandeId) async {
-    if (_transactionId == null) return;
-
-    if (_paymentVerificationAttempts >= _maxPaymentVerificationAttempts) {
+    _paymentPollingTimer = Timer(const Duration(seconds: 60), () {
       if (mounted) {
         Navigator.of(context).pop();
         setState(() => _isLoading = false);
@@ -339,40 +380,7 @@ class _CreateCommandeScreenState extends State<CreateCommandeScreen> {
           ),
         );
       }
-      return;
-    }
-
-    _paymentVerificationAttempts++;
-
-    try {
-      final status = await FedaPayService.checkTransactionStatus(_transactionId!);
-      if (!mounted) return;
-
-      if (status == 'approved' || status == 'completed') {
-        final success = await Provider.of<CommandeProvider>(context, listen: false).effectuerPaiement(commandeId);
-        if (mounted) {
-          Navigator.of(context).pop();
-          if (success) {
-            _showSuccessDialog();
-          }
-        }
-      } else if (status == 'pending') {
-        Future.delayed(const Duration(seconds: 3), () => _verifyPaymentStatus(commandeId));
-      } else {
-        if (mounted) {
-          Navigator.of(context).pop();
-          setState(() => _isLoading = false);
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Le paiement a échoué. Votre demande n\'est pas encore transmise.'), backgroundColor: AppColors.error),
-          );
-        }
-      }
-    } catch (e) {
-      if (mounted) {
-        Navigator.of(context).pop();
-        setState(() => _isLoading = false);
-      }
-    }
+    });
   }
 
   void _showSuccessDialog() {

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'dart:async';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -31,6 +32,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
   String? _transactionId;
   int _verificationAttempts = 0;
   static const int _maxVerificationAttempts = 20;
+  Timer? _pollingTimer;
 
   Future<void> _processPayment() async {
     // ✅ PROTECTION 1: Empêcher double clic
@@ -115,6 +117,12 @@ class _PaymentScreenState extends State<PaymentScreen> {
     }
   }
 
+  @override
+  void dispose() {
+    _pollingTimer?.cancel();
+    super.dispose();
+  }
+
   void _showPaymentVerificationDialog() {
     showDialog(
       context: context,
@@ -144,95 +152,90 @@ class _PaymentScreenState extends State<PaymentScreen> {
       ),
     );
 
-    // Vérifier le statut après 5 secondes
-    Future.delayed(const Duration(seconds: 5), () {
-      _verifyPaymentStatus();
-    });
-  }
+    final completer = Completer<void>();
 
-  Future<void> _verifyPaymentStatus() async {
-    if (_transactionId == null) {
-      if (mounted) {
-        Navigator.of(context).pop();
-        setState(() => _isProcessing = false);
-      }
-      return;
-    }
+    _showPaymentVerificationDialog();
 
-    if (_verificationAttempts >= _maxVerificationAttempts) {
-      if (mounted) {
-        Navigator.of(context).pop();
-        setState(() => _isProcessing = false);
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Délai de vérification dépassé. Veuillez contacter le support.'),
-            backgroundColor: AppColors.error,
-          ),
-        );
-      }
-      return;
-    }
-
-    _verificationAttempts++;
-
-    try {
-      Logger.log('[INFO] Vérification statut transaction $_transactionId...');
-      
-      final status = await FedaPayService.checkTransactionStatus(_transactionId!);
-      Logger.log('[INFO] Statut: $status');
-
-      if (!mounted) return;
-
-      if (status == 'approved' || status == 'completed') {
-        final commandeProvider = Provider.of<CommandeProvider>(context, listen: false);
-        final success = await commandeProvider.effectuerPaiement(widget.commandeId);
-
-        if (mounted) {
+    _pollingTimer = Timer.periodic(const Duration(seconds: 3), (_) async {
+      if (_verificationAttempts >= _maxVerificationAttempts) {
+        _pollingTimer?.cancel();
+        if (mounted && !completer.isCompleted) {
+          completer.complete();
           Navigator.of(context).pop();
-          
-          if (success) {
-            _showSuccessDialog();
-          } else {
+          setState(() => _isProcessing = false);
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Délai de vérification dépassé. Veuillez contacter le support.'),
+              backgroundColor: AppColors.error,
+            ),
+          );
+        }
+        return;
+      }
+
+      _verificationAttempts++;
+
+      try {
+        final status = await FedaPayService.checkTransactionStatus(_transactionId!);
+        if (!mounted) return;
+
+        if (status == 'approved' || status == 'completed') {
+          _pollingTimer?.cancel();
+          final commandeProvider = Provider.of<CommandeProvider>(context, listen: false);
+          final success = await commandeProvider.effectuerPaiement(widget.commandeId);
+
+          if (mounted && !completer.isCompleted) {
+            completer.complete();
+            Navigator.of(context).pop();
+
+            if (success) {
+              _showSuccessDialog();
+            } else {
+              setState(() => _isProcessing = false);
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(commandeProvider.errorMessage ?? 'Erreur lors de la validation du paiement'),
+                  backgroundColor: AppColors.error,
+                ),
+              );
+            }
+          }
+        } else if (status == 'canceled' || status == 'failed') {
+          _pollingTimer?.cancel();
+          if (mounted && !completer.isCompleted) {
+            completer.complete();
+            Navigator.of(context).pop();
             setState(() => _isProcessing = false);
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
-                content: Text(commandeProvider.errorMessage ?? 'Erreur lors de la validation du paiement'),
+                content: Text('Paiement ${status == 'canceled' ? 'annulé' : 'échoué'}'),
                 backgroundColor: AppColors.error,
               ),
             );
           }
         }
-      } else if (status == 'pending') {
-        if (mounted) {
-          Future.delayed(const Duration(seconds: 3), () {
-            _verifyPaymentStatus();
-          });
-        }
-      } else {
+      } catch (e) {
+        Logger.log('[ERROR] Vérification statut: $e');
+      }
+    });
+
+    // Timeout global après 60s
+    _pollingTimer = Timer(const Duration(seconds: 60), () {
+      if (!completer.isCompleted) {
+        completer.complete();
+        _pollingTimer?.cancel();
         if (mounted) {
           Navigator.of(context).pop();
           setState(() => _isProcessing = false);
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Paiement ${status == 'canceled' ? 'annulé' : 'échoué'}'),
+            const SnackBar(
+              content: Text('Délai de vérification dépassé. Veuillez contacter le support.'),
               backgroundColor: AppColors.error,
             ),
           );
         }
       }
-    } catch (e) {
-      Logger.log('[ERROR] Erreur vérification: $e');
-      if (mounted) {
-        Navigator.of(context).pop();
-        setState(() => _isProcessing = false);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Erreur lors de la vérification: $e'),
-            backgroundColor: AppColors.error,
-          ),
-        );
-      }
-    }
+    });
   }
 
   void _showSuccessDialog() {

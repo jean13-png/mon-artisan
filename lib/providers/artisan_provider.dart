@@ -544,22 +544,20 @@ class ArtisanProvider extends ChangeNotifier {
 
       Logger.log('[SUCCESS] Profil artisan mis à jour avec succès');
 
-      // Notifier l'admin qu'un nouveau profil est à valider
-      // Note: userId 'admin' n'est pas un UID Firebase valide. Cette notification
-      // peut être bloquée par les règles Firestore si aucun admin n'est ciblé précisément.
-      // L'admin voit les profils en attente dans son dashboard via verificationStatus.
+      // Ajouter dans la queue admin pour validation
       try {
-        await FirebaseService.firestore.collection('notifications').add({
-          'userId': 'admin',
-          'titre': 'Nouveau profil à valider',
-          'message': 'Un artisan a soumis son profil pour validation.',
-          'type': 'nouveau_profil',
+        await FirebaseService.firestore.collection('admin_queue').add({
+          'type': 'new_artisan_profile',
           'artisanId': artisanDoc.id,
-          'isRead': false,
+          'artisanUserId': artisanDoc['userId'],
+          'artisanNom': artisanDoc['nom'],
+          'artisanPrenom': artisanDoc['prenom'],
+          'metier': artisanDoc['metier'],
           'createdAt': Timestamp.now(),
+          'statut': 'en_attente',
         });
       } catch (e) {
-        Logger.log('[WARNING] Notification admin ignorée: $e');
+        Logger.log('[WARNING] Queue admin ignorée: $e');
       }
       
       // Recharger le profil

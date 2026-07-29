@@ -8,6 +8,8 @@ import '../../core/routes/app_router.dart';
 import '../../providers/artisan_provider.dart';
 import '../../providers/commande_provider.dart';
 import '../../widgets/loading_widget.dart';
+import '../../core/utils/logger.dart';
+import '../../models/commande_model.dart';
 
 class RevenusScreen extends StatefulWidget {
   const RevenusScreen({super.key});
@@ -19,6 +21,68 @@ class RevenusScreen extends StatefulWidget {
 class _RevenusScreenState extends State<RevenusScreen> {
   String _selectedPeriod = 'mois';
   final _firestore = FirebaseFirestore.instance;
+  Map<String, dynamic>? _stats;
+  bool _isLoadingStats = false;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final artisanProvider = Provider.of<ArtisanProvider>(context, listen: false);
+    final artisan = artisanProvider.currentArtisan;
+    if (artisan != null) {
+      _loadStats(artisan.userId);
+    }
+  }
+
+  Future<void> _loadStats(String artisanUserId) async {
+    setState(() => _isLoadingStats = true);
+    try {
+      final now = DateTime.now();
+      DateTime startDate;
+
+      switch (_selectedPeriod) {
+        case 'mois':
+          startDate = DateTime(now.year, now.month, 1);
+          break;
+        case 'trimestre':
+          final currentQuarter = ((now.month - 1) ~/ 3) * 3 + 1;
+          startDate = DateTime(now.year, currentQuarter, 1);
+          break;
+        case 'annee':
+          startDate = DateTime(now.year, 1, 1);
+          break;
+        default:
+          startDate = DateTime(now.year, now.month, 1);
+      }
+
+      final snapshot = await _firestore
+          .collection('commandes')
+          .where('artisanId', isEqualTo: artisanUserId)
+          .where('statut', whereIn: ['terminee', 'validee'])
+          .get();
+
+      final commandes = snapshot.docs
+          .map((doc) => CommandeModel.fromFirestore(doc))
+          .where((c) {
+            final date = c.completedAt ?? c.createdAt;
+            return date.isAfter(startDate);
+          })
+          .toList();
+
+      final totalRevenus = commandes.fold<double>(0, (sum, c) => sum + c.montantArtisan);
+
+      setState(() {
+        _stats = {
+          'nombreCommandes': commandes.length,
+          'revenus': totalRevenus.toStringAsFixed(0),
+        };
+        _isLoadingStats = false;
+      });
+    } catch (e) {
+      Logger.error('Erreur chargement stats', e);
+      setState(() => _isLoadingStats = false);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -32,11 +96,16 @@ class _RevenusScreenState extends State<RevenusScreen> {
       );
     }
 
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!_isLoadingStats) {
+        _loadStats(artisan.userId);
+      }
+      commandeProvider.loadAllArtisanCommandes(artisan.userId);
+    });
+
     final commandesTerminees = commandeProvider.commandes
         .where((c) => c.statut == 'terminee' || c.statut == 'validee')
         .toList();
-
-    final stats = _calculateStats(commandesTerminees);
 
     return Scaffold(
       backgroundColor: AppColors.greyLight,
@@ -87,6 +156,16 @@ class _RevenusScreenState extends State<RevenusScreen> {
                             FutureBuilder<double>(
                               future: artisanProvider.getPendingValidationAmount(),
                               builder: (context, snapshot) {
+                                if (snapshot.hasError) {
+                                  return Text(
+                                    '-- FCFA',
+                                    style: AppTextStyles.h1.copyWith(
+                                      color: AppColors.white,
+                                      fontSize: 28,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  );
+                                }
                                 final pending = snapshot.data ?? 0;
                                 return Text(
                                   '${pending.toStringAsFixed(0)} FCFA',
@@ -214,6 +293,8 @@ class _RevenusScreenState extends State<RevenusScreen> {
                         onChanged: (value) {
                           if (value != null) {
                             setState(() => _selectedPeriod = value);
+                            final artisanProvider = Provider.of<ArtisanProvider>(context, listen: false);
+                            _loadStats(artisanProvider.currentArtisan!.userId);
                           }
                         },
                       ),
@@ -225,7 +306,7 @@ class _RevenusScreenState extends State<RevenusScreen> {
                       Expanded(
                         child: _buildStatCard(
                           'Commandes',
-                          '${stats['nombreCommandes']}',
+                          '${_stats?['nombreCommandes'] ?? 0}',
                           Icons.assignment,
                           AppColors.primaryBlue,
                         ),
@@ -234,7 +315,7 @@ class _RevenusScreenState extends State<RevenusScreen> {
                       Expanded(
                         child: _buildStatCard(
                           'Revenus',
-                          '${stats['revenus']} FCFA',
+                          '${_stats?['revenus'] ?? '0'} FCFA',
                           Icons.monetization_on,
                           AppColors.success,
                         ),
@@ -394,42 +475,6 @@ class _RevenusScreenState extends State<RevenusScreen> {
     );
   }
 
-  Map<String, dynamic> _calculateStats(List<dynamic> commandes) {
-    final now = DateTime.now();
-    DateTime startDate;
-
-    switch (_selectedPeriod) {
-      case 'mois':
-        startDate = DateTime(now.year, now.month, 1);
-        break;
-      case 'trimestre':
-        final currentQuarter = ((now.month - 1) ~/ 3) * 3 + 1;
-        startDate = DateTime(now.year, currentQuarter, 1);
-        break;
-      case 'annee':
-        startDate = DateTime(now.year, 1, 1);
-        break;
-      default:
-        startDate = DateTime(now.year, now.month, 1);
-    }
-
-    final filteredCommandes = commandes.where((c) {
-      final date = c.completedAt ?? c.createdAt;
-      return date.isAfter(startDate);
-    }).toList();
-
-    double totalRevenus = 0;
-
-    for (var commande in filteredCommandes) {
-      totalRevenus += commande.montantArtisan;
-    }
-
-    return {
-      'nombreCommandes': filteredCommandes.length,
-      'revenus': totalRevenus.toStringAsFixed(0),
-    };
-  }
-
   String _formatDate(DateTime date) {
     return '${date.day}/${date.month}/${date.year}';
   }
@@ -442,65 +487,87 @@ class _RevenusScreenState extends State<RevenusScreen> {
       builder: (context) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         title: Text('Demander un retrait', style: AppTextStyles.h3),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Disponible: ${montantDisponible.toStringAsFixed(0)} FCFA',
-              style: AppTextStyles.bodyMedium.copyWith(color: AppColors.greyDark),
-            ),
-            const SizedBox(height: 16),
-            TextField(
-              controller: montantController,
-              keyboardType: TextInputType.number,
-              decoration: InputDecoration(
-                labelText: 'Montant à retirer',
-                hintText: 'Min. 5 000 FCFA',
-                suffixText: 'FCFA',
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(8),
-                ),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Disponible: ${montantDisponible.toStringAsFixed(0)} FCFA',
+            style: AppTextStyles.bodyMedium.copyWith(color: AppColors.greyDark),
+          ),
+          const SizedBox(height: 16),
+          TextField(
+            controller: montantController,
+            keyboardType: TextInputType.number,
+            decoration: InputDecoration(
+              labelText: 'Montant à retirer',
+              hintText: 'Min. 5 000 FCFA',
+              suffixText: 'FCFA',
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8),
               ),
             ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text('Annuler', style: AppTextStyles.bodyMedium),
           ),
-          ElevatedButton(
-            onPressed: () async {
-              final montant = double.tryParse(montantController.text);
-              if (montant == null || montant < 5000) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Montant minimum: 5 000 FCFA'),
-                    backgroundColor: AppColors.error,
-                  ),
-                );
+        ],
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: Text('Annuler', style: AppTextStyles.bodyMedium),
+        ),
+        ElevatedButton(
+          onPressed: () async {
+            final montant = double.tryParse(montantController.text);
+            if (montant == null || montant < 5000) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('Montant minimum: 5 000 FCFA'),
+                  backgroundColor: AppColors.error,
+                ),
+              );
+              return;
+            }
+            if (montant > montantDisponible) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('Montant supérieur au solde disponible'),
+                  backgroundColor: AppColors.error,
+                ),
+              );
+              return;
+            }
+
+            Navigator.pop(context);
+
+            try {
+              final artisanProvider =
+                  Provider.of<ArtisanProvider>(context, listen: false);
+              final artisan = artisanProvider.currentArtisan!;
+
+              final existing = await _firestore
+                  .collection('retraits')
+                  .where('artisanId', isEqualTo: artisan.userId)
+                  .where('statut', isEqualTo: 'en_attente')
+                  .limit(1)
+                  .get();
+
+              if (existing.docs.isNotEmpty) {
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Vous avez déjà une demande de retrait en cours'),
+                      backgroundColor: AppColors.warning,
+                    ),
+                  );
+                }
                 return;
               }
-              if (montant > montantDisponible) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Montant supérieur au solde disponible'),
-                    backgroundColor: AppColors.error,
-                  ),
-                );
-                return;
-              }
 
-              Navigator.pop(context);
+              await _firestore.runTransaction((transaction) async {
+                final retraitRef = _firestore.collection('retraits').doc();
+                final artisanRef = _firestore.collection('artisans').doc(artisan.id);
 
-              try {
-                final artisanProvider =
-                    Provider.of<ArtisanProvider>(context, listen: false);
-                final artisan = artisanProvider.currentArtisan!;
-
-                // Enregistrer la demande de retrait dans Firestore
-                await _firestore.collection('retraits').add({
+                transaction.set(retraitRef, {
                   'artisanId': artisan.userId,
                   'artisanDocId': artisan.id,
                   'montant': montant,
@@ -508,39 +575,34 @@ class _RevenusScreenState extends State<RevenusScreen> {
                   'createdAt': Timestamp.now(),
                 });
 
-                // Déduire du solde disponible
-                await _firestore
-                    .collection('artisans')
-                    .doc(artisan.id)
-                    .update({
-                  'revenusDisponibles':
-                      FieldValue.increment(-montant),
+                transaction.update(artisanRef, {
+                  'revenusDisponibles': FieldValue.increment(-montant),
                   'updatedAt': Timestamp.now(),
                 });
+              });
 
-                // Recharger le profil
-                await artisanProvider.loadArtisanProfile(artisan.userId);
+              await artisanProvider.loadArtisanProfile(artisan.userId);
 
-                if (context.mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text(
-                          'Demande de retrait de ${montant.toStringAsFixed(0)} FCFA envoyée'),
-                      backgroundColor: AppColors.success,
-                    ),
-                  );
-                }
-              } catch (e) {
-                if (context.mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text('Erreur: $e'),
-                      backgroundColor: AppColors.error,
-                    ),
-                  );
-                }
+              if (context.mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(
+                        'Demande de retrait de ${montant.toStringAsFixed(0)} FCFA envoyée'),
+                    backgroundColor: AppColors.success,
+                  ),
+                );
               }
-            },
+            } catch (e) {
+              if (context.mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('Erreur: $e'),
+                    backgroundColor: AppColors.error,
+                  ),
+                );
+              }
+            }
+          },
             style: ElevatedButton.styleFrom(backgroundColor: AppColors.success),
             child: Text('Confirmer', style: AppTextStyles.button),
           ),

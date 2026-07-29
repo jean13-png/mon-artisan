@@ -270,11 +270,7 @@ class _CommandeDetailScreenState extends State<CommandeDetailScreen> {
                 const SizedBox(height: 16),
 
                 // Suivi dynamique de commande
-                GestureDetector(
-                  onTap: () {},
-                  behavior: HitTestBehavior.opaque,
-                  child: _buildTrackingCard(commande),
-                ),
+                _buildTrackingCard(commande),
 
                 const SizedBox(height: 16),
 
@@ -1216,7 +1212,46 @@ class _CommandeDetailScreenState extends State<CommandeDetailScreen> {
     final steps = _trackingSteps(commande);
     final currentIndex = _currentTrackingStepIndex(commande);
 
-    return Container(
+    return InkWell(
+      onTap: () {
+        showDialog(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: Text('Suivi détaillé', style: AppTextStyles.h3),
+            content: SizedBox(
+              width: double.maxFinite,
+              child: ListView.builder(
+                shrinkWrap: true,
+                itemCount: steps.length,
+                itemBuilder: (context, index) {
+                  final step = steps[index];
+                  final isActive = index <= currentIndex;
+                  return ListTile(
+                    leading: Icon(
+                      isActive ? Icons.check_circle : Icons.radio_button_unchecked,
+                      color: isActive ? AppColors.success : AppColors.greyMedium,
+                    ),
+                    title: Text(
+                      step.label,
+                      style: AppTextStyles.bodyMedium.copyWith(
+                        fontWeight: isActive ? FontWeight.w700 : FontWeight.normal,
+                      ),
+                    ),
+                    subtitle: step.date != null ? Text(step.date!) : null,
+                  );
+                },
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: Text('Fermer', style: AppTextStyles.bodyMedium),
+              ),
+            ],
+          ),
+        );
+      },
+      child: Container(
       width: double.infinity,
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
@@ -1297,6 +1332,7 @@ class _CommandeDetailScreenState extends State<CommandeDetailScreen> {
             );
           }),
         ],
+      ),
       ),
     );
   }

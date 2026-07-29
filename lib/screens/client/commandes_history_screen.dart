@@ -30,12 +30,11 @@ class _CommandesHistoryScreenState extends State<CommandesHistoryScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final authProvider = Provider.of<AuthProvider>(context, listen: false);
       if (authProvider.userModel != null) {
+        final commandeProvider = Provider.of<CommandeProvider>(context, listen: false);
         if (widget.isArtisan) {
-          Provider.of<CommandeProvider>(context, listen: false)
-              .loadArtisanCommandes(authProvider.userModel!.id);
+          commandeProvider.loadAllArtisanCommandes(authProvider.userModel!.id);
         } else {
-          Provider.of<CommandeProvider>(context, listen: false)
-              .loadClientCommandes(authProvider.userModel!.id);
+          commandeProvider.loadAllClientCommandes(authProvider.userModel!.id);
         }
       }
     });
@@ -81,7 +80,7 @@ class _CommandesHistoryScreenState extends State<CommandesHistoryScreen> {
               case 'Terminées':
                 return c.statut == 'terminee' || c.statut == 'validee';
               case 'Annulées':
-                return c.statut == 'annulee' || c.statut == 'devis_refuse' || c.statut == 'refusee';
+                return c.statut == 'annulee' || c.statut == 'refusee';
               default:
                 return true;
             }

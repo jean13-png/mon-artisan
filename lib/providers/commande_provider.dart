@@ -141,6 +141,60 @@ class CommandeProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  // Récupérer toutes les commandes d'un client (pour historique)
+  Future<void> loadAllClientCommandes(String clientId) async {
+    _isLoading = true;
+    _errorMessage = null;
+    _commandes.clear();
+    _hasMore = false;
+    notifyListeners();
+
+    try {
+      final querySnapshot = await FirebaseService.firestore
+          .collection('commandes')
+          .where('clientId', isEqualTo: clientId)
+          .orderBy('createdAt', descending: true)
+          .get();
+
+      _commandes = querySnapshot.docs
+          .map((doc) => CommandeModel.fromFirestore(doc))
+          .toList();
+    } catch (e) {
+      _errorMessage = 'Erreur lors du chargement des commandes';
+      Logger.error('Erreur loadAllClientCommandes', e);
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  // Récupérer toutes les commandes d'un artisan (pour historique)
+  Future<void> loadAllArtisanCommandes(String artisanId) async {
+    _isLoading = true;
+    _errorMessage = null;
+    _commandes.clear();
+    _hasMore = false;
+    notifyListeners();
+
+    try {
+      final querySnapshot = await FirebaseService.firestore
+          .collection('commandes')
+          .where('artisanId', isEqualTo: artisanId)
+          .orderBy('createdAt', descending: true)
+          .get();
+
+      _commandes = querySnapshot.docs
+          .map((doc) => CommandeModel.fromFirestore(doc))
+          .toList();
+    } catch (e) {
+      _errorMessage = 'Erreur lors du chargement des commandes';
+      Logger.error('Erreur loadAllArtisanCommandes', e);
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
   // Récupérer les commandes d'un client (paginé)
   Future<void> loadClientCommandes(String clientId,
       {bool forceRefresh = true}) async {

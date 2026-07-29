@@ -27,7 +27,7 @@ class FedaPayService {
         'v1': {
           'id': 'sim_${DateTime.now().millisecondsSinceEpoch}',
           'url': 'https://checkout.fedapay.com/simulation',
-          'status': 'pending',
+          'status': 'approved',
           'amount': amount,
           'description': description,
         }
