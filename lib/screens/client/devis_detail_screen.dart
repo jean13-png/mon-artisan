@@ -269,25 +269,66 @@ class _DevisDetailScreenState extends State<DevisDetailScreen> {
   }
 
   Future<void> _annulerCommande() async {
+    final motifs = [
+      'Le devis est trop élevé',
+      'Je ne suis plus disponible',
+      'L\'artisan ne répond pas',
+      'J\'ai trouvé un autre artisan',
+      'Le délai est trop long',
+      'Autre raison',
+    ];
+    String? motifSelectionne;
+    final commentaireController = TextEditingController();
+
     final confirmed = await showDialog<bool>(
       context: context,
-      builder: (context) => AlertDialog(
-        title: Text('Annuler la commande', style: AppTextStyles.h3),
-        content: Text(
-          'Êtes-vous sûr de vouloir annuler cette commande ?',
-          style: AppTextStyles.bodyMedium,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          title: Text('Pourquoi annulez-vous cette commande ?', style: AppTextStyles.h3),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Votre avis nous aide à améliorer la plateforme.',
+                style: AppTextStyles.bodyMedium,
+              ),
+              const SizedBox(height: 16),
+              ...motifs.map((motif) {
+                return RadioListTile<String>(
+                  title: Text(motif, style: AppTextStyles.bodyMedium),
+                  value: motif,
+                  groupValue: motifSelectionne,
+                  onChanged: (value) {
+                    setDialogState(() {
+                      motifSelectionne = value;
+                    });
+                  },
+                );
+              }),
+              const SizedBox(height: 12),
+              CustomTextField(
+                label: 'Commentaire (optionnel)',
+                hint: 'Donnez plus de détails si vous le souhaitez...',
+                controller: commentaireController,
+                maxLines: 3,
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: Text('Non', style: AppTextStyles.bodyMedium),
+            ),
+            ElevatedButton(
+              onPressed: motifSelectionne == null
+                  ? null
+                  : () => Navigator.pop(context, true),
+              style: ElevatedButton.styleFrom(backgroundColor: AppColors.error),
+              child: Text('Oui, annuler', style: AppTextStyles.button),
+            ),
+          ],
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: Text('Non', style: AppTextStyles.bodyMedium),
-          ),
-          ElevatedButton(
-            onPressed: () => Navigator.pop(context, true),
-            style: ElevatedButton.styleFrom(backgroundColor: AppColors.error),
-            child: Text('Oui, annuler', style: AppTextStyles.button),
-          ),
-        ],
       ),
     );
 
@@ -298,12 +339,16 @@ class _DevisDetailScreenState extends State<DevisDetailScreen> {
 
     try {
       final commandeProvider = Provider.of<CommandeProvider>(context, listen: false);
-      final success = await commandeProvider.annulerCommande(widget.commande.id);
+      final success = await commandeProvider.annulerCommandeAvecFeedback(
+        widget.commande.id,
+        motif: motifSelectionne!,
+        commentaire: commentaireController.text.trim(),
+      );
 
       if (success && mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Commande annulée avec succès'),
+            content: Text('Commande annulée. Merci pour votre avis !'),
             backgroundColor: AppColors.success,
           ),
         );

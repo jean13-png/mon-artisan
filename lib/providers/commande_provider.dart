@@ -1036,12 +1036,16 @@ class CommandeProvider extends ChangeNotifier {
         'statut': 'annulee',
         'updatedAt': Timestamp.now(),
       });
+
+      if (commande.artisanId != null && commande.artisanId!.isNotEmpty) {
+        await FirestoreService.setArtisanAvailable(commande.artisanId!);
+      }
       
       await FirestoreService.createNotification({
         'userId': commande.artisanId,
         'type': 'commande_annulee',
         'titre': 'Commande annulée',
-        'message': 'Le client a annulé la commande',
+        'message': 'Le client a annulé la commande #${commandeId.substring(0, 8)}',
         'data': {
           'commandeId': commandeId,
         },
@@ -1050,6 +1054,62 @@ class CommandeProvider extends ChangeNotifier {
       return true;
     } catch (e) {
       Logger.log('[ERROR] Erreur annulation: $e');
+      _errorMessage = 'Erreur lors de l\'annulation de la commande';
+      notifyListeners();
+      return false;
+    } finally {
+      _unlockOperation(operationKey);
+    }
+  }
+
+  Future<bool> annulerCommandeAvecFeedback(String commandeId, {required String motif, String? commentaire}) async {
+    final operationKey = 'annuler_feedback_$commandeId';
+    if (_isOperationInProgress(operationKey)) return false;
+    _lockOperation(operationKey);
+    
+    try {
+      final commandeDoc = await FirebaseService.firestore
+          .collection('commandes')
+          .doc(commandeId)
+          .get();
+      
+      if (!commandeDoc.exists) {
+        _errorMessage = 'Commande introuvable';
+        notifyListeners();
+        return false;
+      }
+      
+      final commande = CommandeModel.fromFirestore(commandeDoc);
+
+      // Sauvegarder le feedback client dans une collection dédiée
+      await FirebaseService.firestore.collection('annulation_feedbacks').add({
+        'commandeId': commandeId,
+        'clientId': commande.clientId,
+        'artisanId': commande.artisanId,
+        'motif': motif,
+        'commentaire': commentaire ?? '',
+        'createdAt': Timestamp.now(),
+      });
+      
+      // Annuler la commande et libérer l'artisan
+      final success = await annulerCommande(commandeId);
+      
+      // Notification admin
+      await FirestoreService.createNotification({
+        'userId': 'admin',
+        'type': 'annulation_feedback',
+        'titre': 'Nouvelle annulation avec avis',
+        'message': 'Commande #${commandeId.substring(0, 8)} annulée. Motif: $motif',
+        'data': {
+          'commandeId': commandeId,
+          'motif': motif,
+          'commentaire': commentaire ?? '',
+        },
+      });
+      
+      return success;
+    } catch (e) {
+      Logger.log('[ERROR] Erreur annulation avec feedback: $e');
       _errorMessage = 'Erreur lors de l\'annulation de la commande';
       notifyListeners();
       return false;

@@ -26,6 +26,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   int _signalementsEnAttente = 0;
   int _agentsEnAttente = 0;
   int _retraitsEnAttente = 0;
+  int _feedbacksAnnulation = 0;
   double _revenusTotal = 0.0;
   bool _isLoading = true;
 
@@ -114,6 +115,13 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
           .count()
           .get();
       _retraitsEnAttente = retraitsCount.count ?? 0;
+
+      // Compter les feedbacks d'annulation
+      final feedbacksCount = await FirebaseService.firestore
+          .collection('annulation_feedbacks')
+          .count()
+          .get();
+      _feedbacksAnnulation = feedbacksCount.count ?? 0;
 
       setState(() => _isLoading = false);
     } catch (e) {
@@ -263,6 +271,13 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                             Icons.receipt_long_rounded,
                             const Color(0xFFEF4444), // Rouge moderne
                             'Activité totale',
+                          ),
+                          _buildStatCard(
+                            'Avis annulation',
+                            _feedbacksAnnulation.toString(),
+                            Icons.cancel_rounded,
+                            const Color(0xFF8B5CF6), // Violet moderne
+                            'Feedbacks clients',
                           ),
                         ],
                       ),
@@ -507,6 +522,13 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
             );
           },
           badge: _retraitsEnAttente > 0 ? _retraitsEnAttente.toString() : null,
+        ),
+        _buildActionCard(
+          'Avis annulation',
+          Icons.cancel_rounded,
+          const Color(0xFFEC4899),
+          () => context.go(AppRouter.adminAnnulationFeedbacks),
+          badge: _feedbacksAnnulation > 0 ? _feedbacksAnnulation.toString() : null,
         ),
       ],
     );
