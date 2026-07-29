@@ -9,16 +9,36 @@ class AdminAnnulationFeedbacksScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: const Color(0xFFF8FAFC),
-      appBar: AppBar(
-        backgroundColor: AppColors.primaryBlue,
-        elevation: 0,
-        title: Text(
-          "Avis d'annulation",
-          style: AppTextStyles.h3.copyWith(color: AppColors.white),
+    return PopScope(
+      canPop: true,
+      onPopInvokedWithResult: (didPop, result) {
+        if (didPop) {
+          return;
+        }
+        if (context.mounted) {
+          Navigator.pop(context);
+        }
+      },
+      child: Scaffold(
+        backgroundColor: const Color(0xFFF8FAFC),
+        appBar: AppBar(
+          backgroundColor: AppColors.primaryBlue,
+          elevation: 0,
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back, color: AppColors.white),
+            onPressed: () {
+              if (Navigator.canPop(context)) {
+                Navigator.pop(context);
+              } else {
+                context.go(AppRouter.adminDashboard);
+              }
+            },
+          ),
+          title: Text(
+            "Avis d'annulation",
+            style: AppTextStyles.h3.copyWith(color: AppColors.white),
+          ),
         ),
-      ),
       body: StreamBuilder<QuerySnapshot>(
         stream: FirebaseService.firestore
             .collection('annulation_feedbacks')

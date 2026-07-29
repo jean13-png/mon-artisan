@@ -29,6 +29,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   int _feedbacksAnnulation = 0;
   double _revenusTotal = 0.0;
   bool _isLoading = true;
+  DateTime? _lastLoadTime;
 
   @override
   void initState() {
@@ -36,7 +37,11 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     _loadStatistics();
   }
 
-  Future<void> _loadStatistics() async {
+  Future<void> _loadStatistics({bool forceRefresh = false}) async {
+    if (!forceRefresh && _lastLoadTime != null && DateTime.now().difference(_lastLoadTime!) < const Duration(seconds: 2)) {
+      return;
+    }
+
     setState(() => _isLoading = true);
 
     try {
@@ -123,6 +128,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
           .get();
       _feedbacksAnnulation = feedbacksCount.count ?? 0;
 
+      _lastLoadTime = DateTime.now();
       setState(() => _isLoading = false);
     } catch (e) {
       setState(() => _isLoading = false);
