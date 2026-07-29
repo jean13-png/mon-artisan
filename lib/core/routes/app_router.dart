@@ -22,6 +22,9 @@ import '../../screens/admin/admin_dashboard_screen.dart';
 import '../../screens/admin/artisans_validation_screen.dart';
 import '../../screens/admin/agents_management_screen.dart';
 import '../../screens/admin/users_management_screen.dart';
+import '../../screens/admin/admin_reports_screen.dart';
+import '../../screens/admin/admin_transactions_screen.dart';
+import '../../screens/admin/admin_withdrawals_screen.dart';
 import '../../screens/admin/admin_annulation_feedbacks_screen.dart';
 import '../../screens/artisan/commande_detail_screen.dart';
 import '../../screens/artisan/revenus_screen.dart';
@@ -82,6 +85,9 @@ class AppRouter {
   static const String adminValidateArtisans = '/admin/validate-artisans';
   static const String adminManageAgents = '/admin/manage-agents';
   static const String adminManageUsers = '/admin/manage-users';
+  static const String adminReports = '/admin/reports';
+  static const String adminTransactions = '/admin/transactions';
+  static const String adminWithdrawals = '/admin/withdrawals';
   static const String adminAnnulationFeedbacks = '/admin/annulation-feedbacks';
 
   // ── Routes protégées : communes ────────────────────────────────────────────
@@ -96,7 +102,7 @@ class AppRouter {
     splash, roleSelection, login, register, contratEngagement, artisanPayment,
   };
   static const _adminRoutes = {
-    adminDashboard, adminValidateArtisans, adminManageAgents, adminManageUsers, adminAnnulationFeedbacks,
+    adminDashboard, adminValidateArtisans, adminManageAgents, adminManageUsers, adminReports, adminTransactions, adminWithdrawals, adminAnnulationFeedbacks,
   };
   static const _clientRoutes = {
     homeClient, categoryMetiers, allCategories, searchArtisan, artisanProfile, selectCommandeType,
@@ -168,6 +174,18 @@ class AppRouter {
       GoRoute(
         path: adminManageUsers,
         builder: (context, state) => const UsersManagementScreen(),
+      ),
+      GoRoute(
+        path: adminReports,
+        builder: (context, state) => const AdminReportsScreen(),
+      ),
+      GoRoute(
+        path: adminTransactions,
+        builder: (context, state) => const AdminTransactionsScreen(),
+      ),
+      GoRoute(
+        path: adminWithdrawals,
+        builder: (context, state) => const AdminWithdrawalsScreen(),
       ),
       GoRoute(
         path: adminAnnulationFeedbacks,

@@ -7,9 +7,6 @@ import '../../core/routes/app_router.dart';
 import '../../core/services/firebase_service.dart';
 import '../../providers/auth_provider.dart';
 import '../../widgets/double_tap_to_exit.dart';
-import 'admin_reports_screen.dart';
-import 'admin_transactions_screen.dart';
-import 'admin_withdrawals_screen.dart';
 
 class AdminDashboardScreen extends StatefulWidget {
   const AdminDashboardScreen({super.key});
@@ -477,32 +474,27 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
           'Artisans',
           Icons.how_to_reg_rounded,
           const Color(0xFF10B981),
-          () => context.go('/admin/validate-artisans'),
+          () => context.push('/admin/validate-artisans'),
           badge: _artisansEnAttente > 0 ? _artisansEnAttente.toString() : null,
         ),
         _buildActionCard(
           'Agents',
           Icons.badge_rounded,
           AppColors.primaryBlue,
-          () => context.go('/admin/manage-agents'),
+          () => context.push('/admin/manage-agents'),
           badge: _agentsEnAttente > 0 ? _agentsEnAttente.toString() : null,
         ),
         _buildActionCard(
           'Utilisateurs',
           Icons.manage_accounts_rounded,
           const Color(0xFF6366F1),
-          () => context.go('/admin/manage-users'),
+          () => context.push('/admin/manage-users'),
         ),
         _buildActionCard(
           'Signalements',
           Icons.gavel_rounded,
           const Color(0xFFF59E0B),
-          () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(builder: (_) => const AdminReportsScreen()),
-            );
-          },
+          () => context.push('/admin/reports'),
           badge:
               _signalementsEnAttente > 0 ? _signalementsEnAttente.toString() : null,
         ),
@@ -510,30 +502,20 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
           'Paiements',
           Icons.account_balance_rounded,
           const Color(0xFFEF4444),
-          () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(builder: (_) => const AdminTransactionsScreen()),
-            );
-          },
+          () => context.push('/admin/transactions'),
         ),
         _buildActionCard(
           'Retraits',
           Icons.payments_rounded,
           const Color(0xFF8B5CF6),
-          () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(builder: (_) => const AdminWithdrawalsScreen()),
-            );
-          },
+          () => context.push('/admin/withdrawals'),
           badge: _retraitsEnAttente > 0 ? _retraitsEnAttente.toString() : null,
         ),
         _buildActionCard(
           'Avis annulation',
           Icons.cancel_rounded,
           const Color(0xFFEC4899),
-          () => context.go(AppRouter.adminAnnulationFeedbacks),
+          () => context.push(AppRouter.adminAnnulationFeedbacks),
           badge: _feedbacksAnnulation > 0 ? _feedbacksAnnulation.toString() : null,
         ),
       ],
