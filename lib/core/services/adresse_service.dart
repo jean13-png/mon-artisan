@@ -57,8 +57,8 @@ class AdresseService {
 
     // 3. Obtenir la position GPS
     final position = await Geolocator.getCurrentPosition(
-      desiredAccuracy: LocationAccuracy.high,
-      timeLimit: const Duration(seconds: 15),
+      desiredAccuracy: LocationAccuracy.medium,
+      timeLimit: const Duration(seconds: 30),
     );
 
     // 4. Convertir en adresse lisible
