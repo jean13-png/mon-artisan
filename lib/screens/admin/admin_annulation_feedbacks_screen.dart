@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:go_router/go_router.dart';
 import '../../core/constants/colors.dart';
 import '../../core/constants/text_styles.dart';
+import '../../core/routes/app_router.dart';
 import '../../core/services/firebase_service.dart';
 
 class AdminAnnulationFeedbacksScreen extends StatelessWidget {
@@ -12,10 +14,7 @@ class AdminAnnulationFeedbacksScreen extends StatelessWidget {
     return PopScope(
       canPop: true,
       onPopInvokedWithResult: (didPop, result) {
-        if (didPop) {
-          return;
-        }
-        if (context.mounted) {
+        if (!didPop && context.mounted) {
           Navigator.pop(context);
         }
       },
@@ -152,6 +151,8 @@ class AdminAnnulationFeedbacksScreen extends StatelessWidget {
           );
         },
       ),
-    );
-  }
+    ),
+  );
 }
+}
+
