@@ -518,6 +518,12 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
           () => context.push(AppRouter.adminAnnulationFeedbacks),
           badge: _feedbacksAnnulation > 0 ? _feedbacksAnnulation.toString() : null,
         ),
+        _buildActionCard(
+          'Support artisans',
+          Icons.support_agent_rounded,
+          const Color(0xFF6366F1),
+          () => context.push(AppRouter.adminSupport),
+        ),
       ],
     );
   }

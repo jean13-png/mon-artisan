@@ -26,6 +26,8 @@ import '../../screens/admin/admin_reports_screen.dart';
 import '../../screens/admin/admin_transactions_screen.dart';
 import '../../screens/admin/admin_withdrawals_screen.dart';
 import '../../screens/admin/admin_annulation_feedbacks_screen.dart';
+import '../../screens/admin/admin_support_screen.dart';
+import '../../screens/artisan/support_artisan_screen.dart';
 import '../../screens/artisan/commande_detail_screen.dart';
 import '../../screens/artisan/revenus_screen.dart';
 import '../../screens/artisan/complete_profile_screen.dart';
@@ -79,6 +81,7 @@ class AppRouter {
   static const String envoyerDevis = '/envoyer-devis';
   static const String revenus = '/revenus';
   static const String completeProfile = '/complete-profile';
+  static const String supportArtisan = '/support-artisan';
 
   // ── Routes protégées : admin ───────────────────────────────────────────────
   static const String adminDashboard = '/admin-dashboard';
@@ -89,6 +92,7 @@ class AppRouter {
   static const String adminTransactions = '/admin/transactions';
   static const String adminWithdrawals = '/admin/withdrawals';
   static const String adminAnnulationFeedbacks = '/admin/annulation-feedbacks';
+  static const String adminSupport = '/admin/support';
 
   // ── Routes protégées : communes ────────────────────────────────────────────
   static const String notifications = '/notifications';
@@ -102,7 +106,7 @@ class AppRouter {
     splash, roleSelection, login, register, contratEngagement, artisanPayment,
   };
   static const _adminRoutes = {
-    adminDashboard, adminValidateArtisans, adminManageAgents, adminManageUsers, adminReports, adminTransactions, adminWithdrawals, adminAnnulationFeedbacks,
+    adminDashboard, adminValidateArtisans, adminManageAgents, adminManageUsers, adminReports, adminTransactions, adminWithdrawals, adminAnnulationFeedbacks, adminSupport,
   };
   static const _clientRoutes = {
     homeClient, categoryMetiers, allCategories, searchArtisan, artisanProfile, selectCommandeType,
@@ -110,7 +114,7 @@ class AppRouter {
     becomeAgent, agentDashboard, conversationsList,
   };
   static const _artisanRoutes = {
-    homeArtisan, commandeDetail, envoyerDevis, revenus, completeProfile, conversationsList,
+    homeArtisan, commandeDetail, envoyerDevis, revenus, completeProfile, supportArtisan, conversationsList,
   };
 
   // ── Factory ───────────────────────────────────────────────────────────────
@@ -160,6 +164,10 @@ class AppRouter {
         builder: (context, state) => const HomeArtisanScreen(),
       ),
       GoRoute(
+        path: supportArtisan,
+        builder: (context, state) => const SupportArtisanScreen(),
+      ),
+      GoRoute(
         path: adminDashboard,
         builder: (context, state) => const AdminDashboardScreen(),
       ),
@@ -190,6 +198,10 @@ class AppRouter {
       GoRoute(
         path: adminAnnulationFeedbacks,
         builder: (context, state) => const AdminAnnulationFeedbacksScreen(),
+      ),
+      GoRoute(
+        path: adminSupport,
+        builder: (context, state) => const AdminSupportScreen(),
       ),
       GoRoute(
         path: categoryMetiers,

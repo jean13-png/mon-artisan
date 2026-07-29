@@ -1010,6 +1010,30 @@ class CommandeProvider extends ChangeNotifier {
   }
 
   // Annuler complètement la commande
+  Future<void> annulerToutesCommandesArtisan(String artisanId) async {
+    try {
+      final querySnapshot = await FirebaseService.firestore
+          .collection('commandes')
+          .where('artisanId', isEqualTo: artisanId)
+          .where('statut', whereIn: ['en_attente', 'diagnostic_demande', 'devis_envoye', 'devis_accepte', 'acceptee', 'en_cours'])
+          .get();
+
+      final batch = FirebaseService.firestore.batch();
+      for (final doc in querySnapshot.docs) {
+        batch.update(doc.reference, {
+          'statut': 'annulee',
+          'updatedAt': Timestamp.now(),
+        });
+      }
+      await batch.commit();
+
+      await FirestoreService.setArtisanAvailable(artisanId);
+    } catch (e) {
+      Logger.log('[ERROR] annulerToutesCommandesArtisan: $e');
+      rethrow;
+    }
+  }
+
   Future<bool> annulerCommande(String commandeId) async {
     final operationKey = 'annuler_$commandeId';
     if (_isOperationInProgress(operationKey)) return false;

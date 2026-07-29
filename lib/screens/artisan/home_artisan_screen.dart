@@ -357,6 +357,9 @@ class _HomeArtisanScreenState extends State<HomeArtisanScreen> {
               case 'profile':
                 context.push(AppRouter.editProfile);
                 break;
+              case 'support':
+                context.push(AppRouter.supportArtisan);
+                break;
               case 'revenus':
                 context.push(AppRouter.revenus);
                 break;
@@ -374,6 +377,7 @@ class _HomeArtisanScreenState extends State<HomeArtisanScreen> {
           },
           itemBuilder: (context) => [
             _menuItem('profile', Icons.person_outline, 'Mon profil', AppColors.primaryBlue),
+            _menuItem('support', Icons.support_agent_outlined, 'Contacter le support', AppColors.primaryBlue),
             _menuItem('revenus', Icons.account_balance_wallet_outlined, 'Mes revenus', AppColors.success),
             if (user.isClient)
               _menuItem('switch_client', Icons.swap_horiz, 'Mode Client', AppColors.primaryBlue),
