@@ -48,10 +48,9 @@ class _LoginScreenState extends State<LoginScreen> {
         }
         
         // Rediriger selon le rôle de l'utilisateur
-        final role = authProvider.userModel?.role;
-        if (role == 'client') {
+        if (user != null && user.hasRole('client')) {
           context.go(AppRouter.homeClient);
-        } else if (role == 'artisan') {
+        } else if (user != null && user.hasRole('artisan')) {
           context.go(AppRouter.homeArtisan);
         }
       } else if (mounted) {

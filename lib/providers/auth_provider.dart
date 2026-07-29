@@ -68,6 +68,12 @@ class AuthProvider extends ChangeNotifier {
 
     try {
       await FirebaseService.signInWithEmail(email, password);
+
+      final userId = _firebaseUser?.uid;
+      if (userId != null) {
+        await _loadUserData(userId);
+      }
+
       _isLoading = false;
       notifyListeners();
       return true;
