@@ -857,6 +857,26 @@ class _CommandeDetailScreenState extends State<CommandeDetailScreen> {
   Widget? _buildClientActions(BuildContext context, CommandeModel commande) {
     final statut = commande.statut;
 
+    // Annulation possible pour plusieurs statuts client
+    final canCancel = [
+      'en_attente',
+      'diagnostic_demande',
+      'devis_envoye',
+      'devis_accepte',
+      'acceptee',
+      'en_cours',
+    ].contains(statut);
+
+    if (canCancel) {
+      return _buildBottomBar(
+        child: CustomButton(
+          text: 'Annuler la commande',
+          onPressed: () => _annulerCommandeClient(commande),
+          backgroundColor: AppColors.error,
+        ),
+      );
+    }
+
     // Action : Accepter le devis final
     if (statut == 'devis_envoye') {
       return _buildBottomBar(
@@ -872,7 +892,7 @@ class _CommandeDetailScreenState extends State<CommandeDetailScreen> {
               ),
             ),
             const SizedBox(width: 12),
-            _buildChatButton(commande), // Passer la commande actuelle
+            _buildChatButton(commande),
             const SizedBox(width: 8),
             Expanded(
               flex: 2,
@@ -920,6 +940,42 @@ class _CommandeDetailScreenState extends State<CommandeDetailScreen> {
     }
 
     return _buildCommunicationBottomBar(commande);
+  }
+
+  Future<void> _annulerCommandeClient(CommandeModel commande) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Annuler la commande'),
+        content: const Text('Êtes-vous sûr de vouloir annuler cette commande ?'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Non')),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: ElevatedButton.styleFrom(backgroundColor: AppColors.error),
+            child: const Text('Oui, annuler'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true) {
+      final success = await Provider.of<CommandeProvider>(context, listen: false).annulerCommandeAvecFeedback(
+        commande.id,
+        motif: 'Annulé par le client',
+      );
+      if (success && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Commande annulée.'),
+            backgroundColor: AppColors.success,
+          ),
+        );
+        if (Navigator.canPop(context)) {
+          Navigator.pop(context);
+        }
+      }
+    }
   }
 
   Widget? _buildArtisanActions(BuildContext context, CommandeModel commande) {
