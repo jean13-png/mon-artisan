@@ -22,20 +22,48 @@ class _RevenusScreenState extends State<RevenusScreen> {
   String _selectedPeriod = 'mois';
   final _firestore = FirebaseFirestore.instance;
   Map<String, dynamic>? _stats;
-  bool _isLoadingStats = false;
+  bool _isDisposed = false;
+  DateTime? _lastStatsLoad;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _loadInitialData();
+    });
+  }
+
+  Future<void> _loadInitialData() async {
+    if (_isDisposed) return;
+    
+    final artisanProvider = Provider.of<ArtisanProvider>(context, listen: false);
+    final commandeProvider = Provider.of<CommandeProvider>(context, listen: false);
+    final artisan = artisanProvider.currentArtisan;
+    
+    if (artisan != null && !_isDisposed) {
+      final now = DateTime.now();
+      if (_lastStatsLoad == null || now.difference(_lastStatsLoad!) > const Duration(seconds: 2)) {
+        _lastStatsLoad = now;
+        await _loadStats(artisan.userId);
+      }
+      await commandeProvider.loadAllArtisanCommandes(artisan.userId);
+    }
+  }
+
+  @override
+  void dispose() {
+    _isDisposed = true;
+    super.dispose();
+  }
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    final artisanProvider = Provider.of<ArtisanProvider>(context, listen: false);
-    final artisan = artisanProvider.currentArtisan;
-    if (artisan != null) {
-      _loadStats(artisan.userId);
-    }
   }
 
   Future<void> _loadStats(String artisanUserId) async {
-    setState(() => _isLoadingStats = true);
+    if (_isDisposed) return;
+
     try {
       final now = DateTime.now();
       DateTime startDate;
@@ -69,18 +97,18 @@ class _RevenusScreenState extends State<RevenusScreen> {
           })
           .toList();
 
-      final totalRevenus = commandes.fold<double>(0, (sum, c) => sum + c.montantArtisan);
+      final totalRevenus = commandes.fold<double>(0, (total, c) => total + c.montantArtisan);
 
-      setState(() {
-        _stats = {
-          'nombreCommandes': commandes.length,
-          'revenus': totalRevenus.toStringAsFixed(0),
-        };
-        _isLoadingStats = false;
-      });
+      if (!_isDisposed) {
+        setState(() {
+          _stats = {
+            'nombreCommandes': commandes.length,
+            'revenus': totalRevenus.toStringAsFixed(0),
+          };
+        });
+      }
     } catch (e) {
       Logger.error('Erreur chargement stats', e);
-      setState(() => _isLoadingStats = false);
     }
   }
 
@@ -95,13 +123,6 @@ class _RevenusScreenState extends State<RevenusScreen> {
         body: LoadingWidget(message: 'Chargement...'),
       );
     }
-
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!_isLoadingStats) {
-        _loadStats(artisan.userId);
-      }
-      commandeProvider.loadAllArtisanCommandes(artisan.userId);
-    });
 
     final commandesTerminees = commandeProvider.commandes
         .where((c) => c.statut == 'terminee' || c.statut == 'validee')
@@ -294,7 +315,11 @@ class _RevenusScreenState extends State<RevenusScreen> {
                           if (value != null) {
                             setState(() => _selectedPeriod = value);
                             final artisanProvider = Provider.of<ArtisanProvider>(context, listen: false);
-                            _loadStats(artisanProvider.currentArtisan!.userId);
+                            final now = DateTime.now();
+                            if (_lastStatsLoad == null || now.difference(_lastStatsLoad!) > const Duration(seconds: 1)) {
+                              _lastStatsLoad = now;
+                              _loadStats(artisanProvider.currentArtisan!.userId);
+                            }
                           }
                         },
                       ),
