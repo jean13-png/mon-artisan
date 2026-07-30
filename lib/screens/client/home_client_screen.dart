@@ -632,7 +632,7 @@ class _HomeClientScreenState extends State<HomeClientScreen> {
                       ),
                       const SizedBox(height: 16),
                       ElevatedButton(
-                        onPressed: () => context.push(AppRouter.searchArtisan),
+                        onPressed: () => context.push(AppRouter.allCategories),
                         style: ElevatedButton.styleFrom(
                           backgroundColor: AppColors.primaryBlue,
                           shape: RoundedRectangleBorder(
