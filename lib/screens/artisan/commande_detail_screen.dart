@@ -1212,7 +1212,8 @@ class _CommandeDetailScreenState extends State<CommandeDetailScreen> {
     final steps = _trackingSteps(commande);
     final currentIndex = _currentTrackingStepIndex(commande);
 
-    return InkWell(
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
       onTap: () {
         showDialog(
           context: context,
@@ -1252,87 +1253,73 @@ class _CommandeDetailScreenState extends State<CommandeDetailScreen> {
         );
       },
       child: Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: AppColors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: AppColors.black.withOpacity(0.05),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text('Suivi de la commande', style: AppTextStyles.h3),
-          const SizedBox(height: 20),
-          ...List.generate(steps.length, (i) {
-            final step = steps[i];
-            final bool isActive = i <= currentIndex;
-            final bool isLast = i == steps.length - 1;
+        width: double.infinity,
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          color: AppColors.white,
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(
+              color: AppColors.black.withOpacity(0.05),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Suivi de la commande', style: AppTextStyles.h3),
+            const SizedBox(height: 20),
+            ...List.generate(steps.length, (i) {
+              final step = steps[i];
+              final bool isActive = i <= currentIndex;
+              final bool isLast = i == steps.length - 1;
 
-            return Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Column(
-                  children: [
-                    Container(
-                      width: 28,
-                      height: 28,
-                      decoration: BoxDecoration(
-                        color: isActive ? AppColors.success : AppColors.greyMedium,
-                        shape: BoxShape.circle,
-                      ),
-                      child: Icon(
-                        isActive ? Icons.check : Icons.circle,
-                        size: 14,
-                        color: AppColors.white,
-                      ),
-                    ),
-                    if (!isLast)
+              return Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Column(
+                    children: [
                       Container(
-                        width: 2,
-                        height: 40,
-                        color: isActive ? AppColors.success : AppColors.greyMedium,
-                      ),
-                  ],
-                ),
-                const SizedBox(width: 14),
-                Expanded(
-                  child: Padding(
-                    padding: EdgeInsets.only(top: 2, bottom: isLast ? 0 : 20),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          step.label,
-                          style: AppTextStyles.bodyMedium.copyWith(
-                            color: isActive ? AppColors.onSurface : AppColors.greyMedium,
-                            fontWeight: isActive ? FontWeight.w700 : FontWeight.normal,
-                          ),
+                        width: 28,
+                        height: 28,
+                        decoration: BoxDecoration(
+                          color: isActive ? AppColors.success : AppColors.greyMedium,
+                          shape: BoxShape.circle,
                         ),
-                        if (step.date != null) ...[
-                          const SizedBox(height: 4),
-                          Text(
-                            step.date!,
-                            style: AppTextStyles.bodySmall.copyWith(
-                              color: AppColors.greyDark,
-                            ),
-                          ),
-                        ],
-                      ],
+                        child: Icon(
+                          isActive ? Icons.check : Icons.circle,
+                          size: 14,
+                          color: AppColors.white,
+                        ),
+                      ),
+                      if (!isLast)
+                        Container(
+                          width: 2,
+                          height: 40,
+                          color: isActive ? AppColors.success : AppColors.greyMedium,
+                        ),
+                    ],
+                  ),
+                  const SizedBox(width: 14),
+                  Expanded(
+                    child: Padding(
+                      padding: EdgeInsets.only(top: 2, bottom: isLast ? 0 : 20),
+                      child: Text(
+                        step.label,
+                        style: AppTextStyles.bodyMedium.copyWith(
+                          color: isActive ? AppColors.onSurface : AppColors.greyMedium,
+                          fontWeight: isActive ? FontWeight.w700 : FontWeight.normal,
+                        ),
+                      ),
                     ),
                   ),
-                ),
-              ],
-            );
-          }),
-        ],
-      ),
+                ],
+              );
+            }),
+          ],
+        ),
       ),
     );
   }
