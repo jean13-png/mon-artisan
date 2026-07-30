@@ -1,13 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:go_router/go_router.dart';
+import 'package:intl/intl.dart';
+import 'package:provider/provider.dart';
 import '../../core/constants/colors.dart';
 import '../../core/constants/text_styles.dart';
-import '../../core/routes/app_router.dart';
 import '../../core/services/firebase_service.dart';
 import '../../providers/commande_provider.dart';
-import '../../providers/auth_provider.dart';
-import 'package:provider/provider.dart';
 
 class AdminSupportScreen extends StatefulWidget {
   const AdminSupportScreen({super.key});
@@ -301,7 +299,7 @@ class _AdminSupportScreenState extends State<AdminSupportScreen> {
           children: [
             Text('Artisan ID: $artisanId', style: AppTextStyles.bodySmall.copyWith(color: AppColors.greyDark)),
             const SizedBox(height: 12),
-            const Text('Vous pouvez annuler toutes les commandes en cours de cet artisan et favoriser sa visibilité dans les recherches.', style: AppTextStyles.bodyMedium),
+            Text('Vous pouvez annuler toutes les commandes en cours de cet artisan et favoriser sa visibilité dans les recherches.', style: AppTextStyles.bodyMedium),
           ],
         ),
         actions: [
@@ -326,8 +324,12 @@ class _AdminSupportScreenState extends State<AdminSupportScreen> {
 
               if (confirmed != true) return;
 
+              if (!mounted) return;
+
+              final commandeProvider = Provider.of<CommandeProvider>(context, listen: false);
+              final scaffoldMessenger = ScaffoldMessenger.of(context);
+
               try {
-                final commandeProvider = Provider.of<CommandeProvider>(context, listen: false);
                 await commandeProvider.annulerToutesCommandesArtisan(artisanId);
                 await FirebaseService.firestore.collection('priorites_artisans').doc(artisanId).set({
                   'artisanId': artisanId,
@@ -336,8 +338,8 @@ class _AdminSupportScreenState extends State<AdminSupportScreen> {
                   'raison': 'Signalement client / problème',
                 }, SetOptions(merge: true));
 
-                if (context.mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
+                if (mounted) {
+                  scaffoldMessenger.showSnackBar(
                     const SnackBar(
                       content: Text('Actions appliquées : commandes annulées, visibilité favorisée'),
                       backgroundColor: AppColors.success,
@@ -345,8 +347,8 @@ class _AdminSupportScreenState extends State<AdminSupportScreen> {
                   );
                 }
               } catch (e) {
-                if (context.mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
+                if (mounted) {
+                  scaffoldMessenger.showSnackBar(
                     SnackBar(content: Text('Erreur: $e'), backgroundColor: AppColors.error),
                   );
                 }

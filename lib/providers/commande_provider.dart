@@ -1061,8 +1061,8 @@ class CommandeProvider extends ChangeNotifier {
         'updatedAt': Timestamp.now(),
       });
 
-      if (commande.artisanId != null && commande.artisanId!.isNotEmpty) {
-        await FirestoreService.setArtisanAvailable(commande.artisanId!);
+      if (commande.artisanId.isNotEmpty) {
+        await FirestoreService.setArtisanAvailable(commande.artisanId);
       }
       
       await FirestoreService.createNotification({
