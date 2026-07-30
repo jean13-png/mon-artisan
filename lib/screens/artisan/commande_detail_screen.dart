@@ -1075,26 +1075,42 @@ class _CommandeDetailScreenState extends State<CommandeDetailScreen> {
   }
 
   Widget _buildChatButton(CommandeModel commande) {
-    return IconButton(
-      onPressed: () => context.push(AppRouter.chat, extra: {
-        'otherUserId': _isClient ? commande.artisanId : commande.clientId,
-        'otherUserName': _otherUserNom ?? '${_isClient ? 'Artisan' : 'Client'} #${(_isClient ? commande.artisanId : commande.clientId).substring(0, 8)}',
-      }),
-      icon: const Icon(Icons.chat_bubble_outline, color: AppColors.primaryBlue),
-      style: IconButton.styleFrom(
-        backgroundColor: AppColors.primaryBlue.withOpacity(0.1),
-        padding: const EdgeInsets.all(12),
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: () => context.push(AppRouter.chat, extra: {
+          'otherUserId': _isClient ? commande.artisanId : commande.clientId,
+          'otherUserName': _otherUserNom ?? '${_isClient ? 'Artisan' : 'Client'} #${(_isClient ? commande.artisanId : commande.clientId).substring(0, 8)}',
+        }),
+        borderRadius: BorderRadius.circular(12),
+        child: Container(
+          width: 44,
+          height: 44,
+          decoration: BoxDecoration(
+            color: AppColors.primaryBlue.withOpacity(0.1),
+            shape: BoxShape.circle,
+          ),
+          child: const Icon(Icons.chat_bubble_outline, color: AppColors.primaryBlue, size: 20),
+        ),
       ),
     );
   }
 
   Widget _buildCallButton() {
-    return IconButton(
-      onPressed: _callOtherUser,
-      icon: const Icon(Icons.phone, color: AppColors.primaryBlue),
-      style: IconButton.styleFrom(
-        backgroundColor: AppColors.primaryBlue.withOpacity(0.1),
-        padding: const EdgeInsets.all(12),
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: _callOtherUser,
+        borderRadius: BorderRadius.circular(12),
+        child: Container(
+          width: 44,
+          height: 44,
+          decoration: BoxDecoration(
+            color: AppColors.primaryBlue.withOpacity(0.1),
+            shape: BoxShape.circle,
+          ),
+          child: const Icon(Icons.phone, color: AppColors.primaryBlue, size: 20),
+        ),
       ),
     );
   }
