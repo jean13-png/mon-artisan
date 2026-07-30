@@ -291,11 +291,15 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         children: [
                           Icon(Icons.category_outlined, size: 16, color: AppColors.primaryBlue),
                           const SizedBox(width: 8),
-                          Text(
-                            'Catégorie : $_selectedCategorie',
-                            style: AppTextStyles.bodySmall.copyWith(
-                              color: AppColors.primaryBlue,
-                              fontWeight: FontWeight.w600,
+                          Expanded(
+                            child: Text(
+                              'Catégorie : $_selectedCategorie',
+                              style: AppTextStyles.bodySmall.copyWith(
+                                color: AppColors.primaryBlue,
+                                fontWeight: FontWeight.w600,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
                             ),
                           ),
                         ],
