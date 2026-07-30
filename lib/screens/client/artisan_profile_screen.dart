@@ -174,10 +174,14 @@ class ArtisanProfileScreen extends StatelessWidget {
                             ),
                           ),
                           const SizedBox(width: 8),
-                          Text(
-                            '(${artisan.nombreAvis} avis)',
-                            style: AppTextStyles.bodyMedium.copyWith(
-                              color: AppColors.greyDark,
+                          Expanded(
+                            child: Text(
+                              '(${artisan.nombreAvis} avis)',
+                              style: AppTextStyles.bodyMedium.copyWith(
+                                color: AppColors.greyDark,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
                             ),
                           ),
                           const Spacer(),

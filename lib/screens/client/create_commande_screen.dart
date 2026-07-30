@@ -201,7 +201,7 @@ class _CreateCommandeScreenState extends State<CreateCommandeScreen> {
         dateIntervention: _selectedDate ?? DateTime.now().add(const Duration(days: 1)),
         heureIntervention: _selectedTime != null
             ? '${_selectedTime!.hour}:${_selectedTime!.minute.toString().padLeft(2, '0')}'
-            : 'À définir',
+            : 'Non définie',
         montant: 0,
         fraisDeplacement: _isDiagnosticMode 
             ? (_fraisDiagnostic ?? AppConstants.diagnosticMontantMin)
