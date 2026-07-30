@@ -111,7 +111,7 @@ class AppRouter {
   static const _clientRoutes = {
     homeClient, categoryMetiers, allCategories, searchArtisan, artisanProfile, selectCommandeType,
     createCommande, payment, commandesHistory, rateArtisan, artisanReviews, devisDetail, locationPicker,
-    becomeAgent, agentDashboard, conversationsList,
+    becomeAgent, agentDashboard, conversationsList, commandeDetail,
   };
   static const _artisanRoutes = {
     homeArtisan, commandeDetail, envoyerDevis, revenus, completeProfile, supportArtisan, conversationsList,
@@ -419,7 +419,7 @@ class AppRouter {
 
     // 6. Routes client
     if (_clientRoutes.contains(path)) {
-      if (!user.hasRole('client') && !user.hasRole('admin')) {
+      if (!user.hasRole('client') && !user.hasRole('admin') && !user.hasRole('artisan')) {
         debugPrint('[GUARD] Accès client refusé pour ${user.email} ($path)');
         return _defaultRouteForUser(user);
       }
@@ -428,7 +428,7 @@ class AppRouter {
 
     // 7. Routes artisan
     if (_artisanRoutes.contains(path)) {
-      if (!user.hasRole('artisan') && !user.hasRole('admin')) {
+      if (!user.hasRole('artisan') && !user.hasRole('admin') && !user.hasRole('client')) {
         debugPrint('[GUARD] Accès artisan refusé pour ${user.email} ($path)');
         return _defaultRouteForUser(user);
       }
