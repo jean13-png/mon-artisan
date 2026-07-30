@@ -261,9 +261,16 @@ class _UsersManagementScreenState extends State<UsersManagementScreen> with Sing
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  const Icon(Icons.people),
-                  const SizedBox(width: 8),
-                  Text('Clients (${_filteredClients.length})'),
+                  const Icon(Icons.people, size: 18),
+                  const SizedBox(width: 4),
+                  Flexible(
+                    child: Text(
+                      'Clients (${_filteredClients.length})',
+                      style: const TextStyle(fontSize: 12),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
                 ],
               ),
             ),
@@ -271,9 +278,16 @@ class _UsersManagementScreenState extends State<UsersManagementScreen> with Sing
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  const Icon(Icons.work),
-                  const SizedBox(width: 8),
-                  Text('Artisans (${_filteredArtisans.length})'),
+                  const Icon(Icons.work, size: 18),
+                  const SizedBox(width: 4),
+                  Flexible(
+                    child: Text(
+                      'Artisans (${_filteredArtisans.length})',
+                      style: const TextStyle(fontSize: 12),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
                 ],
               ),
             ),
@@ -401,7 +415,7 @@ class _UsersManagementScreenState extends State<UsersManagementScreen> with Sing
                 children: [
                   const Icon(Icons.info, size: 20),
                   const SizedBox(width: 8),
-                  const Text('Détails'),
+                  Flexible(child: Text('Détails')),
                 ],
               ),
               onTap: () {
@@ -424,7 +438,7 @@ class _UsersManagementScreenState extends State<UsersManagementScreen> with Sing
                 children: [
                   Icon(isBanned ? Icons.check_circle : Icons.block, size: 20),
                   const SizedBox(width: 8),
-                  Text(isBanned ? 'Débannir' : 'Bannir'),
+                  Flexible(child: Text(isBanned ? 'Débannir' : 'Bannir')),
                 ],
               ),
               onTap: () => _banUser(client.id, 'client', isBanned),
@@ -434,7 +448,7 @@ class _UsersManagementScreenState extends State<UsersManagementScreen> with Sing
                 children: [
                   Icon(Icons.email, size: 20),
                   SizedBox(width: 8),
-                  Text('Contacter'),
+                  Flexible(child: Text('Contacter')),
                 ],
               ),
               onTap: () => _contactUser(client.email, '${client.prenom} ${client.nom}'),
@@ -444,7 +458,7 @@ class _UsersManagementScreenState extends State<UsersManagementScreen> with Sing
                 children: [
                   Icon(Icons.delete, size: 20, color: AppColors.error),
                   SizedBox(width: 8),
-                  Text('Supprimer', style: TextStyle(color: AppColors.error)),
+                  Flexible(child: Text('Supprimer', style: TextStyle(color: AppColors.error))),
                 ],
               ),
               onTap: () => _deleteUser(client.id, 'client'),
@@ -475,9 +489,21 @@ class _UsersManagementScreenState extends State<UsersManagementScreen> with Sing
             Row(
               children: [
                 const Icon(Icons.star, size: 14, color: AppColors.warning),
-                Text(' ${artisan.noteGlobale.toStringAsFixed(1)} (${artisan.nombreAvis} avis)'),
+                Expanded(
+                  child: Text(
+                    ' ${artisan.noteGlobale.toStringAsFixed(1)} (${artisan.nombreAvis} avis)',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
                 const SizedBox(width: 8),
-                Text('${artisan.nombreCommandes} commandes'),
+                Flexible(
+                  child: Text(
+                    '${artisan.nombreCommandes} commandes',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
               ],
             ),
             if (!artisan.isVerified)
@@ -499,11 +525,11 @@ class _UsersManagementScreenState extends State<UsersManagementScreen> with Sing
           icon: const Icon(Icons.more_vert),
           itemBuilder: (_) => [
             PopupMenuItem(
-              child: const Row(
+              child: Row(
                 children: [
-                  Icon(Icons.info, size: 20),
-                  SizedBox(width: 8),
-                  Text('Détails'),
+                  const Icon(Icons.info, size: 20),
+                  const SizedBox(width: 8),
+                  Flexible(child: Text('Détails')),
                 ],
               ),
               onTap: () {
@@ -522,11 +548,11 @@ class _UsersManagementScreenState extends State<UsersManagementScreen> with Sing
               },
             ),
             PopupMenuItem(
-              child: const Row(
+              child: Row(
                 children: [
-                  Icon(Icons.email, size: 20),
-                  SizedBox(width: 8),
-                  Text('Contacter'),
+                  const Icon(Icons.email, size: 20),
+                  const SizedBox(width: 8),
+                  Flexible(child: Text('Contacter')),
                 ],
               ),
               onTap: () => _contactUser(artisan.email ?? '', '${artisan.prenom ?? ''} ${artisan.nom ?? ''}'),
@@ -536,7 +562,7 @@ class _UsersManagementScreenState extends State<UsersManagementScreen> with Sing
                 children: [
                   Icon(Icons.delete, size: 20, color: AppColors.error),
                   SizedBox(width: 8),
-                  Text('Supprimer', style: TextStyle(color: AppColors.error)),
+                  Flexible(child: Text('Supprimer', style: TextStyle(color: AppColors.error))),
                 ],
               ),
               onTap: () => _deleteUser(artisan.userId, 'artisan'),
